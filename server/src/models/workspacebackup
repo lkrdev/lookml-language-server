@@ -1,0 +1,709 @@
+import {
+  Connection,
+  Location,
+  Position,
+  Range,
+} from "vscode-languageserver/node";
+import { TextDocument, DocumentUri } from "vscode-languageserver-textdocument";
+import * as path from "path";
+import { URI } from "vscode-uri";
+
+// Define interfaces for LookML elements
+export interface ViewInfo {
+  name: string;
+  location: Location;
+  fields: Map<string, FieldInfo>;
+  extends?: string; // Name of the view this extends
+  properties: Map<string, PropertyInfo>;
+}
+
+export interface FieldInfo {
+  name: string;
+  type: "dimension" | "measure" | "parameter" | "filter";
+  location: Location;
+  properties: Map<string, PropertyInfo>;
+}
+
+export interface PropertyInfo {
+  name: string;
+  value: string;
+  location: Location;
+}
+
+export interface ExploreInfo {
+  name: string;
+  location: Location;
+  viewName?: string;
+  joins: Map<string, JoinInfo>;
+  properties: Map<string, PropertyInfo>;
+}
+
+export interface JoinInfo {
+  name: string;
+  location: Location;
+  viewName?: string;
+  sqlOn?: string;
+  relationship?: string;
+  properties: Map<string, PropertyInfo>;
+}
+
+export interface ModelInfo {
+  name: string;
+  location: Location;
+  connection?: string;
+  includes: string[];
+  explores: string[];
+  properties: Map<string, PropertyInfo>;
+}
+
+export class WorkspaceModel {
+  private connection: Connection;
+  private views: Map<string, ViewInfo> = new Map();
+  private explores: Map<string, ExploreInfo> = new Map();
+  private models: Map<string, ModelInfo> = new Map();
+  private viewsByFile: Map<DocumentUri, string[]> = new Map();
+  private includedViews: Map<string, Set<string>> = new Map();
+  private exploresByFile: Map<DocumentUri, string[]> = new Map();
+  private modelsByFile: Map<DocumentUri, string[]> = new Map();
+  private loadedFiles: Set<string> = new Set();
+
+  // Version tracking for incremental updates
+  private documentVersions: Map<DocumentUri, number> = new Map();
+
+  constructor(args: { connection: Connection }) {
+    this.connection = args.connection;
+  }
+
+  /**
+   * Get all views in the workspace
+   */
+  public getViews(): Map<string, ViewInfo> {
+    return this.views;
+  }
+
+  /**
+   * Get a specific view by name
+   */
+  public getView(name: string): ViewInfo | undefined {
+    return this.views.get(name);
+  }
+
+  /**
+   * Get all explores in the workspace
+   */
+  public getExplores(): Map<string, ExploreInfo> {
+    return this.explores;
+  }
+
+  /**
+   * Get a specific explore by name
+   */
+  public getExplore(name: string): ExploreInfo | undefined {
+    return this.explores.get(name);
+  }
+
+  /**
+   * Get all models in the workspace
+   */
+  public getModels(): Map<string, ModelInfo> {
+    return this.models;
+  }
+
+  /**
+   * Get a specific model by name
+   */
+  public getModel(name: string): ModelInfo | undefined {
+    return this.models.get(name);
+  }
+
+  /**
+   * Process a document and update the workspace model
+   */
+  public updateDocument(document: TextDocument): void {
+    console.log("Update Document", document.uri, document.version);
+    const { uri, version = 0 } = document;
+
+    // Skip if we've already processed this version
+    if (version && this.documentVersions.get(uri) === version) {
+      console.log(`Skipping document ${uri} version ${version}`);
+      return;
+    }
+    this.documentVersions.set(uri, version);
+
+    // Remove existing data for this file
+    this.clearDocumentData(uri);
+
+    // Parse the document and update our model
+    this.parseDocument(document);
+
+    // Mark this file as loaded
+    this.loadedFiles.add(uri);
+  }
+
+  /**
+   * Remove data for a document that's been closed/deleted
+   */
+  public removeDocument(uri: DocumentUri): void {
+    //this.clearDocumentData(uri);
+    this.documentVersions.delete(uri);
+    this.loadedFiles.delete(uri);
+  }
+
+  /**
+   * Clear all data associated with a document
+   */
+  private clearDocumentData(uri: DocumentUri): void {
+    console.log("Clearing document data for", uri);
+    // Remove views defined in this file
+    const viewNames = this.viewsByFile.get(uri) || [];
+    console.log("Clearing ViewNames", viewNames);
+    for (const viewName of viewNames) {
+      this.views.delete(viewName);
+    }
+    this.viewsByFile.delete(uri);
+
+    // Remove explores defined in this file
+    const exploreNames = this.exploresByFile.get(uri) || [];
+    for (const exploreName of exploreNames) {
+      this.explores.delete(exploreName);
+    }
+    this.exploresByFile.delete(uri);
+
+    // Remove models defined in this file
+    const modelNames = this.modelsByFile.get(uri) || [];
+    for (const modelName of modelNames) {
+      this.models.delete(modelName);
+    }
+    this.modelsByFile.delete(uri);
+  }
+
+  /**
+   * Parse a document to extract LookML elements
+   */
+  private parseDocument(document: TextDocument): void {
+    const text = document.getText();
+    const lines = text.split("\n");
+    const uri = document.uri;
+
+    // Determine if this is a model file by checking extension or content
+    const isModelFile =
+      uri.endsWith(".model.lkml") ||
+      text.includes("connection:") ||
+      text.includes("include:");
+
+    // Extract model name from filename if this is a model file
+    let modelName = "";
+    if (isModelFile) {
+      const fileNameMatch = uri.match(/([^\/]+)\.model\.lkml$/);
+      if (fileNameMatch) {
+        modelName = fileNameMatch[1];
+      } else {
+        // If no match from filename, use a fallback name
+        modelName = `model_${Math.random().toString(36).substring(2, 9)}`;
+      }
+    }
+
+    // Lists to track what's defined in this file
+    const documentViews: string[] = [];
+    const documentExplores: string[] = [];
+    const documentModels: string[] = [];
+
+    // Create a model entry if this is a model file
+    if (isModelFile) {
+        console.log("deleteing includedViews modelName", modelName);
+        this.includedViews.delete(modelName);
+        
+      const modelInfo: ModelInfo = {
+        name: modelName,
+        location: Location.create(
+          uri,
+          Range.create(Position.create(0, 0), Position.create(0, 0))
+        ),
+        includes: [],
+        explores: [],
+        properties: new Map(),
+      };
+      this.models.set(modelName, modelInfo);
+      documentModels.push(modelName);
+    }
+
+    // Set up tracking for the current parsing state
+    const blockStack: {
+      type: string;
+      name: string;
+      level: number;
+      startLine: number;
+    }[] = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+
+      // Skip empty lines and comments
+      if (line === "" || line.startsWith("#")) {
+        continue;
+      }
+
+      // Track top-level property assignments (for model files)
+      const topLevelPropertyMatch = line.match(
+        /^\s*([a-zA-Z0-9_]+):\s+(.+?)\s*(?:;;|$)/
+      );
+      if (isModelFile && topLevelPropertyMatch && blockStack.length === 0) {
+
+        const propertyName = topLevelPropertyMatch[1];
+        const propertyValue = topLevelPropertyMatch[2]
+          .replace(/;;$/, "")
+          .trim()
+          .replace(/^["']|["']$/g, "");
+
+        // Create property location
+        const location = Location.create(
+          uri,
+          Range.create(
+            Position.create(i, 0),
+            Position.create(i, lines[i].length)
+          )
+        );
+
+        const propertyInfo: PropertyInfo = {
+          name: propertyName,
+          value: propertyValue,
+          location: location,
+        };
+
+        // Add to the model
+        const modelInfo = this.models.get(modelName);
+        if (modelInfo) {
+          modelInfo.properties.set(propertyName, propertyInfo);
+
+          // Handle special properties
+          if (propertyName === "connection") {
+            modelInfo.connection = propertyValue;
+          } else if (propertyName === "include") {
+            modelInfo.includes.push(propertyValue);
+
+            // TODO: In a complete implementation, you would resolve and load the included file here
+            // this.resolveInclude(uri, propertyValue);
+          } else if (propertyName === "explore") {
+            // Handle top-level explore declarations
+            modelInfo.explores.push(propertyValue);
+
+            // Create a basic explore entry
+            const exploreInfo: ExploreInfo = {
+              name: propertyValue,
+              location: location,
+              joins: new Map(),
+              properties: new Map(),
+            };
+            this.explores.set(propertyValue, exploreInfo);
+            documentExplores.push(propertyValue);
+          }
+        }
+
+        // Continue to next line since we've handled this property
+        continue;
+      }
+
+      // Track block openings
+      const blockMatch = line.match(
+        /^\s*([a-zA-Z0-9_]+):\s+([a-zA-Z0-9_]+)\s*\{/
+      );
+      if (blockMatch) {
+        const blockType = blockMatch[1];
+        const blockName = blockMatch[2];
+        const indentLevel = lines[i].length - lines[i].trimLeft().length;
+
+        blockStack.push({
+          type: blockType,
+          name: blockName,
+          level: indentLevel,
+          startLine: i,
+        });
+
+        // Create location info
+        const location = Location.create(
+          uri,
+          Range.create(
+            Position.create(i, 0),
+            Position.create(i, lines[i].length)
+          )
+        );
+
+        // Register different block types
+        if (blockType === "view") {
+          const viewInfo: ViewInfo = {
+            name: blockName,
+            location: location,
+            fields: new Map(),
+            properties: new Map(),
+          };
+          this.views.set(blockName, viewInfo);
+          documentViews.push(blockName);
+        } else if (blockType === "explore") {
+          const exploreInfo: ExploreInfo = {
+            name: blockName,
+            location: location,
+            joins: new Map(),
+            properties: new Map(),
+          };
+          this.explores.set(blockName, exploreInfo);
+          documentExplores.push(blockName);
+        } else if (blockType === "model") {
+          const modelInfo: ModelInfo = {
+            name: blockName,
+            location: location,
+            includes: [],
+            explores: [],
+            properties: new Map(),
+          };
+          this.models.set(blockName, modelInfo);
+          documentModels.push(blockName);
+        } else if (
+          ["dimension", "measure", "parameter", "filter"].includes(blockType)
+        ) {
+          // We're inside a view, add this field to the current view
+          if (blockStack.length >= 2) {
+            const parentBlock = blockStack[blockStack.length - 2];
+            if (parentBlock.type === "view") {
+              const viewInfo = this.views.get(parentBlock.name);
+              if (viewInfo) {
+                const fieldInfo: FieldInfo = {
+                  name: blockName,
+                  type: blockType as
+                    | "dimension"
+                    | "measure"
+                    | "parameter"
+                    | "filter",
+                  location: location,
+                  properties: new Map(),
+                };
+                viewInfo.fields.set(blockName, fieldInfo);
+              }
+            }
+          }
+        } else if (blockType === "join") {
+          // Add join to an explore
+          if (blockStack.length >= 2) {
+            const parentBlock = blockStack[blockStack.length - 2];
+            if (parentBlock.type === "explore") {
+              const exploreInfo = this.explores.get(parentBlock.name);
+              if (exploreInfo) {
+                const joinInfo: JoinInfo = {
+                  name: blockName,
+                  location: location,
+                  properties: new Map(),
+                };
+                exploreInfo.joins.set(blockName, joinInfo);
+              }
+            }
+          }
+        }
+      }
+
+      // Track property assignments inside blocks
+      const propertyMatch = line.match(
+        /^\s*([a-zA-Z0-9_]+):\s+(.+?)\s*(?:;;|$)/
+      );
+      if (propertyMatch && blockStack.length > 0) {
+        const propertyName = propertyMatch[1];
+        const propertyValue = propertyMatch[2].replace(/;;$/, "").trim();
+        const location = Location.create(
+          uri,
+          Range.create(
+            Position.create(i, 0),
+            Position.create(i, lines[i].length)
+          )
+        );
+
+        const propertyInfo: PropertyInfo = {
+          name: propertyName,
+          value: propertyValue,
+          location: location,
+        };
+
+        // Add to the appropriate parent
+        const currentBlock = blockStack[blockStack.length - 1];
+
+        if (currentBlock.type === "view") {
+          const viewInfo = this.views.get(currentBlock.name);
+          if (viewInfo) {
+            viewInfo.properties.set(propertyName, propertyInfo);
+
+            // Handle special properties
+            if (propertyName === "extends") {
+              viewInfo.extends = propertyValue;
+            }
+          }
+        } else if (currentBlock.type === "explore") {
+          const exploreInfo = this.explores.get(currentBlock.name);
+          if (exploreInfo) {
+            exploreInfo.properties.set(propertyName, propertyInfo);
+
+            // Handle special properties
+            if (propertyName === "view_name" || propertyName === "from") {
+              exploreInfo.viewName = propertyValue;
+            }
+          }
+        } else if (currentBlock.type === "model") {
+          const modelInfo = this.models.get(currentBlock.name);
+          if (modelInfo) {
+            modelInfo.properties.set(propertyName, propertyInfo);
+
+            // Handle special properties
+            if (propertyName === "connection") {
+              modelInfo.connection = propertyValue;
+            } else if (propertyName === "include") {
+              modelInfo.includes.push(propertyValue);
+            }
+          }
+        } else if (
+          ["dimension", "measure", "parameter", "filter"].includes(
+            currentBlock.type
+          )
+        ) {
+          // Find parent view
+          for (let j = blockStack.length - 2; j >= 0; j--) {
+            if (blockStack[j].type === "view") {
+              const viewInfo = this.views.get(blockStack[j].name);
+              if (viewInfo) {
+                const fieldInfo = viewInfo.fields.get(currentBlock.name);
+                if (fieldInfo) {
+                  fieldInfo.properties.set(propertyName, propertyInfo);
+                }
+              }
+              break;
+            }
+          }
+        } else if (currentBlock.type === "join") {
+          // Find parent explore
+          for (let j = blockStack.length - 2; j >= 0; j--) {
+            if (blockStack[j].type === "explore") {
+              const exploreInfo = this.explores.get(blockStack[j].name);
+              if (exploreInfo) {
+                const joinInfo = exploreInfo.joins.get(currentBlock.name);
+                if (joinInfo) {
+                  joinInfo.properties.set(propertyName, propertyInfo);
+
+                  // Handle special properties
+                  if (propertyName === "view_name" || propertyName === "from") {
+                    joinInfo.viewName = propertyValue;
+                  } else if (propertyName === "sql_on") {
+                    joinInfo.sqlOn = propertyValue;
+                  } else if (propertyName === "relationship") {
+                    joinInfo.relationship = propertyValue;
+                  }
+                }
+              }
+              break;
+            }
+          }
+        }
+      }
+
+      // Track block closings
+      if (line.match(/^\s*\}/)) {
+        // Remove blocks that have ended
+        const indentLevel = lines[i].length - lines[i].trimLeft().length;
+        while (
+          blockStack.length > 0 &&
+          blockStack[blockStack.length - 1].level >= indentLevel
+        ) {
+          blockStack.pop();
+        }
+      }
+    }
+
+    // Store what's defined in this file
+    this.viewsByFile.set(uri, documentViews);
+    this.exploresByFile.set(uri, documentExplores);
+    this.modelsByFile.set(uri, documentModels);
+
+    // Process includes for model files
+    if (isModelFile) {
+      const modelInfo = this.models.get(modelName);
+      if (modelInfo && modelInfo.includes.length > 0) {
+
+        modelInfo.includes.forEach((include) =>
+          this.resolveInclude(uri, include)
+        );
+      }
+    }
+  }
+
+  /**
+   * Find all references to a symbol in the workspace
+   */
+  public findReferences(name: string): Location[] {
+    const references: Location[] = [];
+
+    // Check if it's a view
+    if (this.views.has(name)) {
+      const view = this.views.get(name)!;
+
+      // Add the definition location
+      references.push(view.location);
+
+      // Find references in explores (viewName, from)
+      for (const [_, explore] of this.explores.entries()) {
+        if (explore.viewName === name) {
+          // Add the view_name/from property location
+          for (const [propName, prop] of explore.properties.entries()) {
+            if (
+              (propName === "view_name" || propName === "from") &&
+              prop.value === name
+            ) {
+              references.push(prop.location);
+            }
+          }
+        }
+
+        // Check join references
+        for (const [_, join] of explore.joins.entries()) {
+          if (join.viewName === name) {
+            // Add the view_name/from property location
+            for (const [propName, prop] of join.properties.entries()) {
+              if (
+                (propName === "view_name" || propName === "from") &&
+                prop.value === name
+              ) {
+                references.push(prop.location);
+              }
+            }
+          }
+        }
+      }
+
+      // Find references in extends properties
+      for (const [_, otherView] of this.views.entries()) {
+        if (otherView.extends === name) {
+          // Add the extends property location
+          for (const [propName, prop] of otherView.properties.entries()) {
+            if (propName === "extends" && prop.value === name) {
+              references.push(prop.location);
+            }
+          }
+        }
+      }
+    }
+
+    return references;
+  }
+
+  /**
+   * Get the workspace folder containing a given document
+   */
+  public getWorkspaceFolder(documentUri: string): string | null {
+    try {
+      const parsedUri = URI.parse(documentUri);
+      return path.dirname(parsedUri.fsPath);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  public getModelNameFromUri(uri: string): string | null {
+    const fileNameMatch = uri.match(/([^\/]+)\.model\.lkml$/);
+    return fileNameMatch ? fileNameMatch[1] : null;
+  }
+
+  public getIncludedViewsForModel(modelName: string): Set<string> | undefined {
+    return this.includedViews.get(modelName);
+  }
+
+  private async resolveInclude(
+    baseUri: string,
+    includePattern: string
+  ): Promise<void> {
+    try {
+      // Clean up the pattern (remove quotes)
+      const cleanPattern = includePattern.replace(/^["']|["']$/g, "");
+
+      // Get the base directory
+      const baseDir = this.getWorkspaceFolder(baseUri);
+      if (!baseDir) {
+        console.log(`Could not determine base directory for ${baseUri}`);
+        return;
+      }
+
+      // Send a custom request to the client to find matching files
+      const matchedFiles = await this.requestMatchingFilesFromClient(
+        baseDir,
+        cleanPattern
+      );
+      const modelName = this.getModelNameFromUri(baseUri);
+
+      for (const filePath of matchedFiles) {
+        // Skip already loaded files
+        if (this.loadedFiles.has(filePath)) continue;
+
+        try {
+          // Request file content via LSP
+          const documentUri = URI.file(filePath).toString();
+          const file: {
+            content: string;
+            uri: string;
+          } = await this.connection.sendRequest("lookml/getFileContent", {
+            uri: documentUri,
+          });
+
+          const textDocument: TextDocument = TextDocument.create(
+            file.uri,
+            "lookml",
+            0,
+            file.content
+          );
+
+          // Update our model with the document
+          if (textDocument) {
+            this.updateDocument(textDocument);
+          } else {
+            console.log(`No content returned for ${filePath}`);
+          }
+
+          const viewsFromThisFile =
+            this.viewsByFile.get(URI.file(filePath).toString()) || [];
+
+          // Add these views to the includedViews map for this model
+          if (modelName) {
+            console.log("resolveInclude modelName", modelName);
+            let modelIncludes = this.includedViews.get(modelName) || new Set();
+            viewsFromThisFile.forEach((view) => modelIncludes.add(view));
+            this.includedViews.set(modelName, modelIncludes);
+          }
+        } catch (fileError) {
+          console.error(`Failed to load file ${filePath}:`, fileError);
+        }
+      }
+    } catch (e) {
+      console.error(`Error resolving include ${includePattern}:`, e);
+    }
+  }
+
+  // Helper method to request matching files from client
+  private async requestMatchingFilesFromClient(
+    baseDir: string,
+    pattern: string
+  ): Promise<string[]> {
+    try {
+      // Send a custom request to the client
+      // The client needs to handle this request type
+      const response = await this.connection.sendRequest(
+        "lookml/findMatchingFiles",
+        {
+          baseDir,
+          pattern,
+        }
+      );
+
+      // The response should be an array of file paths
+      if (Array.isArray(response)) {
+        return response;
+      } else {
+        console.error(`Invalid response format from client:`, response);
+        return [];
+      }
+    } catch (error) {
+      console.error(`Error requesting matching files from client:`, error);
+      return [];
+    }
+  }
+}

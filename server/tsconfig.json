@@ -10,6 +10,6 @@
     "rootDir": "src",
     "incremental": true
   },
-  "include": ["src"],
+  "include": ["src", "src/types.ts"],
   "exclude": ["node_modules", ".vscode-test"]
 }

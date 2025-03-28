@@ -1,0 +1,85 @@
+{
+    "name": "LookML",
+    "scopeName": "source.lookml",
+    "fileTypes": ["lkml", "lookml", "model.lkml", "view.lkml", "explore.lkml"],
+    "patterns": [
+      {
+        "include": "#comments"
+      },
+      {
+        "include": "#keywords"
+      },
+      {
+        "include": "#strings"
+      },
+      {
+        "include": "#block"
+      }
+    ],
+    "repository": {
+      "comments": {
+        "patterns": [
+          {
+            "name": "comment.line.number-sign.lookml",
+            "match": "#.*$"
+          }
+        ]
+      },
+      "keywords": {
+        "patterns": [
+          {
+            "name": "keyword.control.lookml",
+            "match": "\\b(view|explore|model|measure|dimension|parameter|filter|set|join|extends|datagroup|access_grant|sql|sql_on|html|link|label|group_label|description|type|sql_table_name|from|connection|include)\\b"
+          },
+          {
+            "name": "constant.language.lookml",
+            "match": "\\b(yes|no|true|false)\\b"
+          },
+          {
+            "name": "support.type.lookml",
+            "match": "\\b(string|number|date|time|datetime|yesno|tier|zipcode|count|count_distinct|sum|avg|max|min)\\b"
+          }
+        ]
+      },
+      "strings": {
+        "patterns": [
+          {
+            "name": "string.quoted.double.lookml",
+            "begin": "\"",
+            "end": "\"",
+            "patterns": [
+              {
+                "name": "constant.character.escape.lookml",
+                "match": "\\\\."
+              }
+            ]
+          },
+          {
+            "name": "string.quoted.single.lookml",
+            "begin": "'",
+            "end": "'",
+            "patterns": [
+              {
+                "name": "constant.character.escape.lookml",
+                "match": "\\\\."
+              }
+            ]
+          }
+        ]
+      },
+      "block": {
+        "patterns": [
+          {
+            "name": "meta.block.lookml",
+            "begin": "\\{",
+            "end": "\\}",
+            "patterns": [
+              {
+                "include": "$self"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }

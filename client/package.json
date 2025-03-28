@@ -1,5 +1,5 @@
 {
-  "name": "REPLACE_ME",
+  "name": "lookml-language-server-client",
   "description": "REPLACE_ME",
   "author": "REPLACE_ME",
   "license": "MIT",
@@ -17,5 +17,12 @@
   },
   "devDependencies": {
     "@types/vscode": "^1.81.0"
+  },
+  "contributes": {
+    "configurationDefaults": {
+      "[json]": {
+        "editor.formatOnSave": true
+      }
+    }
   }
 }

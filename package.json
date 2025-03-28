@@ -1,29 +1,51 @@
 {
-  "name": "REPLACE_ME",
-  "description": "REPLACE_ME",
-  "author": "REPLACE_ME",
+  "name": "lookml-language-server",
+  "description": "LookML Language Server for Visual Studio Code",
+  "author": "rileylnapier@gmail.com",
   "license": "MIT",
   "version": "1.0.0",
-  "publisher": "REPLACE_ME",
   "categories": [],
   "engines": {
     "vscode": "^1.75.0"
   },
-  "activationEvents": [
-    "onLanguage"
-  ],
   "main": "./client/out/extension",
   "contributes": {
-    "configuration": {}
+    "languages": [
+      {
+        "id": "lookml",
+        "aliases": [
+          "LookML",
+          "lookml"
+        ],
+        "extensions": [
+          ".lkml",
+          ".lookml",
+          ".model.lkml",
+          ".view.lkml",
+          ".explore.lkml"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "lookml",
+        "scopeName": "source.lookml",
+        "path": "./syntaxes/lookml.tmLanguage.json"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc -b",
-    "watch": "tsc -b -w",
-    "postinstall": "cd client && npm install && cd ../server && npm install && cd .."
+    "compile": "tsc --build",
+    "watch": "tsc --build --watch",
+    "lint": "eslint src --ext ts"
   },
   "devDependencies": {
     "@types/node": "^20.5.7",
     "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "vscode": "^1.1.37"
   }
 }

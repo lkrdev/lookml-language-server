@@ -1,5 +1,5 @@
 {
-  "name": "REPLACE_ME",
+  "name": "lookml-language-server",
   "description": "REPLACE_ME",
   "version": "1.0.0",
   "author": "REPLACE_ME",
@@ -12,7 +12,10 @@
     "url": "REPLACE_ME"
   },
   "dependencies": {
+    "lookml-parser": "^6.11.1",
+    "vscode": "^1.1.37",
     "vscode-languageserver": "^8.1.0",
-    "vscode-languageserver-textdocument": "^1.0.8"
+    "vscode-languageserver-textdocument": "^1.0.8",
+    "vscode-uri": "^3.1.0"
   }
 }

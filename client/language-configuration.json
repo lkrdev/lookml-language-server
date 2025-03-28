@@ -1,0 +1,28 @@
+{
+    "comments": {
+      "lineComment": "#"
+    },
+    "brackets": [
+      ["{", "}"],
+      ["[", "]"]
+    ],
+    "autoClosingPairs": [
+      { "open": "{", "close": "}" },
+      { "open": "[", "close": "]" },
+      { "open": "\"", "close": "\"", "notIn": ["string"] },
+      { "open": "'", "close": "'", "notIn": ["string", "comment"] }
+    ],
+    "surroundingPairs": [
+      ["{", "}"],
+      ["[", "]"],
+      ["\"", "\""],
+      ["'", "'"]
+    ],
+    "folding": {
+      "markers": {
+        "start": "^\\s*\\b(view|explore|model|measure|dimension|parameter|filter|set|access_grant|datagroup)\\b.*\\{",
+        "end": "^\\s*\\}"
+      }
+    },
+    "wordPattern": "(-?\\d*\\.\\d\\w*)|([^\\`\\~\\!\\@\\#\\%\\^\\&\\*\\(\\)\\-\\=\\+\\[\\{\\]\\}\\\\\\|\\;\\:\\'\\\"\\,\\.\\<\\>\\/\\?\\s]+)"
+  }
