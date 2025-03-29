@@ -2,8 +2,8 @@ import {
   Hover,
   MarkupKind,
   Position,
-  TextDocument,
   Range,
+  TextDocument,
 } from "vscode-languageserver/node";
 import { WorkspaceModel } from "../models/workspace";
 
@@ -58,7 +58,7 @@ export class HoverProvider {
     zipcode: "Special data type for US zip codes with appropriate formatting.",
     count: "Count of rows or records.",
     sum: "Sum of values in the specified column.",
-    avg: "Average of values in the specified column.",
+    average: "Average of values in the specified column.",
     min: "Minimum value in the specified column.",
     max: "Maximum value in the specified column.",
     count_distinct: "Count of unique values in the specified column.",

@@ -1,14 +1,118 @@
 import {
   Diagnostic,
   DiagnosticSeverity,
-  Range,
   Position,
+  Range,
   TextDocument,
 } from "vscode-languageserver/node";
 import { WorkspaceModel } from "../models/workspace";
 
 export class DiagnosticsProvider {
   private workspaceModel: WorkspaceModel;
+
+  // Shared valid types between dimensions and measures
+  private readonly sharedValidTypes = [
+    "date",
+    "number",
+    "string",
+    "yesno",
+    "zipcode",
+    "date_day_of_month",
+    "date_day_of_week",
+    "date_day_of_week_index",
+    "date_day_of_year",
+    "date_fiscal_month_num",
+    "date_fiscal_quarter",
+    "date_fiscal_quarter_of_year",
+    "date_fiscal_year",
+    "date_hour",
+    "date_hour2",
+    "date_hour3",
+    "date_hour4",
+    "date_hour6",
+    "date_hour8",
+    "date_hour12",
+    "date_hour_of_day",
+    "date_microsecond",
+    "date_millisecond",
+    "date_millisecond2",
+    "date_millisecond4",
+    "date_millisecond5",
+    "date_millisecond8",
+    "date_millisecond10",
+    "date_millisecond20",
+    "date_millisecond25",
+    "date_millisecond40",
+    "date_millisecond50",
+    "date_millisecond100",
+    "date_millisecond125",
+    "date_millisecond200",
+    "date_millisecond250",
+    "date_millisecond500",
+    "date_minute",
+    "date_minute2",
+    "date_minute3",
+    "date_minute4",
+    "date_minute5",
+    "date_minute6",
+    "date_minute10",
+    "date_minute12",
+    "date_minute15",
+    "date_minute20",
+    "date_minute30",
+    "date_month",
+    "date_month_name",
+    "date_month_num",
+    "date_quarter",
+    "date_quarter_of_year",
+    "date_raw",
+    "date_second",
+    "date_time",
+    "date_time_of_day",
+    "date_week",
+    "date_week_of_year",
+    "date_year"
+  ];
+
+  // Dimension-specific valid types (extends shared types)
+  private readonly dimensionValidTypes = [
+    ...this.sharedValidTypes,
+    "bin",
+    "distance",
+    "location",
+    "tier",
+    "duration_day",
+    "duration_hour",
+    "duration_minute",
+    "duration_month",
+    "duration_quarter",
+    "duration_second",
+    "duration_week",
+    "duration_year"
+  ];
+
+  // Measure-specific valid types (extends shared types)
+  private readonly measureValidTypes = [
+    ...this.sharedValidTypes,
+    "average",
+    "average_distinct",
+    "count",
+    "count_distinct",
+    "int",
+    "list",
+    "max",
+    "median",
+    "median_distinct",
+    "min",
+    "percent_of_previous",
+    "percent_of_total",
+    "percentile",
+    "percentile_distinct",
+    "running_total",
+    "sum",
+    "sum_distinct",
+    "date_date"
+  ];
 
   constructor(workspaceModel: WorkspaceModel) {
     this.workspaceModel = workspaceModel;
@@ -372,32 +476,18 @@ export class DiagnosticsProvider {
           // Dimensions and measures should have a type
           const typeMatch = line.match(/^\s*type:/);
           if (typeMatch) {
-            const validTypes = [
-              "string",
-              "number",
-              "count",
-              "sum",
-              "avg",
-              "median",
-              "count_distinct",
-              "list",
-              "yesno",
-              "date",
-              "time",
-              "datetime",
-              "tier",
-              "zipcode",
-              "location",
-            ];
-
             const typeValueMatch = line.match(/^\s*type:\s+([a-zA-Z0-9_]+)/);
             if (typeValueMatch) {
               const typeValue = typeValueMatch[1];
+              const validTypes = currentContext.type === "dimension" 
+                ? this.dimensionValidTypes 
+                : this.measureValidTypes;
+              
               if (!validTypes.includes(typeValue)) {
                 diagnostics.push({
                   severity: DiagnosticSeverity.Warning,
                   range: this.getWordRange(lines[i], i, typeValue),
-                  message: `"${typeValue}" is not a recognized type. Valid types include: ${validTypes.join(
+                  message: `"${typeValue}" is not a valid type for ${currentContext.type}s. Valid types include: ${validTypes.join(
                     ", "
                   )}`,
                   source: "lookml-lsp",

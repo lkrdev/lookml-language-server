@@ -1,10 +1,10 @@
+import { TextDocument } from "vscode-languageserver-textdocument";
 import {
   CompletionItem,
   CompletionItemKind,
-  TextDocumentPositionParams,
   InsertTextFormat,
+  TextDocumentPositionParams,
 } from "vscode-languageserver/node";
-import { TextDocument } from "vscode-languageserver-textdocument";
 import { WorkspaceModel } from "../models/workspace";
 
 // Constants and data for completions
@@ -44,7 +44,7 @@ const lookmlTypes = [
   "count",
   "count_distinct",
   "sum",
-  "avg",
+  "average",
   "max",
   "min",
 ];
