@@ -32,7 +32,7 @@
       "patterns": [
         {
           "name": "keyword.control.lookml",
-          "match": "\\b(view|explore|model|measure|dimension|dimension_group|parameter|filter|set|join|extends|datagroup|access_grant|sql|sql_on|html|link|label|group_label|description|type|sql_table_name|from|connection|include|primary_key|timeframes|hidden|value_format_name|drill_fields|relationship|derived_table|view_name)\\b"
+          "match": "\\b(view|explore|model|measure|dimension|dimension_group|parameter|filter|set|join|extends|datagroup|access_grant|sql|sql_on|html|link|label|group_label|description|type|sql_table_name|from|connection|include|primary_key|timeframes|hidden|value_format_name|drill_fields|relationship|derived_table|view_name|value_format|filters|field|value)\\b"
         },
         {
           "name": "constant.language.lookml",
@@ -40,7 +40,7 @@
         },
         {
           "name": "support.type.lookml",
-          "match": "\\b(string|number|date|time|datetime|yesno|tier|zipcode|count|count_distinct|sum|avg|max|min)\\b"
+          "match": "\\b(string|number|date|time|datetime|yesno|tier|zipcode|count|count_distinct|sum|average|max|min)\\b"
         }
       ]
     },
