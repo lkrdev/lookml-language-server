@@ -33,6 +33,13 @@
         "scopeName": "source.lookml",
         "path": "./syntaxes/lookml.tmLanguage.json"
       }
+    ],
+    "themes": [
+      {
+        "label": "LookML",
+        "uiTheme": "vs-dark",
+        "path": "./syntaxes/lookml.tmTheme.json"
+      }
     ]
   },
   "scripts": {
