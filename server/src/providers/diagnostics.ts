@@ -1,9 +1,9 @@
+import { TextDocument } from "vscode-languageserver-textdocument";
 import {
   Diagnostic,
   DiagnosticSeverity,
   Position,
   Range,
-  TextDocument,
 } from "vscode-languageserver/node";
 import { WorkspaceModel } from "../models/workspace";
 
@@ -524,6 +524,20 @@ export class DiagnosticsProvider {
               message: `"relationship" is only valid within join blocks`,
               source: "lookml-lsp",
             });
+          }
+          // Validate hidden property uses yes/no instead of true/false
+          if (propertyName === "hidden") {
+            const valueMatch = line.match(/^\s*hidden:\s+(true|false)/i);
+            if (valueMatch) {
+              const invalidValue = valueMatch[1];
+              const correctValue = invalidValue.toLowerCase() === "true" ? "yes" : "no";
+              diagnostics.push({
+                severity: DiagnosticSeverity.Warning,
+                range: this.getWordRange(lines[i], i, invalidValue),
+                message: `The "hidden" property should use "yes" or "no" instead of "${invalidValue}". Use "${correctValue}" instead.`,
+                source: "lookml-lsp",
+              });
+            }
           }
         }
       }
