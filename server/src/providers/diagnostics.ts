@@ -264,8 +264,6 @@ export class DiagnosticsProvider {
     
     // Get the model this document belongs to
     const modelName = this.workspaceModel.getModelNameFromUri(document.uri);
-
-    console.log("modelName", modelName);
     
     // Get the set of views included by this model
     const includedViews = modelName ? this.workspaceModel.getIncludedViewsForModel(modelName) : new Set();
