@@ -27,7 +27,7 @@ import { HoverProvider } from "./providers/hover";
 import { AuthenticationService } from "./services/authentication";
 
 // Import models
-import { getCurrentBranch, handleGetDevBranch, handleSwitchToBranchAndPull, handleSwitchToDev } from "./commands";
+import { getCurrentBranch, handleGetDevBranch, handleGetExploreUrlAsMe, handleSwitchToBranchAndPull, handleSwitchToDev } from "./commands";
 import { WorkspaceModel } from "./models/workspace";
 
 // Create a connection for the server
@@ -105,7 +105,8 @@ connection.onInitialize((params: InitializeParams) => {
           'looker.switchToBranchAndPull', 
           'looker.getCurrentBranch', 
           'looker.getDevBranch', 
-          'looker.switchToDev'
+          'looker.switchToDev',
+          'looker.createExploreUrlAsMe'
         ]
       }
     },
@@ -194,6 +195,17 @@ connection.onExecuteCommand(async (params: ExecuteCommandParams) => {
         throw new Error('Invalid arguments for switchToBranchAndPull command');
       }
       return handleSwitchToBranchAndPull(args[0] as string);
+
+    case 'looker.createExploreUrlAsMe':
+      if (!args || args.length !== 3) {
+        throw new Error('Invalid arguments for createExploreUrlAsMe command');
+      }
+      return handleGetExploreUrlAsMe(authService!, {
+        base_url: args[0] as string,
+        model_name: args[1] as string,
+        explore_name: args[2] as string,
+      });
+
     default:
       throw new Error(`Unknown command: ${command}`);
   }
