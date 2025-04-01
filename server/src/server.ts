@@ -1,20 +1,21 @@
 import {
   createConnection,
-  TextDocuments,
-  ProposedFeatures,
-  InitializeParams,
-  TextDocumentSyncKind,
-  InitializeResult,
-  DocumentSymbolParams,
-  SymbolInformation,
-  Position,
-  DefinitionParams,
   Definition,
+  DefinitionParams,
+  DocumentSymbolParams,
+  ExecuteCommandParams,
+  InitializeParams,
+  InitializeResult,
+  Position,
+  ProposedFeatures,
+  SymbolInformation,
+  TextDocuments,
+  TextDocumentSyncKind,
 } from "vscode-languageserver/node";
 
-import { TextDocument } from "vscode-languageserver-textdocument";
-import * as path from "path";
 import * as fs from "fs";
+import * as path from "path";
+import { TextDocument } from "vscode-languageserver-textdocument";
 
 // Import providers
 import { CompletionProvider } from "./providers/completion";
@@ -22,11 +23,18 @@ import { DiagnosticsProvider } from "./providers/diagnostics";
 import { FormattingProvider } from "./providers/formatting";
 import { HoverProvider } from "./providers/hover";
 
+// Import services
+import { AuthenticationService } from "./services/authentication";
+
 // Import models
+import { getCurrentBranch, handleGetDevBranch, handleGetExploreUrlAsMe, handleSwitchToBranchAndPull, handleSwitchToDev } from "./commands";
 import { WorkspaceModel } from "./models/workspace";
 
 // Create a connection for the server
 const connection = createConnection(ProposedFeatures.all);
+
+// Initialize services
+let authService: AuthenticationService | null = null;
 
 // Set up logging
 connection.console.info(`LookML Language Server starting up`);
@@ -58,6 +66,7 @@ const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 const workspaceModel = new WorkspaceModel({
   connection,
 });
+
 // Create providers
 const completionProvider = new CompletionProvider(workspaceModel);
 const diagnosticsProvider = new DiagnosticsProvider(workspaceModel);
@@ -88,10 +97,118 @@ connection.onInitialize((params: InitializeParams) => {
         firstTriggerCharacter: "}",
         moreTriggerCharacter: ["{", "\n"],
       },
+      // Execute command capability
+      executeCommandProvider: {
+        commands: [
+          'looker.authenticate', 
+          'looker.remoteReset', 
+          'looker.switchToBranchAndPull', 
+          'looker.getCurrentBranch', 
+          'looker.getDevBranch', 
+          'looker.switchToDev',
+          'looker.createExploreUrlAsMe'
+        ]
+      }
     },
   };
 
   return result;
+});
+
+const getSdk = () => {
+  if (!authService) {
+    throw new Error('Authentication service not initialized');
+  }
+  return authService.getSDK();
+}
+
+// Add command handlers
+connection.onExecuteCommand(async (params: ExecuteCommandParams) => {
+  const { command, arguments: args } = params;
+
+  switch (command) {
+    case 'looker.authenticate':
+      if (!args || args.length !== 3) {
+        throw new Error('Invalid arguments for authenticate command');
+      }
+
+      const [base_url, client_id, client_secret] = args as string[];
+      
+      try {
+        if (!authService) {
+          authService = new AuthenticationService(base_url, client_id, client_secret);
+        } else {
+         await  authService.updateCredentials(base_url, client_id, client_secret);
+        }
+
+        const credentials = { base_url, client_id, client_secret };
+        const success = await authService.testConnection(credentials);
+        
+        if (success) {
+          await authService.updateCredentials(credentials.base_url, credentials.client_id, credentials.client_secret);
+          return { success: true, message: 'Successfully authenticated with Looker' };
+        } else {
+          return { success: false, message: 'Failed to authenticate with Looker' };
+        }
+      } catch (error) {
+        console.error('Authentication error:', error);
+        return { success: false, message: `Authentication failed: ${error instanceof Error ? error.message : String(error)}` };
+      }
+
+    case 'looker.remoteReset':
+      if (!args || args.length !== 1) {
+        throw new Error('Invalid arguments for remoteReset command');
+      }
+      const project_name = args[0] as string;
+      await authService?.resetToRemote(project_name);
+      return { success: true, message: 'Successfully reset to remote' };
+    
+      case 'looker.getDevBranch':
+      if (!args || args.length !== 1) {
+        throw new Error('Invalid arguments for getDevBranch command');
+      }
+      const { branch_name } = await handleGetDevBranch(authService!, {
+        project_name: args[0] as string,
+      })
+      return { success: true, branch_name: branch_name };
+    
+    case 'looker.switchToDev':
+      if (!args || args.length !== 2) {
+        throw new Error('Project name not found');
+      }
+      const switch_args = {
+        project_name: args[0] as string,
+        branch_name: args[1] as string,
+      }
+      const branch_response = await handleGetDevBranch(authService!, switch_args)
+      if (branch_response.branch_name !== switch_args.branch_name) {
+        throw new Error(`Branch name does not match. Looker ${switch_args.project_name} is on ${branch_response.branch_name} but ${ switch_args.branch_name} was expected`);
+      } else {
+        return handleSwitchToDev(authService!, switch_args)
+      }
+    
+    case 'looker.getCurrentBranch' :
+      return getCurrentBranch();
+
+    case 'looker.switchToBranchAndPull':
+      if (!args || args.length !== 1) {
+        throw new Error('Invalid arguments for switchToBranchAndPull command');
+      }
+      return handleSwitchToBranchAndPull(args[0] as string);
+
+    case 'looker.createExploreUrlAsMe':
+      if (!args || args.length !== 3) {
+        throw new Error('Invalid arguments for createExploreUrlAsMe command');
+      }
+      return handleGetExploreUrlAsMe(authService!, {
+        base_url: args[0] as string,
+        model_name: args[1] as string,
+        explore_name: args[2] as string,
+      });
+
+    default:
+      throw new Error(`Unknown command: ${command}`);
+  }
 });
 
 // Handle document content changes

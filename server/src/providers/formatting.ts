@@ -1,9 +1,9 @@
+import { TextDocument } from "vscode-languageserver-textdocument";
 import {
-  TextDocument,
-  TextEdit,
-  Range,
-  Position,
   FormattingOptions,
+  Position,
+  Range,
+  TextEdit,
 } from "vscode-languageserver/node";
 
 export class FormattingProvider {
@@ -298,8 +298,6 @@ export class FormattingProvider {
   ): TextEdit[] {
     // Start with basic formatting
     const basicEdits = this.formatDocument(document, options);
-
-    // Apply enhanced formatting rules
     const text = document.getText();
     const lines = text.split("\n");
     const enhancedEdits: TextEdit[] = [];
@@ -309,67 +307,162 @@ export class FormattingProvider {
     const insertSpaces = options.insertSpaces !== false;
     const indentStr = insertSpaces ? " ".repeat(tabSize) : "\t";
 
-    // Find blocks of property assignments to align
-    let blockStart = -1;
-    let blockEnd = -1;
-    const propertyBlocks: { start: number; end: number }[] = [];
-
+    // Process each line
     for (let i = 0; i < lines.length; i++) {
-      const trimmedLine = lines[i].trim();
+      const originalLine = lines[i];
+      const trimmedLine = originalLine.trim();
+      const indentLevel = this.getIndentLevel(originalLine, tabSize);
 
-      // Detect property assignments (name: value)
-      const propertyMatch = trimmedLine.match(/^[a-zA-Z0-9_]+:\s+.+/);
-
-      if (propertyMatch) {
-        // Start a new block or extend the current one
-        if (blockStart === -1) {
-          blockStart = i;
-        }
-        blockEnd = i;
-      } else if (
-        blockStart !== -1 &&
-        (trimmedLine === "" || trimmedLine === "}" || trimmedLine.endsWith("{"))
-      ) {
-        // End the current block if we hit a blank line, closing brace, or opening brace
-        if (blockEnd - blockStart >= 2) {
-          // Only consider blocks with at least 3 properties
-          propertyBlocks.push({ start: blockStart, end: blockEnd });
-        }
-        blockStart = -1;
-        blockEnd = -1;
-      }
-    }
-
-    // Process each block to align the colons
-    for (const block of propertyBlocks) {
-      // Find the longest property name
-      let maxNameLength = 0;
-
-      for (let i = block.start; i <= block.end; i++) {
-        const trimmedLine = lines[i].trim();
-        const colonIndex = trimmedLine.indexOf(":");
-
-        if (colonIndex > maxNameLength) {
-          maxNameLength = colonIndex;
-        }
+      // Skip empty lines and comments
+      if (trimmedLine === "" || trimmedLine.startsWith("#")) {
+        continue;
       }
 
-      // Format each line in the block
-      for (let i = block.start; i <= block.end; i++) {
-        const originalLine = lines[i];
-        const trimmedLine = originalLine.trim();
-        const indentLevel = this.getIndentLevel(originalLine, tabSize);
+      // Handle array formatting
+      if (trimmedLine.includes("[")) {
+        const arrayStartIndex = trimmedLine.indexOf("[");
+        const arrayEndIndex = trimmedLine.indexOf("]");
+        
+        if (arrayStartIndex !== -1) {
+          // If the array is on a single line, check if it needs to be split
+          if (arrayEndIndex !== -1 && arrayEndIndex > arrayStartIndex) {
+            const beforeArray = trimmedLine.substring(0, arrayStartIndex).trim();
+            const arrayContent = trimmedLine.substring(arrayStartIndex + 1, arrayEndIndex).trim();
+            const afterArray = trimmedLine.substring(arrayEndIndex + 1).trim();
+            
+            // Calculate the total length including indentation
+            const totalLength = indentStr.repeat(indentLevel).length + 
+              beforeArray.length + 2 + // 2 for ": " after property name
+              arrayContent.length + 2 + // 2 for " [" and "]"
+              afterArray.length;
 
-        // Split into name and value parts
-        const colonIndex = trimmedLine.indexOf(":");
-        const name = trimmedLine.substring(0, colonIndex);
-        const value = trimmedLine.substring(colonIndex + 1).trimLeft();
+            // If total length exceeds 80 characters, convert to multi-line
+            if (totalLength > 80) {
+              const formattedLine = indentStr.repeat(indentLevel) + beforeArray + " [";
+              
+              if (formattedLine !== originalLine) {
+                enhancedEdits.push(
+                  TextEdit.replace(
+                    this.createRange(i, 0, i, originalLine.length),
+                    formattedLine
+                  )
+                );
+              }
 
-        // Format with aligned colons
-        const padding = " ".repeat(maxNameLength - colonIndex);
-        const formattedLine =
-          indentStr.repeat(indentLevel) + name + padding + ": " + value;
+              // Process array elements
+              let j = i + 1;
+              let inArray = true;
+              const arrayItems = arrayContent.split(",").map(item => item.trim());
+              
+              // Add each array item on its own line
+              for (let k = 0; k < arrayItems.length; k++) {
+                const arrayLine = indentStr.repeat(indentLevel + 1) + arrayItems[k] + 
+                  (k < arrayItems.length - 1 ? "," : "");
+                
+                if (j < lines.length) {
+                  if (arrayLine !== lines[j]) {
+                    enhancedEdits.push(
+                      TextEdit.replace(
+                        this.createRange(j, 0, j, lines[j].length),
+                        arrayLine
+                      )
+                    );
+                  }
+                }
+                j++;
+              }
 
+              // Add closing bracket
+              const closingLine = indentStr.repeat(indentLevel) + "]" + afterArray;
+              if (j < lines.length && closingLine !== lines[j]) {
+                enhancedEdits.push(
+                  TextEdit.replace(
+                    this.createRange(j, 0, j, lines[j].length),
+                    closingLine
+                  )
+                );
+              }
+            } else {
+              // Keep single-line format if under 80 characters
+              const formattedArrayContent = arrayContent
+                .split(",")
+                .map(item => item.trim())
+                .join(", ");
+              
+              const formattedLine = indentStr.repeat(indentLevel) + 
+                beforeArray + " [" + formattedArrayContent + "]" + afterArray;
+              
+              if (formattedLine !== originalLine) {
+                enhancedEdits.push(
+                  TextEdit.replace(
+                    this.createRange(i, 0, i, originalLine.length),
+                    formattedLine
+                  )
+                );
+              }
+            }
+          } else {
+            // Multi-line array formatting
+            const beforeArray = trimmedLine.substring(0, arrayStartIndex).trim();
+            const formattedLine = indentStr.repeat(indentLevel) + beforeArray + " [";
+            
+            if (formattedLine !== originalLine) {
+              enhancedEdits.push(
+                TextEdit.replace(
+                  this.createRange(i, 0, i, originalLine.length),
+                  formattedLine
+                )
+              );
+            }
+
+            // Process array elements
+            let j = i + 1;
+            let inArray = true;
+            while (j < lines.length && inArray) {
+              const currentLine = lines[j];
+              const trimmedCurrentLine = currentLine.trim();
+              
+              if (trimmedCurrentLine.includes("]")) {
+                // Found closing bracket
+                const formattedClosingLine = indentStr.repeat(indentLevel) + "]";
+                if (formattedClosingLine !== currentLine) {
+                  enhancedEdits.push(
+                    TextEdit.replace(
+                      this.createRange(j, 0, j, currentLine.length),
+                      formattedClosingLine
+                    )
+                  );
+                }
+                inArray = false;
+              } else if (trimmedCurrentLine) {
+                // Array element
+                const formattedArrayLine = indentStr.repeat(indentLevel + 1) + trimmedCurrentLine;
+                if (formattedArrayLine !== currentLine) {
+                  enhancedEdits.push(
+                    TextEdit.replace(
+                      this.createRange(j, 0, j, currentLine.length),
+                      formattedArrayLine
+                    )
+                  );
+                }
+              }
+              j++;
+            }
+          }
+        }
+        continue;
+      }
+
+      // Handle property assignments
+      const colonIndex = trimmedLine.indexOf(":");
+      if (colonIndex !== -1) {
+        const name = trimmedLine.substring(0, colonIndex).trim();
+        const value = trimmedLine.substring(colonIndex + 1).trim();
+        
+        // Remove any extra spaces before the colon
+        const formattedLine = indentStr.repeat(indentLevel) + 
+          name + ": " + value;
+        
         if (formattedLine !== originalLine) {
           enhancedEdits.push(
             TextEdit.replace(
@@ -378,6 +471,65 @@ export class FormattingProvider {
             )
           );
         }
+        continue;
+      }
+
+      // Handle SQL blocks
+      if (trimmedLine.startsWith("sql:")) {
+        const sqlContent = trimmedLine.substring(4).trim();
+        if (sqlContent.startsWith("(")) {
+          // Multi-line SQL
+          const formattedLine = indentStr.repeat(indentLevel) + "sql:";
+          if (formattedLine !== originalLine) {
+            enhancedEdits.push(
+              TextEdit.replace(
+                this.createRange(i, 0, i, originalLine.length),
+                formattedLine
+              )
+            );
+          }
+        } else {
+          // Single-line SQL
+          const formattedLine = indentStr.repeat(indentLevel) + "sql: " + sqlContent;
+          if (formattedLine !== originalLine) {
+            enhancedEdits.push(
+              TextEdit.replace(
+                this.createRange(i, 0, i, originalLine.length),
+                formattedLine
+              )
+            );
+          }
+        }
+        continue;
+      }
+
+      // Handle closing braces
+      if (trimmedLine === "}") {
+        const formattedLine = indentStr.repeat(indentLevel) + "}";
+        if (formattedLine !== originalLine) {
+          enhancedEdits.push(
+            TextEdit.replace(
+              this.createRange(i, 0, i, originalLine.length),
+              formattedLine
+            )
+          );
+        }
+        continue;
+      }
+
+      // Handle opening braces
+      if (trimmedLine.endsWith("{")) {
+        const beforeBrace = trimmedLine.substring(0, trimmedLine.length - 1).trim();
+        const formattedLine = indentStr.repeat(indentLevel) + beforeBrace + " {";
+        if (formattedLine !== originalLine) {
+          enhancedEdits.push(
+            TextEdit.replace(
+              this.createRange(i, 0, i, originalLine.length),
+              formattedLine
+            )
+          );
+        }
+        continue;
       }
     }
 
