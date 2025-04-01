@@ -10,6 +10,52 @@
   },
   "main": "./client/out/extension",
   "contributes": {
+    "commands": [
+      {
+        "command": "looker.authenticate",
+        "title": "Authenticate",
+        "category": "Looker"
+      },
+      {
+        "command": "looker.resetToRemote",
+        "title": "Reset to Remote",
+        "category": "Looker"
+      },
+      {
+        "command": "looker.reauthenticate",
+        "title": "Reauthenticate",
+        "category": "Looker"
+      },
+      {
+        "command": "looker.selectProject",
+        "title": "Select Project",
+        "category": "Looker"
+      },
+      {
+        "command": "looker.syncBranches",
+        "title": "Sync Branches",
+        "category": "Looker"
+      }
+    ],
+    "configuration": {
+      "title": "Looker",
+      "properties": {
+        "looker.credentials": {
+          "type": "object",
+          "default": {
+            "base_url": "",
+            "client_id": "",
+            "client_secret": ""
+          },
+          "description": "Looker API credentials"
+        },
+        "looker.projectName": {
+          "type": "string",
+          "default": "",
+          "description": "Looker project name"
+        }
+      }
+    },
     "languages": [
       {
         "id": "lookml",
@@ -49,7 +95,7 @@
     "lint": "eslint src --ext ts"
   },
   "devDependencies": {
-    "@types/node": "^20.5.7",
+    "@types/node": "^20.17.28",
     "typescript": "^5.2.2"
   },
   "dependencies": {
