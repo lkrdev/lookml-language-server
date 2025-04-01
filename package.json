@@ -35,6 +35,11 @@
         "command": "looker.syncBranches",
         "title": "Sync Branches",
         "category": "Looker"
+      },
+      {
+        "command": "looker.openExplore",
+        "title": "Open Explore",
+        "category": "Looker"
       }
     ],
     "configuration": {
