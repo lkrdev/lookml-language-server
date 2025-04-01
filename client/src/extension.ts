@@ -233,7 +233,6 @@ export function activate(context: ExtensionContext) {
           command: 'looker.switchToBranchAndPull',
           arguments: [dev_branch.branch_name],
         })
-        console.log({switch_to_branch_and_pull})
       }
     })
   )
