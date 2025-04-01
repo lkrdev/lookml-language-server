@@ -1,10 +1,13 @@
 # must do
+
 [ ] type should be intellisense, different for measures and dimensions
+
 [ ] Autocomplete for `${current_field}`
+
 [ ] Explore this view button to open a selected explore in a browser tab
 
 
-
+# nice to have
 How do we show an explore in a vscode tab?
  - webview won't work, its an iframe and will only show production
  - should we build a lightweight web app and show it in webvew?
