@@ -115,13 +115,6 @@ connection.onInitialize((params: InitializeParams) => {
   return result;
 });
 
-const getSdk = () => {
-  if (!authService) {
-    throw new Error('Authentication service not initialized');
-  }
-  return authService.getSDK();
-}
-
 // Add command handlers
 connection.onExecuteCommand(async (params: ExecuteCommandParams) => {
   const { command, arguments: args } = params;
