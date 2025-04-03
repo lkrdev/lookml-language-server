@@ -284,13 +284,12 @@ export class DiagnosticsProvider {
         
         // Check if this is an explore and validate its name against views
         if (blockMatch[1] === "explore") {
-            console.log("includedViews", includedViews);
           const exploreName = blockMatch[2]; // This is the explore name like "inventory_items"
-          
+
           // Check if there's a view with this name and if it's included in this model
           const viewExists = this.workspaceModel.getView(exploreName);
           const viewIncluded = includedViews?.has(exploreName) || false;
-          
+
           if (viewExists && !viewIncluded) {
             // View exists but isn't included in this model
             diagnostics.push({
@@ -302,19 +301,19 @@ export class DiagnosticsProvider {
           } else if (!viewExists) {
             // View doesn't exist at all - check if explicit view_name is provided
             let hasExplicitView = false;
-            
+
             // Look ahead a few lines to check for view_name or from property
             const maxLookAhead = Math.min(i + 10, lines.length);
             for (let j = i + 1; j < maxLookAhead; j++) {
               const propLine = lines[j].trim();
               if (propLine === "}") break; // End of explore block
-              
+
               if (propLine.match(/^\s*(view_name|from):\s+/)) {
                 hasExplicitView = true;
                 break;
               }
             }
-            
+
             if (!hasExplicitView) {
               diagnostics.push({
                 severity: DiagnosticSeverity.Error,

@@ -152,9 +152,6 @@ export function activate(context: ExtensionContext) {
       // Use VS Code's API to find files
       const files = await vscode.workspace.findFiles(glob);
 
-      // Log what we found
-      outputChannel.appendLine(`Found ${files.length} matching files`);
-
       // Return absolute file paths
       return files.map((file) => file.fsPath);
     } catch (error) {
@@ -167,8 +164,6 @@ export function activate(context: ExtensionContext) {
     const { uri } = params;
 
     try {
-      outputChannel.appendLine(`Reading file content: ${uri}`);
-
       // Convert string URI to VS Code URI
       const fileUri = vscode.Uri.parse(uri);
 
