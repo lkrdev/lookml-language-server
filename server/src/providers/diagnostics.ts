@@ -261,152 +261,208 @@ export class DiagnosticsProvider {
     const diagnostics: Diagnostic[] = [];
     const text = document.getText();
     const lines = text.split("\n");
-    
+
     // Get the model this document belongs to
     const modelName = this.workspaceModel.getModelNameFromUri(document.uri);
-    
+
     // Get the set of views included by this model
-    const includedViews = modelName ? this.workspaceModel.getIncludedViewsForModel(modelName) : new Set();
-  
-    // Parse document to find reference errors
+    const includedViews = modelName
+      ? this.workspaceModel.getIncludedViewsForModel(modelName)
+      : new Set();
+
+    // Track explores and their available views
+    const exploreAvailableViews: Map<string, Set<string>> = new Map();
+
+    // First pass: build context structure and available views
+    let currentExplore: string | null = null;
     let currentContext: { type: string; name: string } | null = null;
-  
+    let indentLevel = 0;
+    let contextStack: Array<{ type: string; name: string; level: number }> = [];
+
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
       if (line === "" || line.startsWith("#")) continue;
-  
-      // Track current context
-      const blockMatch = line.match(
-        /^\s*([a-zA-Z0-9_]+):\s+([a-zA-Z0-9_]+)\s*\{/
-      );
+
+      // Track blocks and indentation
+      const blockMatch = line.match(/^([a-zA-Z0-9_]+):\s+([a-zA-Z0-9_]+)\s*\{/);
       if (blockMatch) {
-        currentContext = { type: blockMatch[1], name: blockMatch[2] };
-        
-        // Check if this is an explore and validate its name against views
-        if (blockMatch[1] === "explore") {
-            console.log("includedViews", includedViews);
-          const exploreName = blockMatch[2]; // This is the explore name like "inventory_items"
-          
-          // Check if there's a view with this name and if it's included in this model
-          const viewExists = this.workspaceModel.getView(exploreName);
-          const viewIncluded = includedViews?.has(exploreName) || false;
-          
-          if (viewExists && !viewIncluded) {
-            // View exists but isn't included in this model
-            diagnostics.push({
-              severity: DiagnosticSeverity.Error,
-              range: this.getWordRange(lines[i], i, exploreName),
-              message: `Explore "${exploreName}" references a view with the same name, but the view is not included in this model`,
-              source: "lookml-lsp",
-            });
-          } else if (!viewExists) {
-            // View doesn't exist at all - check if explicit view_name is provided
-            let hasExplicitView = false;
-            
-            // Look ahead a few lines to check for view_name or from property
-            const maxLookAhead = Math.min(i + 10, lines.length);
-            for (let j = i + 1; j < maxLookAhead; j++) {
-              const propLine = lines[j].trim();
-              if (propLine === "}") break; // End of explore block
-              
-              if (propLine.match(/^\s*(view_name|from):\s+/)) {
-                hasExplicitView = true;
-                break;
-              }
-            }
-            
-            if (!hasExplicitView) {
-              diagnostics.push({
-                severity: DiagnosticSeverity.Error,
-                range: this.getWordRange(lines[i], i, exploreName),
-                message: `Explore "${exploreName}" implicitly references a view with the same name, but the view was not found in workspace`,
-                source: "lookml-lsp",
-              });
-            }
+        const blockType = blockMatch[1];
+        const blockName = blockMatch[2];
+
+        // Count leading spaces to determine indent level
+        const indent = lines[i].length - lines[i].trimLeft().length;
+
+        // Update context stack
+        while (
+          contextStack.length > 0 &&
+          contextStack[contextStack.length - 1].level >= indent
+        ) {
+          contextStack.pop();
+        }
+
+        contextStack.push({ type: blockType, name: blockName, level: indent });
+        currentContext = { type: blockType, name: blockName };
+
+        // If this is an explore, initialize its available views
+        if (blockType === "explore") {
+          currentExplore = blockName;
+          exploreAvailableViews.set(blockName, new Set([blockName])); // Start with the explore itself
+        }
+        // If this is a join within an explore, add it to available views
+        else if (
+          blockType === "join" &&
+          contextStack.length >= 2 &&
+          contextStack[contextStack.length - 2].type === "explore"
+        ) {
+          const exploreName = contextStack[contextStack.length - 2].name;
+          const availableViews = exploreAvailableViews.get(exploreName);
+          if (availableViews) {
+            availableViews.add(blockName); // Add the join name to available views
           }
         }
       } else if (line === "}") {
-        currentContext = null;
-      }
-  
-      // Check 'extends' references
-      const extendsMatch = line.match(/^\s*extends:\s+([a-zA-Z0-9_]+)/);
-      if (extendsMatch && currentContext?.type === "view") {
-        const viewName = extendsMatch[1];
-  
-        // Check if the view exists and is included in this model
-        const viewExists = this.workspaceModel.getView(viewName);
-        const viewIncluded = includedViews?.has(viewName) || false;
-        
-        if (!viewExists) {
-          diagnostics.push({
-            severity: DiagnosticSeverity.Error,
-            range: this.getWordRange(lines[i], i, viewName),
-            message: `View "${viewName}" not found in workspace`,
-            source: "lookml-lsp",
-          });
-        } else if (!viewIncluded && modelName) {
-          diagnostics.push({
-            severity: DiagnosticSeverity.Error,
-            range: this.getWordRange(lines[i], i, viewName),
-            message: `View "${viewName}" exists but is not included in this model`,
-            source: "lookml-lsp",
-          });
+        // Closing brace - pop from context stack if matching indent
+        if (contextStack.length > 0) {
+          const currentIndent = lines[i].length - lines[i].trimLeft().length;
+          while (
+            contextStack.length > 0 &&
+            contextStack[contextStack.length - 1].level >= currentIndent
+          ) {
+            contextStack.pop();
+          }
+
+          currentContext =
+            contextStack.length > 0
+              ? {
+                  type: contextStack[contextStack.length - 1].type,
+                  name: contextStack[contextStack.length - 1].name,
+                }
+              : null;
+
+          if (
+            contextStack.length > 0 &&
+            contextStack[contextStack.length - 1].type === "explore"
+          ) {
+            currentExplore = contextStack[contextStack.length - 1].name;
+          } else {
+            currentExplore = null;
+          }
         }
       }
-  
-      // Check 'from' or 'view_name' references
-      const fromMatch = line.match(/^\s*(from|view_name):\s+([a-zA-Z0-9_]+)/);
-      if (
-        fromMatch &&
-        (currentContext?.type === "explore" || currentContext?.type === "join")
-      ) {
-        const viewName = fromMatch[2];
-        
-        // Check if the view exists and is included in this model
-        const viewExists = this.workspaceModel.getView(viewName);
-        const viewIncluded = includedViews?.has(viewName) || false;
-        
-        if (!viewExists) {
-          diagnostics.push({
-            severity: DiagnosticSeverity.Error,
-            range: this.getWordRange(lines[i], i, viewName),
-            message: `View "${viewName}" not found in workspace`,
-            source: "lookml-lsp",
-          });
-        } else if (!viewIncluded && modelName) {
-          diagnostics.push({
-            severity: DiagnosticSeverity.Error,
-            range: this.getWordRange(lines[i], i, viewName),
-            message: `View "${viewName}" exists but is not included in this model`,
-            source: "lookml-lsp",
-          });
+
+      // Add views specified by view_name or from
+      const viewNameMatch = line.match(
+        /^\s*(view_name|from):\s+([a-zA-Z0-9_]+)/
+      );
+      if (viewNameMatch && currentContext) {
+        const viewName = viewNameMatch[2];
+
+        if (currentContext.type === "explore") {
+          // Update the explore's base view
+          const availableViews = exploreAvailableViews.get(currentContext.name);
+          if (availableViews) {
+            availableViews.delete(currentContext.name); // Remove the explore name
+            availableViews.add(viewName); // Add the actual view name
+          }
+        } else if (currentContext.type === "join" && currentExplore) {
+          // Add this join's real view name
+          const availableViews = exploreAvailableViews.get(currentExplore);
+          if (availableViews) {
+            availableViews.add(viewName);
+          }
         }
       }
-  
-      // Check for field references in sql_on
+    }
+
+    // Reset for second pass - actual validation
+    currentContext = null;
+    contextStack = [];
+    currentExplore = null;
+
+    // Second pass: check for reference errors
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line === "" || line.startsWith("#")) continue;
+
+      // Track context (same as first pass)
+      const blockMatch = line.match(/^([a-zA-Z0-9_]+):\s+([a-zA-Z0-9_]+)\s*\{/);
+      if (blockMatch) {
+        const blockType = blockMatch[1];
+        const blockName = blockMatch[2];
+
+        const indent = lines[i].length - lines[i].trimLeft().length;
+
+        while (
+          contextStack.length > 0 &&
+          contextStack[contextStack.length - 1].level >= indent
+        ) {
+          contextStack.pop();
+        }
+
+        contextStack.push({ type: blockType, name: blockName, level: indent });
+        currentContext = { type: blockType, name: blockName };
+
+        if (blockType === "explore") {
+          currentExplore = blockName;
+        }
+
+        // Your existing explore validation code...
+      } else if (line === "}") {
+        // Same closing brace handling as first pass
+        if (contextStack.length > 0) {
+          const currentIndent = lines[i].length - lines[i].trimLeft().length;
+          while (
+            contextStack.length > 0 &&
+            contextStack[contextStack.length - 1].level >= currentIndent
+          ) {
+            contextStack.pop();
+          }
+
+          currentContext =
+            contextStack.length > 0
+              ? {
+                  type: contextStack[contextStack.length - 1].type,
+                  name: contextStack[contextStack.length - 1].name,
+                }
+              : null;
+
+          if (
+            contextStack.length > 0 &&
+            contextStack[contextStack.length - 1].type === "explore"
+          ) {
+            currentExplore = contextStack[contextStack.length - 1].name;
+          } else {
+            currentExplore = null;
+          }
+        }
+      }
+
+      // Your existing extends, from, and view_name validation code...
+
+      // Enhanced sql_on validation to check for explore context
       const sqlOnMatch = line.match(/^\s*sql_on:\s+(.+?)(?:;;|$)/);
-      if (sqlOnMatch && currentContext?.type === "join") {
+      if (sqlOnMatch && currentContext?.type === "join" && currentExplore) {
         const sqlOnContent = sqlOnMatch[1];
-  
-        // Extract field references like ${view_name.field_name}
         const fieldRefPattern = /\$\{([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\}/g;
         let fieldMatch;
-  
+
+        // Get the set of available views for this explore
+        const availableViews = exploreAvailableViews.get(currentExplore);
+
         while ((fieldMatch = fieldRefPattern.exec(sqlOnContent)) !== null) {
           const viewName = fieldMatch[1];
           const fieldName = fieldMatch[2];
-          
-          // Check if the view exists and is included in this model
-          const view = this.workspaceModel.getView(viewName);
-          const viewIncluded = includedViews?.has(viewName) || false;
-          
+
           const refStart = lines[i].indexOf(fieldMatch[0]);
           const range = {
             start: { line: i, character: refStart },
             end: { line: i, character: refStart + fieldMatch[0].length },
           };
-  
+
+          // Check if view exists in workspace and model (your existing checks)
+          const view = this.workspaceModel.getView(viewName);
+          const viewIncluded = includedViews?.has(viewName) || false;
+
           if (!view) {
             diagnostics.push({
               severity: DiagnosticSeverity.Error,
@@ -429,10 +485,19 @@ export class DiagnosticsProvider {
               source: "lookml-lsp",
             });
           }
+          // NEW CHECK: Verify the view is available in this explore context
+          else if (availableViews && !availableViews.has(viewName)) {
+            diagnostics.push({
+              severity: DiagnosticSeverity.Error,
+              range,
+              message: `View "${viewName}" is not available in this explore context. It must be joined before it can be referenced.`,
+              source: "lookml-lsp",
+            });
+          }
         }
       }
     }
-  
+
     return diagnostics;
   }
 

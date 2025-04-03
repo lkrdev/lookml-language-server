@@ -78,8 +78,9 @@ export class LookMLParser {
    */
   private async initTempDir(): Promise<void> {
     try {
-      this.tempFilesDir = await fs.mkdtemp(path.join(os.tmpdir(), 'lookml-lsp-'));
-      console.log(`Created temp directory: ${this.tempFilesDir}`);
+      this.tempFilesDir = await fs.mkdtemp(
+        path.join(os.tmpdir(), "lookml-lsp-")
+      );
     } catch (error) {
       console.error('Failed to create temp directory:', error);
     }
@@ -647,7 +648,6 @@ export class LookMLParser {
     if (this.tempFilesDir) {
       try {
         await fs.rm(this.tempFilesDir, { recursive: true, force: true });
-        console.log(`Cleaned up temp directory: ${this.tempFilesDir}`);
       } catch (error) {
         console.error('Failed to clean up temp directory:', error);
       }

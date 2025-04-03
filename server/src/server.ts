@@ -21,14 +21,22 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { CompletionProvider } from "./providers/completion";
 import { DiagnosticsProvider } from "./providers/diagnostics";
 import { FormattingProvider } from "./providers/formatting";
+
 import { HoverProvider } from "./providers/hover";
 
 // Import services
 import { AuthenticationService } from "./services/authentication";
 
 // Import models
-import { getCurrentBranch, handleGetDevBranch, handleGetExploreUrlAsMe, handleSwitchToBranchAndPull, handleSwitchToDev } from "./commands";
+import {
+  getCurrentBranch,
+  handleGetDevBranch,
+  handleGetExploreUrlAsMe,
+  handleSwitchToBranchAndPull,
+  handleSwitchToDev,
+} from "./commands";
 import { WorkspaceModel } from "./models/workspace";
+import { ContextDetector } from "./providers/completion/context-detector";
 
 // Create a connection for the server
 const connection = createConnection(ProposedFeatures.all);
@@ -38,26 +46,6 @@ let authService: AuthenticationService | null = null;
 
 // Set up logging
 connection.console.info(`LookML Language Server starting up`);
-
-// Create direct file logging for debugging
-try {
-  const logDir = path.join(__dirname, "..");
-  const logFile = path.join(logDir, "lookml-server.log");
-  fs.writeFileSync(logFile, `Server started at ${new Date().toISOString()}\n`);
-
-  function logToFile(message: string) {
-    try {
-      const timestamp = new Date().toISOString();
-      fs.appendFileSync(logFile, `[${timestamp}] ${message}\n`);
-    } catch (e) {
-      // Silent fail
-    }
-  }
-
-  logToFile("LookML Language Server initialized");
-} catch (e) {
-  // Silent fail - we don't want to prevent server startup if logging fails
-}
 
 // Create a text document manager
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
@@ -82,7 +70,7 @@ connection.onInitialize((params: InitializeParams) => {
       // Completion capabilities
       completionProvider: {
         resolveProvider: true,
-        triggerCharacters: [".", ":"],
+        triggerCharacters: [".", ":", "{"],
       },
       // Definition capabilities
       definitionProvider: true,
@@ -100,15 +88,15 @@ connection.onInitialize((params: InitializeParams) => {
       // Execute command capability
       executeCommandProvider: {
         commands: [
-          'looker.authenticate', 
-          'looker.remoteReset', 
-          'looker.switchToBranchAndPull', 
-          'looker.getCurrentBranch', 
-          'looker.getDevBranch', 
-          'looker.switchToDev',
-          'looker.createExploreUrlAsMe'
-        ]
-      }
+          "looker.authenticate",
+          "looker.remoteReset",
+          "looker.switchToBranchAndPull",
+          "looker.getCurrentBranch",
+          "looker.getDevBranch",
+          "looker.switchToDev",
+          "looker.createExploreUrlAsMe",
+        ],
+      },
     },
   };
 
@@ -120,78 +108,106 @@ connection.onExecuteCommand(async (params: ExecuteCommandParams) => {
   const { command, arguments: args } = params;
 
   switch (command) {
-    case 'looker.authenticate':
+    case "looker.authenticate":
       if (!args || args.length !== 3) {
-        throw new Error('Invalid arguments for authenticate command');
+        throw new Error("Invalid arguments for authenticate command");
       }
 
       const [base_url, client_id, client_secret] = args as string[];
-      
+
       try {
         if (!authService) {
-          authService = new AuthenticationService(base_url, client_id, client_secret);
+          authService = new AuthenticationService(
+            base_url,
+            client_id,
+            client_secret
+          );
         } else {
-         await  authService.updateCredentials(base_url, client_id, client_secret);
+          await authService.updateCredentials(
+            base_url,
+            client_id,
+            client_secret
+          );
         }
 
         const credentials = { base_url, client_id, client_secret };
         const success = await authService.testConnection(credentials);
-        
+
         if (success) {
-          await authService.updateCredentials(credentials.base_url, credentials.client_id, credentials.client_secret);
-          return { success: true, message: 'Successfully authenticated with Looker' };
+          await authService.updateCredentials(
+            credentials.base_url,
+            credentials.client_id,
+            credentials.client_secret
+          );
+          return {
+            success: true,
+            message: "Successfully authenticated with Looker",
+          };
         } else {
-          return { success: false, message: 'Failed to authenticate with Looker' };
+          return {
+            success: false,
+            message: "Failed to authenticate with Looker",
+          };
         }
       } catch (error) {
-        console.error('Authentication error:', error);
-        return { success: false, message: `Authentication failed: ${error instanceof Error ? error.message : String(error)}` };
+        console.error("Authentication error:", error);
+        return {
+          success: false,
+          message: `Authentication failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        };
       }
 
-    case 'looker.remoteReset':
+    case "looker.remoteReset":
       if (!args || args.length !== 1) {
-        throw new Error('Invalid arguments for remoteReset command');
+        throw new Error("Invalid arguments for remoteReset command");
       }
       const project_name = args[0] as string;
       await authService?.resetToRemote(project_name);
-      return { success: true, message: 'Successfully reset to remote' };
-    
-      case 'looker.getDevBranch':
+      return { success: true, message: "Successfully reset to remote" };
+
+    case "looker.getDevBranch":
       if (!args || args.length !== 1) {
-        throw new Error('Invalid arguments for getDevBranch command');
+        throw new Error("Invalid arguments for getDevBranch command");
       }
       const { branch_name } = await handleGetDevBranch(authService!, {
         project_name: args[0] as string,
-      })
+      });
       return { success: true, branch_name: branch_name };
-    
-    case 'looker.switchToDev':
+
+    case "looker.switchToDev":
       if (!args || args.length !== 2) {
-        throw new Error('Project name not found');
+        throw new Error("Project name not found");
       }
       const switch_args = {
         project_name: args[0] as string,
         branch_name: args[1] as string,
-      }
-      const branch_response = await handleGetDevBranch(authService!, switch_args)
+      };
+      const branch_response = await handleGetDevBranch(
+        authService!,
+        switch_args
+      );
       if (branch_response.branch_name !== switch_args.branch_name) {
-        throw new Error(`Branch name does not match. Looker ${switch_args.project_name} is on ${branch_response.branch_name} but ${ switch_args.branch_name} was expected`);
+        throw new Error(
+          `Branch name does not match. Looker ${switch_args.project_name} is on ${branch_response.branch_name} but ${switch_args.branch_name} was expected`
+        );
       } else {
-        return handleSwitchToDev(authService!, switch_args)
+        return handleSwitchToDev(authService!, switch_args);
       }
-    
-    case 'looker.getCurrentBranch' :
+
+    case "looker.getCurrentBranch":
       return getCurrentBranch();
 
-    case 'looker.switchToBranchAndPull':
+    case "looker.switchToBranchAndPull":
       if (!args || args.length !== 1) {
-        throw new Error('Invalid arguments for switchToBranchAndPull command');
+        throw new Error("Invalid arguments for switchToBranchAndPull command");
       }
       return handleSwitchToBranchAndPull(args[0] as string);
 
-    case 'looker.createExploreUrlAsMe':
+    case "looker.createExploreUrlAsMe":
       if (!args || args.length !== 3) {
-        throw new Error('Invalid arguments for createExploreUrlAsMe command');
+        throw new Error("Invalid arguments for createExploreUrlAsMe command");
       }
       return handleGetExploreUrlAsMe(authService!, {
         base_url: args[0] as string,
@@ -220,7 +236,6 @@ documents.onDidChangeContent((change) => {
 // Handle document closing
 documents.onDidClose((event) => {
   // Clean up the model
-  connection.console.info("Remove Document");
   workspaceModel.removeDocument(event.document.uri);
 
   // Clear diagnostics
@@ -232,7 +247,10 @@ connection.onCompletion((params) => {
   const document = documents.get(params.textDocument.uri);
   if (!document) return [];
 
-  return completionProvider.getCompletionItems(document, params);
+  const result = completionProvider.getCompletionItems(document, params);
+
+  console.log("result", result);
+  return result;
 });
 
 // Provide additional information for completion items
@@ -266,9 +284,8 @@ connection.onDefinition((params: DefinitionParams): Definition | null => {
   if (!modelName) return null;
 
   // Check if this view is included by the current model
-  console.log(`Model name: ${modelName}`);
   const includedViews = workspaceModel.getIncludedViewsForModel(modelName);
-  console.log(`Included Views:`, includedViews);
+
   if (!includedViews || !includedViews.has(word)) {
     // View exists but isn't included by this model - don't allow navigation
     return null;
