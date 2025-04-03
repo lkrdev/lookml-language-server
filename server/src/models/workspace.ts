@@ -47,6 +47,10 @@ import {
       return this.views;
     }
 
+    public getExploresByFile(uri: DocumentUri): string[] | undefined {
+      return this.exploresByFile.get(uri);
+    }
+
     /**
      * Get a specific view by name
      */

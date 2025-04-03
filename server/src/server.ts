@@ -249,6 +249,7 @@ connection.onCompletion((params) => {
 
   const result = completionProvider.getCompletionItems(document, params);
 
+  console.log("result", result);
   return result;
 });
 
