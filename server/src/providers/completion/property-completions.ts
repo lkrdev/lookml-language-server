@@ -132,19 +132,13 @@ export class PropertyCompletionProvider {
    * Get completions for properties and property values
    */
   public getCompletions(context: CompletionContext): CompletionItem[] {
+    console.log("context", context);
     if (context.type === "property") {
       return this.getPropertyCompletions(context.blockType);
     }
 
-    if (context.propertyName === "type") {
+    if (context.type === "type") {
       return this.getTypeCompletions(context.blockType);
-    }
-
-    if (context.type === "value") {
-      return this.getPropertyValueCompletions(
-        context.propertyName,
-        context.blockType
-      );
     }
 
     return [];
@@ -160,7 +154,7 @@ export class PropertyCompletionProvider {
       return this.commonProperties[blockType].map((prop) => ({
         label: prop,
         kind: CompletionItemKind.Property,
-        insertText: `${prop}: `,
+        insertText: `${prop}`,
         data: { type: "property", blockType },
       }));
     }
@@ -198,6 +192,7 @@ export class PropertyCompletionProvider {
    * Get type completions based on the current block type
    */
   private getTypeCompletions(blockType: string | undefined): CompletionItem[] {
+    console.log("blockType", blockType);
     if (
       blockType === "dimension" ||
       blockType === "filter" ||
@@ -242,14 +237,13 @@ export class PropertyCompletionProvider {
   /**
    * Get completions for property values
    */
-  private getPropertyValueCompletions(
+  public getPropertyValueCompletions(
     propertyName: string | undefined,
     blockType: string | undefined
   ): CompletionItem[] {
-    if (!propertyName) return [];
-
     console.log("propertyName", propertyName);
     console.log("blockType", blockType);
+    if (!propertyName) return [];
 
     switch (propertyName) {
       case "hidden":

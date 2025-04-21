@@ -40,16 +40,10 @@ export class CompletionProvider {
     try {
       // Detect context at current position
       const context = this.contextDetector.getContext(document, position);
-      console.log(
-        `Providing completions for context: ${JSON.stringify(
-          context
-        )} at line ${position.position.line}, character ${
-          position.position.character
-        }`
-      );
       
       let items: CompletionItem[] = [];
       
+      console.log("context.type", context.type);
       // Get completions based on context
       switch (context.type) {
         case 'empty':

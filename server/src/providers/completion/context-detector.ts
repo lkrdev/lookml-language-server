@@ -33,6 +33,7 @@ export class ContextDetector {
     document: TextDocument,
     params: TextDocumentPositionParams
   ): CompletionContext {
+    console.log("getContext", params);
     const position = params.position;
     const text = document.getText();
     const lines = text.split("\n");
@@ -41,10 +42,12 @@ export class ContextDetector {
 
     // Check if we're at the beginning of a line (suggesting block types)
     if (linePrefix.trim() === "") {
+      console.log("empty line");
       return { type: "empty", linePrefix };
     }
 
     const sqlOnTableAfterEqual = linePrefix.match(/.*sql_on:.*=\s*\$\{\s*$/);
+    console.log("sqlOnTableAfterEqual", sqlOnTableAfterEqual);
     if (sqlOnTableAfterEqual) {
       const joinContext = this.getJoinContext(document, position);
       return {
@@ -59,6 +62,8 @@ export class ContextDetector {
     const sqlOnFieldAfterEqual = linePrefix.match(
       /.*sql_on:.*=\s*\$\{([a-zA-Z0-9_]+)\.\s*$/
     );
+
+    console.log("sqlOnFieldAfterEqual", sqlOnFieldAfterEqual);
     if (sqlOnFieldAfterEqual) {
       const joinContext = this.getJoinContext(document, position);
       return {
@@ -71,6 +76,7 @@ export class ContextDetector {
     }
 
     const sqlOnTableStart = linePrefix.match(/.*sql_on:\s*\$\{\s*$/);
+    console.log("sqlOnTableStart", sqlOnTableStart);
     if (sqlOnTableStart) {
       const joinContext = this.getJoinContext(document, position);
       return {
@@ -85,6 +91,8 @@ export class ContextDetector {
     const sqlOnTableField = linePrefix.match(
       /.*sql_on:.*\$\{([a-zA-Z0-9_]+)\.\s*$/
     );
+
+    console.log("sqlOnTableField", sqlOnTableField);
     if (sqlOnTableField) {
       return {
         type: "field_reference",
@@ -96,6 +104,7 @@ export class ContextDetector {
 
     // Check if we're providing a value to a property
     const valueMatch = linePrefix.match(/^\s+([a-zA-Z0-9_]+):\s+(.*)$/);
+    console.log("valueMatch", valueMatch);
     if (valueMatch) {
       const inString = this.isInString(linePrefix);
       return {
@@ -107,12 +116,10 @@ export class ContextDetector {
       };
     }
 
-    // Check if we're inside a block and providing a property
-    const propertyColonMatch = linePrefix.match(/^\s+([a-zA-Z0-9_]+):$/);
-    if (propertyColonMatch) {
+    // Check if we're providing a value to the "type:" property
+    if (linePrefix.match(/^\s+type:\s*$/)) {
       return {
-        type: "value",
-        propertyName: propertyColonMatch[1],
+        type: "type",
         blockType: this.getCurrentBlockType(document, position),
         linePrefix,
       };
@@ -124,6 +131,17 @@ export class ContextDetector {
       return {
         type: "block",
         blockType: blockDeclaration[1],
+        linePrefix,
+      };
+    }
+
+    // Check if we're inside a block and providing a property
+    const propertyColonMatch = linePrefix.match(/^\s+([a-zA-Z0-9_]+):$/);
+    if (propertyColonMatch) {
+      return {
+        type: "value",
+        propertyName: propertyColonMatch[1],
+        blockType: this.getCurrentBlockType(document, position),
         linePrefix,
       };
     }
@@ -145,15 +163,6 @@ export class ContextDetector {
         exploreName: joinContext?.exploreName,
         joinName: joinContext?.joinName,
         viewName: joinContext?.viewName,
-        linePrefix,
-      };
-    }
-
-    // Check if we're providing a value to the "type:" property
-    if (linePrefix.match(/^\s+type:\s*$/)) {
-      return {
-        type: "type",
-        blockType: this.getCurrentBlockType(document, position),
         linePrefix,
       };
     }

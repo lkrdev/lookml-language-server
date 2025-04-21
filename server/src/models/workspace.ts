@@ -90,6 +90,7 @@ import {
      * Process a document and update the workspace model
      */
     public async updateDocument(document: TextDocument): Promise<void> {
+      //console.log(`Updating document: ${document.uri}`, document.version);
       const { uri, version = 0 } = document;
 
       // Skip if we've already processed this version
@@ -293,6 +294,7 @@ import {
 
         // Get the base directory
         const baseDir = this.getWorkspaceFolder(baseUri);
+
         if (!baseDir) {
           console.log(`Could not determine base directory for ${baseUri}`);
           return;

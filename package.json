@@ -100,7 +100,7 @@
     "lint": "eslint src --ext ts"
   },
   "devDependencies": {
-    "@types/node": "^20.17.28",
+    "@types/node": "^20.17.30",
     "typescript": "^5.2.2"
   },
   "dependencies": {

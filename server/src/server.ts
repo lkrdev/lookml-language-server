@@ -106,7 +106,6 @@ connection.onInitialize((params: InitializeParams) => {
 // Add command handlers
 connection.onExecuteCommand(async (params: ExecuteCommandParams) => {
   const { command, arguments: args } = params;
-
   switch (command) {
     case "looker.authenticate":
       if (!args || args.length !== 3) {
@@ -115,6 +114,7 @@ connection.onExecuteCommand(async (params: ExecuteCommandParams) => {
 
       const [base_url, client_id, client_secret] = args as string[];
 
+      console.log("base_url, client_id, client_secret", base_url, client_id, client_secret);
       try {
         if (!authService) {
           authService = new AuthenticationService(
@@ -235,8 +235,8 @@ documents.onDidChangeContent((change) => {
 
 // Handle document closing
 documents.onDidClose((event) => {
-  // Clean up the model
-  workspaceModel.removeDocument(event.document.uri);
+  // don't remove this as it prevents linking to the file
+  //workspaceModel.removeDocument(event.document.uri);
 
   // Clear diagnostics
   connection.sendDiagnostics({ uri: event.document.uri, diagnostics: [] });
@@ -248,8 +248,6 @@ connection.onCompletion((params) => {
   if (!document) return [];
 
   const result = completionProvider.getCompletionItems(document, params);
-
-  console.log("result", result);
   return result;
 });
 
