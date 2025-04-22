@@ -94,13 +94,6 @@ export class HoverProvider {
     const exploreHover = this.getExploreHover(word);
     const propertyHover = this.getPropertyHover(word, document, position);
 
-    if (keywordHover) console.log("keywordHover", keywordHover);
-    if (typeHover) console.log("typeHover", typeHover);
-    if (viewHover) console.log("viewHover", viewHover);
-    if (fieldHover) console.log("fieldHover", fieldHover);
-    if (exploreHover) console.log("exploreHover", exploreHover);
-    if (propertyHover) console.log("propertyHover", propertyHover);
-
     const hover =
       keywordHover ||
       typeHover ||
@@ -109,7 +102,6 @@ export class HoverProvider {
       exploreHover ||
       propertyHover;
 
-      console.log("hover", hover);
     return hover;
   }
 

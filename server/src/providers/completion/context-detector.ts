@@ -3,6 +3,7 @@ import {
   Position,
   TextDocumentPositionParams,
 } from "vscode-languageserver/node";
+import { WorkspaceModel } from "../../models/workspace";
 
 export interface CompletionContext {
   type:
@@ -14,7 +15,8 @@ export interface CompletionContext {
     | "type"
     | "value"
     | "field_reference"
-    | "table_reference";
+    | "table_reference"
+    | "dimension_reference";
   blockType?: string;
   propertyName?: string;
   viewName?: string;
@@ -23,9 +25,16 @@ export interface CompletionContext {
   linePrefix?: string;
   word?: string;
   inString?: boolean;
+  dimensionName?: string;
 }
 
 export class ContextDetector {
+  private workspaceModel: WorkspaceModel;
+
+  constructor(workspaceModel: WorkspaceModel) {
+    this.workspaceModel = workspaceModel;
+  }
+
   /**
    * Analyze document to determine completion context
    */
@@ -33,21 +42,29 @@ export class ContextDetector {
     document: TextDocument,
     params: TextDocumentPositionParams
   ): CompletionContext {
-    console.log("getContext", params);
     const position = params.position;
     const text = document.getText();
     const lines = text.split("\n");
     const line = lines[position.line];
     const linePrefix = line.substring(0, position.character);
 
+    if (this.workspaceModel.isViewFile(document)) {
+      const sqlFieldMatch = linePrefix.match(/.*sql:.*\$\{\s*([a-zA-Z0-9_]*)$/);
+      if (sqlFieldMatch) {
+        return {
+          type: "dimension_reference",
+          viewName: this.workspaceModel.getViewNameFromFile(document),
+          dimensionName: sqlFieldMatch[1],
+          linePrefix,
+        };
+      }
+    }
     // Check if we're at the beginning of a line (suggesting block types)
     if (linePrefix.trim() === "") {
-      console.log("empty line");
       return { type: "empty", linePrefix };
     }
 
     const sqlOnTableAfterEqual = linePrefix.match(/.*sql_on:.*=\s*\$\{\s*$/);
-    console.log("sqlOnTableAfterEqual", sqlOnTableAfterEqual);
     if (sqlOnTableAfterEqual) {
       const joinContext = this.getJoinContext(document, position);
       return {
@@ -63,7 +80,6 @@ export class ContextDetector {
       /.*sql_on:.*=\s*\$\{([a-zA-Z0-9_]+)\.\s*$/
     );
 
-    console.log("sqlOnFieldAfterEqual", sqlOnFieldAfterEqual);
     if (sqlOnFieldAfterEqual) {
       const joinContext = this.getJoinContext(document, position);
       return {
@@ -76,7 +92,6 @@ export class ContextDetector {
     }
 
     const sqlOnTableStart = linePrefix.match(/.*sql_on:\s*\$\{\s*$/);
-    console.log("sqlOnTableStart", sqlOnTableStart);
     if (sqlOnTableStart) {
       const joinContext = this.getJoinContext(document, position);
       return {
@@ -92,7 +107,6 @@ export class ContextDetector {
       /.*sql_on:.*\$\{([a-zA-Z0-9_]+)\.\s*$/
     );
 
-    console.log("sqlOnTableField", sqlOnTableField);
     if (sqlOnTableField) {
       return {
         type: "field_reference",
@@ -100,26 +114,22 @@ export class ContextDetector {
         blockType: this.getCurrentBlockType(document, position),
         linePrefix,
       };
-    }
-
-    // Check if we're providing a value to a property
-    const valueMatch = linePrefix.match(/^\s+([a-zA-Z0-9_]+):\s+(.*)$/);
-    console.log("valueMatch", valueMatch);
-    if (valueMatch) {
-      const inString = this.isInString(linePrefix);
-      return {
-        type: "value",
-        propertyName: valueMatch[1],
-        blockType: this.getCurrentBlockType(document, position),
-        inString,
-        linePrefix,
-      };
-    }
+    }    
 
     // Check if we're providing a value to the "type:" property
     if (linePrefix.match(/^\s+type:\s*$/)) {
       return {
         type: "type",
+        blockType: this.getCurrentBlockType(document, position),
+        linePrefix,
+      };
+    }
+
+     // Check if we're in a relationship context
+     if (linePrefix.match(/.*relationship:\s*$/)) {
+      return {
+        type: "value",
+        propertyName: "relationship",
         blockType: this.getCurrentBlockType(document, position),
         linePrefix,
       };
@@ -166,6 +176,18 @@ export class ContextDetector {
         linePrefix,
       };
     }
+
+    const valueMatch = linePrefix.match(/^\s+([a-zA-Z0-9_]+):\s+(.*)$/);
+    if (valueMatch) {
+      const inString = this.isInString(linePrefix);
+      return {
+        type: "value",
+        propertyName: valueMatch[1],
+        blockType: this.getCurrentBlockType(document, position),
+        inString,
+        linePrefix,
+      };
+    }     
 
     // Default context
     return {
@@ -338,3 +360,4 @@ export class ContextDetector {
     return undefined;
   }
 }
+ 

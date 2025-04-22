@@ -132,9 +132,12 @@ export class PropertyCompletionProvider {
    * Get completions for properties and property values
    */
   public getCompletions(context: CompletionContext): CompletionItem[] {
-    console.log("context", context);
     if (context.type === "property") {
       return this.getPropertyCompletions(context.blockType);
+    }
+
+    if (context.type === "value") {
+      return this.getPropertyValueCompletions(context);
     }
 
     if (context.type === "type") {
@@ -192,7 +195,6 @@ export class PropertyCompletionProvider {
    * Get type completions based on the current block type
    */
   private getTypeCompletions(blockType: string | undefined): CompletionItem[] {
-    console.log("blockType", blockType);
     if (
       blockType === "dimension" ||
       blockType === "filter" ||
@@ -238,14 +240,11 @@ export class PropertyCompletionProvider {
    * Get completions for property values
    */
   public getPropertyValueCompletions(
-    propertyName: string | undefined,
-    blockType: string | undefined
+    context: CompletionContext
   ): CompletionItem[] {
-    console.log("propertyName", propertyName);
-    console.log("blockType", blockType);
-    if (!propertyName) return [];
+    if (!context.propertyName) return [];
 
-    switch (propertyName) {
+    switch (context.propertyName) {
       case "hidden":
       case "primary_key":
         return ["yes", "no"].map((value) => ({
@@ -255,7 +254,7 @@ export class PropertyCompletionProvider {
         }));
 
       case "relationship":
-        if (blockType === "join") {
+        if (context.blockType === "join") {
           return this.joinRelationships.map((relationship) => ({
             label: ` ${relationship}`,
             kind: CompletionItemKind.EnumMember,

@@ -1,9 +1,10 @@
-import { TextDocument } from "vscode-languageserver-textdocument";
+import { Position, TextDocument } from "vscode-languageserver-textdocument";
 import {
   CompletionItem,
   TextDocumentPositionParams,
   CompletionList,
-  Connection
+  Connection,
+  CompletionItemKind
 } from "vscode-languageserver/node";
 import { WorkspaceModel } from "../../models/workspace";
 import { ContextDetector } from "./context-detector";
@@ -23,11 +24,26 @@ export class CompletionProvider {
 
   constructor(workspaceModel: WorkspaceModel) {
     this.workspaceModel = workspaceModel;
-    this.contextDetector = new ContextDetector();
+    this.contextDetector = new ContextDetector(workspaceModel);
     this.blockCompletions = new BlockCompletionProvider(workspaceModel);
     this.propertyCompletions = new PropertyCompletionProvider(workspaceModel);
     this.sqlCompletions = new SQLCompletionProvider(workspaceModel);
     this.documentationProvider = new DocumentationProvider(workspaceModel);
+  }
+
+  public isInJoinBlock(text: string, position: TextDocumentPositionParams): boolean {
+    const lines = text.split("\n");
+    let depth = 0;
+    for (let i = position.position.line; i >= 0; i--) {
+      const line = lines[i].trim();
+  
+      if (line.endsWith("}")) depth++;
+      if (line.endsWith("{")) depth--;
+  
+      if (line.startsWith("join:") && depth <= 0) return true;
+      if (line.startsWith("explore:") && depth <= 0) break;
+    }
+    return false;
   }
 
   /**
@@ -43,7 +59,6 @@ export class CompletionProvider {
       
       let items: CompletionItem[] = [];
       
-      console.log("context.type", context.type);
       // Get completions based on context
       switch (context.type) {
         case 'empty':
@@ -66,6 +81,11 @@ export class CompletionProvider {
           // When user types ${ to reference a table
           items = this.sqlCompletions.getTableReferenceCompletions(context);
           break;
+
+        case 'dimension_reference':
+          // When user types ${ to reference a table
+          items = this.sqlCompletions.getDimensionReferenceCompletions(context);
+          break;
           
         case 'field_reference':
           // When user types ${table_name. to reference fields
@@ -78,6 +98,14 @@ export class CompletionProvider {
           // Add snippets as fallback
           items = getAllSnippets();
           break;
+      }
+
+      if (this.isInJoinBlock(document.getText(), position) && context.linePrefix?.trim() === "") {
+        items.push(...[
+          { label: "type", kind: CompletionItemKind.Property },
+          { label: "sql_on", kind: CompletionItemKind.Property },
+          { label: "relationship", kind: CompletionItemKind.Property },
+        ]);
       }
       
       // If we're potentially in a snippet context, add all snippets

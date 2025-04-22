@@ -2,24 +2,18 @@ import { CompletionItem, CompletionItemKind } from "vscode-languageserver/node";
 import { WorkspaceModel } from "../../models/workspace";
 import { CompletionContext } from "./context-detector";
 import { createSnippet } from "./snippets";
-import { PropertyCompletionProvider } from "./property-completions";
 
 export class BlockCompletionProvider {
   private workspaceModel: WorkspaceModel;
-  private propertyCompletionProvider: PropertyCompletionProvider;
 
   constructor(workspaceModel: WorkspaceModel) {
     this.workspaceModel = workspaceModel;
-    this.propertyCompletionProvider = new PropertyCompletionProvider(
-      workspaceModel
-    );
   }
 
   /**
    * Get completions for block declarations
    */
   public getCompletions(context: CompletionContext): CompletionItem[] {
-    console.log("context.type2", context);
     if (context.type === "empty") {
       return this.getBlockTypeCompletions();
     }
@@ -77,13 +71,7 @@ export class BlockCompletionProvider {
 
     // Create a snippet for the given block type
     if (this.hasSnippet(context.blockType)) {
-      console.log("hasSnippet", context.blockType);
       return [createSnippet(context.blockType)];
-    }
-
-    console.log("context", context);
-    if (context.type === "block" && context.blockType) {
-      return this.propertyCompletionProvider.getPropertyValueCompletions(context.blockType, context.type);
     }
 
     // Otherwise, suggest a generic name completion
