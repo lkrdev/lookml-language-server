@@ -136,15 +136,12 @@ export class PropertyCompletionProvider {
       return this.getPropertyCompletions(context.blockType);
     }
 
-    if (context.propertyName === "type") {
-      return this.getTypeCompletions(context.blockType);
+    if (context.type === "value") {
+      return this.getPropertyValueCompletions(context);
     }
 
-    if (context.type === "value") {
-      return this.getPropertyValueCompletions(
-        context.propertyName,
-        context.blockType
-      );
+    if (context.type === "type") {
+      return this.getTypeCompletions(context.blockType);
     }
 
     return [];
@@ -160,7 +157,7 @@ export class PropertyCompletionProvider {
       return this.commonProperties[blockType].map((prop) => ({
         label: prop,
         kind: CompletionItemKind.Property,
-        insertText: `${prop}: `,
+        insertText: `${prop}`,
         data: { type: "property", blockType },
       }));
     }
@@ -242,16 +239,12 @@ export class PropertyCompletionProvider {
   /**
    * Get completions for property values
    */
-  private getPropertyValueCompletions(
-    propertyName: string | undefined,
-    blockType: string | undefined
+  public getPropertyValueCompletions(
+    context: CompletionContext
   ): CompletionItem[] {
-    if (!propertyName) return [];
+    if (!context.propertyName) return [];
 
-    console.log("propertyName", propertyName);
-    console.log("blockType", blockType);
-
-    switch (propertyName) {
+    switch (context.propertyName) {
       case "hidden":
       case "primary_key":
         return ["yes", "no"].map((value) => ({
@@ -261,7 +254,7 @@ export class PropertyCompletionProvider {
         }));
 
       case "relationship":
-        if (blockType === "join") {
+        if (context.blockType === "join") {
           return this.joinRelationships.map((relationship) => ({
             label: ` ${relationship}`,
             kind: CompletionItemKind.EnumMember,

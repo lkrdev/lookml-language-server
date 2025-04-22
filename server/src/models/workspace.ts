@@ -86,6 +86,29 @@ import {
       return this.models.get(name);
     }
 
+    public isViewFile(document: TextDocument): boolean {
+      return document.uri.includes(".view") && document.getText().includes("view:");
+    }
+  
+    public getViewNameFromFile(document: TextDocument): string | undefined {
+      const lines = document.getText().split("\n");
+      
+      // Scan first 10 lines for view declaration
+      for (let i = 0; i < Math.min(10, lines.length); i++) {
+        const line = lines[i].trim();
+        
+        // Skip empty lines and comments
+        if (line === "" || line.startsWith("#")) continue;
+        
+        const viewMatch = line.match(/^view:\s+([a-zA-Z0-9_]+)\s*\{/);
+        if (viewMatch) {
+          return viewMatch[1];
+        }
+      }
+      
+      return undefined;
+    }
+
     /**
      * Process a document and update the workspace model
      */
@@ -293,6 +316,7 @@ import {
 
         // Get the base directory
         const baseDir = this.getWorkspaceFolder(baseUri);
+
         if (!baseDir) {
           console.log(`Could not determine base directory for ${baseUri}`);
           return;

@@ -123,10 +123,12 @@ export class DiagnosticsProvider {
    */
   public validateDocument(document: TextDocument): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
-
+    const isView = this.workspaceModel.isViewFile(document);
     // Combine results from all validation checks
     diagnostics.push(...this.validateSyntax(document));
-    diagnostics.push(...this.validateReferences(document));
+    isView ?
+      diagnostics.push(...this.validateViewReferences(document)) :
+      diagnostics.push(...this.validateReferences(document));
     diagnostics.push(...this.validateProperties(document));
 
     return diagnostics;
@@ -261,7 +263,6 @@ export class DiagnosticsProvider {
     const diagnostics: Diagnostic[] = [];
     const text = document.getText();
     const lines = text.split("\n");
-
     // Get the model this document belongs to
     const modelName = this.workspaceModel.getModelNameFromUri(document.uri);
 
@@ -334,9 +335,9 @@ export class DiagnosticsProvider {
           currentContext =
             contextStack.length > 0
               ? {
-                  type: contextStack[contextStack.length - 1].type,
-                  name: contextStack[contextStack.length - 1].name,
-                }
+                type: contextStack[contextStack.length - 1].type,
+                name: contextStack[contextStack.length - 1].name,
+              }
               : null;
 
           if (
@@ -421,9 +422,9 @@ export class DiagnosticsProvider {
           currentContext =
             contextStack.length > 0
               ? {
-                  type: contextStack[contextStack.length - 1].type,
-                  name: contextStack[contextStack.length - 1].name,
-                }
+                type: contextStack[contextStack.length - 1].type,
+                name: contextStack[contextStack.length - 1].name,
+              }
               : null;
 
           if (
@@ -501,6 +502,105 @@ export class DiagnosticsProvider {
     return diagnostics;
   }
 
+  private validateViewReferences(document: TextDocument): Diagnostic[] {
+    const diagnostics: Diagnostic[] = [];
+    const text = document.getText();
+    const lines = text.split("\n");
+    const viewName = this.workspaceModel.getViewNameFromFile(document);
+
+    if (!viewName) {
+      return diagnostics;
+    }
+
+    let currentContext: { type: string; name: string } | null = null;
+    let contextStack: Array<{ type: string; name: string; level: number }> = [];
+
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line === "" || line.startsWith("#")) continue;
+
+      // Track context (same as first pass)
+      const blockMatch = line.match(/^([a-zA-Z0-9_]+):\s+([a-zA-Z0-9_]+)\s*\{/);
+      if (blockMatch) {
+        const blockType = blockMatch[1];
+        const blockName = blockMatch[2];
+
+        const indent = lines[i].length - lines[i].trimLeft().length;
+
+        while (
+          contextStack.length > 0 &&
+          contextStack[contextStack.length - 1].level >= indent
+        ) {
+          contextStack.pop();
+        }
+
+        contextStack.push({ type: blockType, name: blockName, level: indent });
+        currentContext = { type: blockType, name: blockName };
+
+        // Your existing explore validation code...
+      } else if (line === "}") {
+        // Same closing brace handling as first pass
+        if (contextStack.length > 0) {
+          const currentIndent = lines[i].length - lines[i].trimLeft().length;
+          while (
+            contextStack.length > 0 &&
+            contextStack[contextStack.length - 1].level >= currentIndent
+          ) {
+            contextStack.pop();
+          }
+
+          currentContext =
+            contextStack.length > 0
+              ? {
+                type: contextStack[contextStack.length - 1].type,
+                name: contextStack[contextStack.length - 1].name,
+              }
+              : null;
+        }
+      }
+      // Add validation for SQL properties in dimensions and measures
+      const dimensionOrMeasureSqlMatch = line.match(/^\s*sql:\s+(.+?)(?:;;|$)/);
+
+      if (dimensionOrMeasureSqlMatch && ["dimension", "measure"].includes(currentContext?.type || "")) {
+        const sqlContent = dimensionOrMeasureSqlMatch[1];
+        // Match any ${...} pattern that contains a dot
+        const fieldRefPattern = /\$\{([^}]+)\}/g;
+        let fieldMatch;
+
+        while ((fieldMatch = fieldRefPattern.exec(sqlContent)) !== null) {
+          let fieldName = fieldMatch[1];
+
+          const refStart = lines[i].indexOf(fieldMatch[0]);
+          const range = {
+            start: { line: i, character: refStart },
+            end: { line: i, character: refStart + fieldMatch[0].length },
+          };
+
+          if (fieldName === "TABLE") {
+            fieldName = fieldMatch.input.split(".")[1].trim();
+            range.start.character = range.start.character + 9;
+            range.end.character = range.start.character + fieldName.length - 1;
+          }
+
+          // Check if view exists in workspace and model
+          const view = this.workspaceModel.getView(viewName);
+
+          if (!view?.fields.has(fieldName)) {
+            diagnostics.push({
+              severity: DiagnosticSeverity.Error,
+              range,
+              message: `Field "${fieldName}" not found in view "${viewName}"`,
+              source: "lookml-lsp",
+            });
+          }
+        }
+      }
+    }
+
+    return diagnostics;
+  }
+
   /**
    * Validate properties based on their context
    */
@@ -542,10 +642,10 @@ export class DiagnosticsProvider {
             const typeValueMatch = line.match(/^\s*type:\s+([a-zA-Z0-9_]+)/);
             if (typeValueMatch) {
               const typeValue = typeValueMatch[1];
-              const validTypes = currentContext.type === "dimension" 
-                ? this.dimensionValidTypes 
+              const validTypes = currentContext.type === "dimension"
+                ? this.dimensionValidTypes
                 : this.measureValidTypes;
-              
+
               if (!validTypes.includes(typeValue)) {
                 diagnostics.push({
                   severity: DiagnosticSeverity.Warning,

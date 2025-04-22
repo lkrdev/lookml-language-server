@@ -1,4 +1,4 @@
-import { CompletionItem, CompletionItemKind, InsertTextFormat } from "vscode-languageserver/node";
+import { CompletionItem, CompletionItemKind, InsertTextFormat, MarkupKind } from "vscode-languageserver/node";
 import { CompletionContext } from "./context-detector";
 import { WorkspaceModel } from "../../models/workspace";
 
@@ -33,7 +33,7 @@ public getTableReferenceCompletions(context: CompletionContext): CompletionItem[
   const views = this.workspaceModel.getViews();
   
   // Add each view as a completion item
-  views.forEach((view, viewName) => {
+  views.forEach((_, viewName) => {
     items.push({
       label: viewName,
       kind: CompletionItemKind.Class,
@@ -73,7 +73,9 @@ public getFieldReferenceCompletions(viewName: string): CompletionItem[] {
   public getCompletions(context: CompletionContext): CompletionItem[] {
     if (context.type === 'sql') {
       return this.getSQLCompletions(context);
-    } else if (context.type === 'sql_on') {
+    }
+    
+    if (context.type === 'sql_on') {
       return this.getJoinSQLCompletions(context);
     }
     
@@ -133,6 +135,33 @@ public getFieldReferenceCompletions(viewName: string): CompletionItem[] {
     }
     
     return items;
+  }
+
+  public getDimensionReferenceCompletions(context: CompletionContext): CompletionItem[] {
+    const completions: CompletionItem[] = [];
+    
+    // Only provide completions in view files
+    if (!context.viewName) return completions;
+
+    // Get the current view
+    const view = this.workspaceModel.getView(context.viewName);
+    if (!view) return completions;
+
+    // Add all dimensions from the current view
+    for (const [dimensionName, dimension] of view.fields.entries()) {
+      completions.push({
+        label: dimensionName,
+        kind: CompletionItemKind.Field,
+        detail: `Dimension from ${context.viewName}`,
+        documentation: {
+          kind: MarkupKind.Markdown,
+          value: dimension.properties.get("description")?.value || `Dimension: ${dimensionName}`,
+        },
+        insertText: dimensionName,
+      });
+    }
+
+    return completions;
   }
   
   /**

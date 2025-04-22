@@ -3,6 +3,7 @@ import {
   Position,
   TextDocumentPositionParams,
 } from "vscode-languageserver/node";
+import { WorkspaceModel } from "../../models/workspace";
 
 export interface CompletionContext {
   type:
@@ -14,7 +15,8 @@ export interface CompletionContext {
     | "type"
     | "value"
     | "field_reference"
-    | "table_reference";
+    | "table_reference"
+    | "dimension_reference";
   blockType?: string;
   propertyName?: string;
   viewName?: string;
@@ -23,9 +25,16 @@ export interface CompletionContext {
   linePrefix?: string;
   word?: string;
   inString?: boolean;
+  dimensionName?: string;
 }
 
 export class ContextDetector {
+  private workspaceModel: WorkspaceModel;
+
+  constructor(workspaceModel: WorkspaceModel) {
+    this.workspaceModel = workspaceModel;
+  }
+
   /**
    * Analyze document to determine completion context
    */
@@ -39,6 +48,17 @@ export class ContextDetector {
     const line = lines[position.line];
     const linePrefix = line.substring(0, position.character);
 
+    if (this.workspaceModel.isViewFile(document)) {
+      const sqlFieldMatch = linePrefix.match(/.*sql:.*\$\{\s*([a-zA-Z0-9_]*)$/);
+      if (sqlFieldMatch) {
+        return {
+          type: "dimension_reference",
+          viewName: this.workspaceModel.getViewNameFromFile(document),
+          dimensionName: sqlFieldMatch[1],
+          linePrefix,
+        };
+      }
+    }
     // Check if we're at the beginning of a line (suggesting block types)
     if (linePrefix.trim() === "") {
       return { type: "empty", linePrefix };
@@ -59,6 +79,7 @@ export class ContextDetector {
     const sqlOnFieldAfterEqual = linePrefix.match(
       /.*sql_on:.*=\s*\$\{([a-zA-Z0-9_]+)\.\s*$/
     );
+
     if (sqlOnFieldAfterEqual) {
       const joinContext = this.getJoinContext(document, position);
       return {
@@ -85,6 +106,7 @@ export class ContextDetector {
     const sqlOnTableField = linePrefix.match(
       /.*sql_on:.*\$\{([a-zA-Z0-9_]+)\.\s*$/
     );
+
     if (sqlOnTableField) {
       return {
         type: "field_reference",
@@ -92,27 +114,22 @@ export class ContextDetector {
         blockType: this.getCurrentBlockType(document, position),
         linePrefix,
       };
-    }
+    }    
 
-    // Check if we're providing a value to a property
-    const valueMatch = linePrefix.match(/^\s+([a-zA-Z0-9_]+):\s+(.*)$/);
-    if (valueMatch) {
-      const inString = this.isInString(linePrefix);
+    // Check if we're providing a value to the "type:" property
+    if (linePrefix.match(/^\s+type:\s*$/)) {
       return {
-        type: "value",
-        propertyName: valueMatch[1],
+        type: "type",
         blockType: this.getCurrentBlockType(document, position),
-        inString,
         linePrefix,
       };
     }
 
-    // Check if we're inside a block and providing a property
-    const propertyColonMatch = linePrefix.match(/^\s+([a-zA-Z0-9_]+):$/);
-    if (propertyColonMatch) {
+     // Check if we're in a relationship context
+     if (linePrefix.match(/.*relationship:\s*$/)) {
       return {
         type: "value",
-        propertyName: propertyColonMatch[1],
+        propertyName: "relationship",
         blockType: this.getCurrentBlockType(document, position),
         linePrefix,
       };
@@ -124,6 +141,17 @@ export class ContextDetector {
       return {
         type: "block",
         blockType: blockDeclaration[1],
+        linePrefix,
+      };
+    }
+
+    // Check if we're inside a block and providing a property
+    const propertyColonMatch = linePrefix.match(/^\s+([a-zA-Z0-9_]+):$/);
+    if (propertyColonMatch) {
+      return {
+        type: "value",
+        propertyName: propertyColonMatch[1],
+        blockType: this.getCurrentBlockType(document, position),
         linePrefix,
       };
     }
@@ -149,14 +177,17 @@ export class ContextDetector {
       };
     }
 
-    // Check if we're providing a value to the "type:" property
-    if (linePrefix.match(/^\s+type:\s*$/)) {
+    const valueMatch = linePrefix.match(/^\s+([a-zA-Z0-9_]+):\s+(.*)$/);
+    if (valueMatch) {
+      const inString = this.isInString(linePrefix);
       return {
-        type: "type",
+        type: "value",
+        propertyName: valueMatch[1],
         blockType: this.getCurrentBlockType(document, position),
+        inString,
         linePrefix,
       };
-    }
+    }     
 
     // Default context
     return {
@@ -329,3 +360,4 @@ export class ContextDetector {
     return undefined;
   }
 }
+ 

@@ -12,6 +12,8 @@
     "url": "REPLACE_ME"
   },
   "dependencies": {
+    "@looker/sdk": "^25.4.0",
+    "@looker/sdk-node": "^25.4.0",
     "lookml-parser": "^6.11.1",
     "vscode": "^1.1.37",
     "vscode-languageserver": "^8.1.0",

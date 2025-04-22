@@ -13,8 +13,6 @@ import {
   TextDocumentSyncKind,
 } from "vscode-languageserver/node";
 
-import * as fs from "fs";
-import * as path from "path";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 // Import providers
@@ -36,19 +34,26 @@ import {
   handleSwitchToDev,
 } from "./commands";
 import { WorkspaceModel } from "./models/workspace";
-import { ContextDetector } from "./providers/completion/context-detector";
+import { Logger } from "./utils/logger";
 
 // Create a connection for the server
 const connection = createConnection(ProposedFeatures.all);
+
+// Initialize logger
+Logger.initialize(connection);
+const logger = Logger.getInstance();
 
 // Initialize services
 let authService: AuthenticationService | null = null;
 
 // Set up logging
-connection.console.info(`LookML Language Server starting up`);
+logger.info(`LookML Language Server starting up`);
 
 // Create a text document manager
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
+
+// Track document update promises
+const documentUpdatePromises = new Map<string, Promise<void>>();
 
 // Create the workspace model
 const workspaceModel = new WorkspaceModel({
@@ -62,7 +67,7 @@ const formattingProvider = new FormattingProvider();
 const hoverProvider = new HoverProvider(workspaceModel);
 
 connection.onInitialize((params: InitializeParams) => {
-  connection.console.info("LookML Language Server initializing");
+  logger.info("LookML Language Server initializing");
 
   const result: InitializeResult = {
     capabilities: {
@@ -106,7 +111,6 @@ connection.onInitialize((params: InitializeParams) => {
 // Add command handlers
 connection.onExecuteCommand(async (params: ExecuteCommandParams) => {
   const { command, arguments: args } = params;
-
   switch (command) {
     case "looker.authenticate":
       if (!args || args.length !== 3) {
@@ -150,7 +154,7 @@ connection.onExecuteCommand(async (params: ExecuteCommandParams) => {
           };
         }
       } catch (error) {
-        console.error("Authentication error:", error);
+        logger.error("Authentication error:", error);
         return {
           success: false,
           message: `Authentication failed: ${
@@ -221,13 +225,12 @@ connection.onExecuteCommand(async (params: ExecuteCommandParams) => {
 });
 
 // Handle document content changes
-documents.onDidChangeContent((change) => {
-  // Update the workspace model
-
-  workspaceModel.updateDocument(change.document);
+documents.onDidChangeContent(async (change) => {
+  const updatePromise = workspaceModel.updateDocument(change.document);
+  documentUpdatePromises.set(change.document.uri, updatePromise);
+  await updatePromise;
 
   setTimeout(() => {
-    // Run diagnostics
     const diagnostics = diagnosticsProvider.validateDocument(change.document);
     connection.sendDiagnostics({ uri: change.document.uri, diagnostics });
   }, 500);
@@ -235,21 +238,25 @@ documents.onDidChangeContent((change) => {
 
 // Handle document closing
 documents.onDidClose((event) => {
-  // Clean up the model
-  workspaceModel.removeDocument(event.document.uri);
+  // don't remove this as it prevents linking to the file
+  //workspaceModel.removeDocument(event.document.uri);
 
   // Clear diagnostics
   connection.sendDiagnostics({ uri: event.document.uri, diagnostics: [] });
 });
 
 // Provide autocompletion
-connection.onCompletion((params) => {
+connection.onCompletion(async (params) => {
   const document = documents.get(params.textDocument.uri);
   if (!document) return [];
 
-  const result = completionProvider.getCompletionItems(document, params);
+  // Wait for any pending document updates to complete
+  const updatePromise = documentUpdatePromises.get(document.uri);
+  if (updatePromise) {
+    await updatePromise;
+  }
 
-  console.log("result", result);
+  const result = await completionProvider.getCompletionItems(document, params);
   return result;
 });
 
@@ -266,7 +273,7 @@ connection.onHover((params) => {
   return hoverProvider.getHoverInfo(document, params.position);
 });
 
-// Provide go-to-definition
+// Provide go-to-definition with support for ${view.field} references
 connection.onDefinition((params: DefinitionParams): Definition | null => {
   const document = documents.get(params.textDocument.uri);
   if (!document) return null;
@@ -275,23 +282,61 @@ connection.onDefinition((params: DefinitionParams): Definition | null => {
   const word = getWordAtPosition(document, position);
   if (!word) return null;
 
-  // Find the view with this name
+  const lines = document.getText().split("\n");
+  if (position.line >= lines.length) return null;
+  const line = lines[position.line];
+
+  const refRegex = /\$\{([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\}/g;
+  let refMatch: RegExpExecArray | null;
+
+  while ((refMatch = refRegex.exec(line)) !== null) {
+    const [_, viewName, fieldName] = refMatch;
+    const matchStart = refMatch.index;
+    const viewStart = matchStart + 2; // after ${
+    const viewEnd = viewStart + viewName.length;
+    const fieldStart = viewEnd + 1; // after .
+    const fieldEnd = fieldStart + fieldName.length;
+    const cursor = position.character;
+
+    const modelName = workspaceModel.getModelNameFromUri(document.uri);
+    if (!modelName) continue;
+
+    const includedViews = workspaceModel.getIncludedViewsForModel(modelName);
+    if (!includedViews || !includedViews.has(viewName)) continue;
+
+    if (cursor >= viewStart && cursor <= viewEnd) {
+      const view = workspaceModel.getView(viewName);
+      if (view) {
+        return {
+          uri: view.location.uri,
+          range: view.location.range,
+        };
+      }
+    }
+
+    if (cursor >= fieldStart && cursor <= fieldEnd) {
+      const view = workspaceModel.getView(viewName);
+      if (!view) continue;
+      const field = view.fields.get(fieldName);
+      if (field) {
+        return {
+          uri: field.location.uri,
+          range: field.location.range,
+        };
+      }
+    }
+  }
+
+  // Fallback: treat word as a view name
   const view = workspaceModel.getView(word);
   if (!view) return null;
 
-  // Get the model name from this document
   const modelName = workspaceModel.getModelNameFromUri(document.uri);
   if (!modelName) return null;
 
-  // Check if this view is included by the current model
   const includedViews = workspaceModel.getIncludedViewsForModel(modelName);
+  if (!includedViews || !includedViews.has(word)) return null;
 
-  if (!includedViews || !includedViews.has(word)) {
-    // View exists but isn't included by this model - don't allow navigation
-    return null;
-  }
-
-  // View is included, allow navigation
   return {
     uri: view.location.uri,
     range: view.location.range,

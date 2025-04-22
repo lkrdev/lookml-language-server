@@ -77,7 +77,7 @@ export class HoverProvider {
     document: TextDocument,
     position: Position
   ): Hover | null {
-    const text = document.getText();
+    //const text = document.getText();
     const wordRange = this.getWordRangeAtPosition(document, position);
 
     if (!wordRange) {
@@ -87,13 +87,20 @@ export class HoverProvider {
     const word = document.getText(wordRange);
 
     // Check different contexts for hover information
-    let hover =
-      this.getKeywordHover(word) ||
-      this.getTypeHover(word) ||
-      this.getViewHover(word) ||
-      this.getFieldHover(word, document, position) ||
-      this.getExploreHover(word) ||
-      this.getPropertyHover(word, document, position);
+    const keywordHover = this.getKeywordHover(word);
+    const typeHover = this.getTypeHover(word);
+    const viewHover = this.getViewHover(word);
+    const fieldHover = this.getFieldHover(word, document, position);
+    const exploreHover = this.getExploreHover(word);
+    const propertyHover = this.getPropertyHover(word, document, position);
+
+    const hover =
+      keywordHover ||
+      typeHover ||
+      viewHover ||
+      fieldHover ||
+      exploreHover ||
+      propertyHover;
 
     return hover;
   }
@@ -237,6 +244,7 @@ export class HoverProvider {
     for (const [viewName, viewInfo] of this.workspaceModel
       .getViews()
       .entries()) {
+
       if (viewInfo.fields.has(word)) {
         const field = viewInfo.fields.get(word)!;
 

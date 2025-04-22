@@ -19,7 +19,7 @@ export class BlockCompletionProvider {
     }
 
     if (context.type === "block") {
-      return this.getBlockNameCompletions(context.blockType);
+      return this.getBlockNameCompletions(context);
     }
 
     return [];
@@ -30,20 +30,23 @@ export class BlockCompletionProvider {
    */
   private getBlockTypeCompletions(): CompletionItem[] {
     return [
-      "view",
-      "explore",
-      "model",
-      "dimension",
+      "derived_table",
       "dimension_group",
-      "measure",
-      "parameter",
+      "dimension",
+      "explore",
       "filter",
       "join",
-      "derived_table",
+      "measure",
+      "model",
+      "parameter",
+      "relationship",
+      "sql_on",
+      "type",
+      "view",
     ].map((keyword) => ({
       label: keyword,
       kind: CompletionItemKind.Class,
-      insertText: `${keyword}: `,
+      insertText: `${keyword}`,
       data: { type: "keyword" },
     }));
   }
@@ -52,31 +55,31 @@ export class BlockCompletionProvider {
    * Get completions for block names based on the block type
    */
   private getBlockNameCompletions(
-    blockType: string | undefined
+    context: CompletionContext
   ): CompletionItem[] {
-    if (!blockType) return [];
+    if (!context.blockType) return [];
 
     // For explore or join blocks, suggest view names
-    if (["explore", "join"].includes(blockType)) {
+    if (["explore", "join"].includes(context.blockType)) {
       return this.getViewNameCompletions(true);
     }
 
     // For 'extends', 'from', or 'view_name', suggest view names
-    if (["extends", "from", "view_name"].includes(blockType)) {
+    if (["extends", "from", "view_name"].includes(context.blockType)) {
       return this.getViewNameCompletions();
     }
 
     // Create a snippet for the given block type
-    if (this.hasSnippet(blockType)) {
-      return [createSnippet(blockType)];
+    if (this.hasSnippet(context.blockType)) {
+      return [createSnippet(context.blockType)];
     }
 
     // Otherwise, suggest a generic name completion
     return [
       {
-        label: `${blockType}_name`,
+        label: `${context.blockType}_name`,
         kind: CompletionItemKind.Value,
-        insertText: `${blockType}_name {`,
+        insertText: `${context.blockType}_name {`,
         data: { type: "block_name" },
       },
     ];
