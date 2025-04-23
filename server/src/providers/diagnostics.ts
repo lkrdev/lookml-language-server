@@ -403,10 +403,6 @@ export class DiagnosticsProvider {
         contextStack.push({ type: blockType, name: blockName, level: indent });
         currentContext = { type: blockType, name: blockName };
 
-        if (blockType === "explore") {
-          currentExplore = blockName;
-        }
-
         // Your existing explore validation code...
       } else if (line === "}") {
         // Same closing brace handling as first pass
@@ -506,7 +502,7 @@ export class DiagnosticsProvider {
     const diagnostics: Diagnostic[] = [];
     const text = document.getText();
     const lines = text.split("\n");
-    
+
     let currentContext: { type: string; name: string } | null = null;
     let contextStack: Array<{ type: string; name: string; level: number }> = [];
 
@@ -586,8 +582,8 @@ export class DiagnosticsProvider {
 
           if (fieldName.includes(".")) {
             const fieldNameSplit = fieldName.split(".");
-            viewName =  fieldNameSplit[0];
-            fieldName =  fieldNameSplit[1];
+            viewName = fieldNameSplit[0];
+            fieldName = fieldNameSplit[1];
           }
 
           // Check if view exists in workspace and model
@@ -615,28 +611,148 @@ export class DiagnosticsProvider {
     const diagnostics: Diagnostic[] = [];
     const text = document.getText();
     const lines = text.split("\n");
+    let contextStack: Array<{
+      type: string;
+      name: string;
+      level: number;
+      lineNumber: number;
+      parent?: {
+        type: string;
+        name: string;
+      }
+    }> = [];
 
-    // Track the current context stack for nested blocks
-    const contextStack: { type: string; name: string }[] = [];
+    // Define valid properties for different block types
+    type LookmlBlockType = "explore" | "join" | "dimension" | "measure";
+
+    const scalarProps: Record<LookmlBlockType, Set<string>> = {
+      explore: new Set([
+        "label", "description", "hidden", "from", "extends", "extension",
+        "sql_always_where", "sql_always_having", "access_filter", "group_label", "tags"
+      ]),
+      join: new Set([
+        "type", "relationship", "sql_on", "sql_where", "sql_having",
+        "required_joins", "fields", "from", "view_name", "outer_only", "required_access_grants"
+      ]),
+      dimension: new Set([
+        "type", "sql", "label", "group_label", "description", "hidden",
+        "view_label", "primary_key", "suggestable", "suggestions", "suggest_persist_for",
+        "tags", "required_fields", "drill_fields", "can_filter", "convert_tz", "datatype",
+        "html", "link", "order_by_field", "sql_distinct_key", "value_format", "value_format_name",
+        "bypass_suggest_restrictions", "full_suggestions", "alias", "map_layer_name"
+      ]),
+      measure: new Set([
+        "type", "sql", "label", "group_label", "description", "hidden",
+        "view_label", "filters", "drill_fields", "required_fields", "tags",
+        "value_format", "value_format_name", "html", "approximate", "approximate_threshold",
+        "can_filter", "convert_tz", "datatype", "direction", "link", "list_field",
+        "percentile", "precision", "sql_distinct_key", "required_access_grants", "alias"
+      ]),
+    };
+
+    const childBlocks: Record<LookmlBlockType, Set<string>> = {
+      explore: new Set(["join", "set", "always_filter", "conditionally_filter"]),
+      join: new Set([]),
+      dimension: new Set([]),
+      measure: new Set([]),
+    };
+
+    // Define valid parent blocks for each block type
+    const validParentBlocks: Record<LookmlBlockType, Set<string>> = {
+      explore: new Set(["model"]),  // explores must be in model files
+      join: new Set(["explore"]),
+      dimension: new Set(["view"]),
+      measure: new Set(["view"])
+    };
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
       if (line === "" || line.startsWith("#")) continue;
 
-      // Track context starts
-      const blockMatch = line.match(
-        /^\s*([a-zA-Z0-9_]+):\s+([a-zA-Z0-9_]+)\s*\{/
-      );
+      // Track context
+      const blockMatch = line.match(/^([a-zA-Z0-9_]+):\s+([a-zA-Z0-9_]+)\s*\{/);
       if (blockMatch) {
-        contextStack.push({ type: blockMatch[1], name: blockMatch[2] });
+        const blockType = blockMatch[1] as LookmlBlockType;
+        const blockName = blockMatch[2];
+        const indent = lines[i].length - lines[i].trimLeft().length;
+
+        while (
+          contextStack.length > 0 &&
+          contextStack[contextStack.length - 1].level >= indent
+        ) {
+          contextStack.pop();
+        }
+
+        const parent = contextStack.length > 0 ? { 
+          type: contextStack[contextStack.length - 1].type, 
+          name: contextStack[contextStack.length - 1].name 
+        } : { type: "model", name: "" }; // If no parent, assume we're in a model file
+
+        // Check if this block type is valid within its parent
+        if (validParentBlocks[blockType]) {
+          if (!validParentBlocks[blockType].has(parent.type)) {
+            const validParents = Array.from(validParentBlocks[blockType]).join(", ");
+            diagnostics.push({
+              severity: DiagnosticSeverity.Error,
+              range: this.getWordRange(lines[i], i, blockType),
+              message: `"${blockType}" blocks can only be defined inside ${validParents} files.`,
+              source: "lookml-lsp",
+            });
+          }
+        }
+        // Also check if parent allows this child
+        else if (parent && childBlocks[parent.type as LookmlBlockType]) {
+          if (!childBlocks[parent.type as LookmlBlockType].has(blockType)) {
+            const validChildren = Array.from(childBlocks[parent.type as LookmlBlockType]).join(", ");
+            diagnostics.push({
+              severity: DiagnosticSeverity.Error,
+              range: this.getWordRange(lines[i], i, blockType),
+              message: `"${blockType}" blocks cannot be defined inside ${parent.type}s. Valid blocks include: ${validChildren}.`,
+              source: "lookml-lsp",
+            });
+          }
+        }
+
+        contextStack.push({ 
+          type: blockType, 
+          name: blockName, 
+          level: indent,
+          lineNumber: i,
+          parent 
+        });
+      } else if (line === "}") {
+        if (contextStack.length > 0) {
+          const currentIndent = lines[i].length - lines[i].trimLeft().length;
+          while (
+            contextStack.length > 0 &&
+            contextStack[contextStack.length - 1].level >= currentIndent
+          ) {
+            contextStack.pop();
+          }
+        }
       }
-      // Track context ends
-      else if (line === "}" && contextStack.length > 0) {
-        contextStack.pop();
-      }
+
       // Validate properties
       else if (contextStack.length > 0) {
         const currentContext = contextStack[contextStack.length - 1];
+        const blockType = currentContext.type as LookmlBlockType;
+
+        // Check for invalid properties in any block type that has defined scalar properties
+        if (scalarProps[blockType]) {
+          const propertyMatch = line.match(/^\s*([a-zA-Z0-9_]+):\s*(?:[^{]|$)/);
+          if (propertyMatch) {
+            const propertyName = propertyMatch[1];
+            // Check if property is in the whitelist for this block type
+            if (!scalarProps[blockType].has(propertyName) && !childBlocks[blockType].has(propertyName)) {
+              diagnostics.push({
+                severity: DiagnosticSeverity.Error,
+                range: this.getWordRange(lines[i], i, propertyName),
+                message: `"${propertyName}" is not a valid property for ${blockType}s. Valid scalar properties include: ${Array.from(scalarProps[blockType]).join(", ")}. Valid block properties include: ${Array.from(childBlocks[blockType]).join(", ")}.`,
+                source: "lookml-lsp",
+              });
+            }
+          }
+        }
 
         // Check for required properties
         if (
