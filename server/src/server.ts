@@ -108,6 +108,12 @@ connection.onInitialize((params: InitializeParams) => {
   return result;
 });
 
+// Initialize workspace when server is ready
+connection.onInitialized(async () => {
+  logger.info("LookML Language Server initialized");
+  await workspaceModel.initialize();
+});
+
 // Add command handlers
 connection.onExecuteCommand(async (params: ExecuteCommandParams) => {
   const { command, arguments: args } = params;
