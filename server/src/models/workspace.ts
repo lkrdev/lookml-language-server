@@ -89,6 +89,10 @@ import {
     public isViewFile(document: TextDocument): boolean {
       return document.uri.includes(".view") && document.getText().includes("view:");
     }
+
+    public isModelFile(document: TextDocument): boolean {
+      return document.uri.includes(".model");
+    }
   
     public getViewNameFromFile(document: TextDocument): string | undefined {
       const lines = document.getText().split("\n");
@@ -107,6 +111,79 @@ import {
       }
       
       return undefined;
+    }
+
+    /**
+     * Initialize the workspace by finding and loading the model file
+     */
+    public async initialize(): Promise<void> {
+      try {
+        // Get the project root directory by looking for .git
+        const rootDir = process.cwd();
+        // Look for model files in the project root
+        const modelFiles = await this.connection.sendRequest<string[]>("lookml/findMatchingFiles", {
+          baseDir: rootDir,
+          pattern: "*.model"
+        });
+
+        if (modelFiles?.length > 0) {
+          await this.loadModelFile(modelFiles[0]);
+        }
+      } catch (error) {
+        console.error("Error initializing workspace:", error);
+      }
+    }
+
+    /**
+     * Load a model file and its includes
+     */
+    private async loadModelFile(modelFilePath: string): Promise<void> {
+      try {
+        const modelUri = URI.file(modelFilePath).toString();
+        const modelContent = await this.connection.sendRequest<{ content: string; uri: string }>("lookml/getFileContent", {
+          uri: modelUri
+        });
+
+        if (modelContent) {
+          const modelDocument = TextDocument.create(
+            modelUri,
+            "lookml",
+            0,
+            modelContent.content
+          );
+
+          // Parse the model file
+          const modelParseResult = await this.lookmlParser.parseDocument(modelDocument);
+          
+          // Update our model with the model parse results
+          this.views = new Map([...this.views, ...modelParseResult.views]);
+          this.explores = new Map([...this.explores, ...modelParseResult.explores]);
+          this.models = new Map([...this.models, ...modelParseResult.models]);
+
+          // Update file tracking for model
+          this.viewsByFile.set(modelUri, modelParseResult.viewNames);
+          this.exploresByFile.set(modelUri, modelParseResult.exploreNames);
+          this.modelsByFile.set(modelUri, modelParseResult.modelNames);
+
+          // Process includes for model files
+          if (modelParseResult.isModelFile && modelParseResult.modelName) {
+            const modelInfo = this.models.get(modelParseResult.modelName);
+            if (modelInfo && modelInfo.includes.length > 0) {
+              const modelName = modelParseResult.modelName;
+
+              // Clear existing included views for this model
+              this.includedViews.delete(modelName);
+
+              // Process each include
+              for (const include of modelInfo.includes) {
+                await this.resolveInclude(modelUri, include, modelName);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`Error loading model file ${modelFilePath}:`, error);
+      }
     }
 
     /**
@@ -137,20 +214,9 @@ import {
       this.exploresByFile.set(uri, parseResult.exploreNames);
       this.modelsByFile.set(uri, parseResult.modelNames);
 
-      // Process includes for model files
-      if (parseResult.isModelFile && parseResult.modelName) {
-        const modelInfo = this.models.get(parseResult.modelName);
-        if (modelInfo && modelInfo.includes.length > 0) {
-          const modelName = parseResult.modelName;
-
-          // Clear existing included views for this model
-          this.includedViews.delete(modelName);
-
-          // Process each include
-          modelInfo.includes.forEach((include) =>
-            this.resolveInclude(uri, include, modelName)
-          );
-        }
+      // If this is a model file and it's being saved (version > 0), load it and its includes
+      if (this.isModelFile(document) && version > 0) {
+        await this.loadModelFile(URI.parse(uri).fsPath);
       }
 
       // Mark this file as loaded

@@ -506,17 +506,18 @@ export class DiagnosticsProvider {
     const diagnostics: Diagnostic[] = [];
     const text = document.getText();
     const lines = text.split("\n");
-    const viewName = this.workspaceModel.getViewNameFromFile(document);
-
-    if (!viewName) {
-      return diagnostics;
-    }
-
+    
     let currentContext: { type: string; name: string } | null = null;
     let contextStack: Array<{ type: string; name: string; level: number }> = [];
 
 
     for (let i = 0; i < lines.length; i++) {
+      let viewName = this.workspaceModel.getViewNameFromFile(document);
+
+      if (!viewName) {
+        continue;
+      }
+
       const line = lines[i].trim();
       if (line === "" || line.startsWith("#")) continue;
 
@@ -581,6 +582,12 @@ export class DiagnosticsProvider {
             fieldName = fieldMatch.input.split(".")[1].trim();
             range.start.character = range.start.character + 9;
             range.end.character = range.start.character + fieldName.length - 1;
+          }
+
+          if (fieldName.includes(".")) {
+            const fieldNameSplit = fieldName.split(".");
+            viewName =  fieldNameSplit[0];
+            fieldName =  fieldNameSplit[1];
           }
 
           // Check if view exists in workspace and model
