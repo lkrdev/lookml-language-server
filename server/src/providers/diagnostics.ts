@@ -355,99 +355,21 @@ export class DiagnosticsProvider {
       const viewNameMatch = line.match(
         /^\s*(view_name|from):\s+([a-zA-Z0-9_]+)/
       );
-
       if (viewNameMatch && currentContext) {
-        const propertyName = viewNameMatch[1];
         const viewName = viewNameMatch[2];
-        const refStart = lines[i].indexOf(viewName);
-        const range = {
-          start: { line: i, character: refStart },
-          end: { line: i, character: refStart + viewName.length },
-        };
-
-        // Check if view exists in workspace
-        const view = this.workspaceModel.getView(viewName);
-        if (!view) {
-          diagnostics.push({
-            severity: DiagnosticSeverity.Error,
-            range,
-            message: `Referenced view "${viewName}" not found in workspace`,
-            source: "lookml-lsp",
-          });
-        } else if (!includedViews?.has(viewName) && modelName) {
-          // Check if view is included in the model
-          diagnostics.push({
-            severity: DiagnosticSeverity.Error,
-            range,
-            message: `View "${viewName}" exists but is not included in this model`,
-            source: "lookml-lsp",
-          });
-        }
-
-        // Check for duplicate view_name/from properties in the same block
-        let blockStart = i;
-        while (blockStart >= 0 && !lines[blockStart].trim().endsWith("{")) {
-          blockStart--;
-        }
-        let blockEnd = i;
-        while (blockEnd < lines.length && !lines[blockEnd].trim().startsWith("}")) {
-          blockEnd++;
-        }
-        let duplicateFound = false;
-        for (let j = blockStart; j <= blockEnd; j++) {
-          if (j !== i) {
-            const otherMatch = lines[j].match(/^\s*(view_name|from):\s+([a-zA-Z0-9_]+)/);
-            if (otherMatch) {
-              duplicateFound = true;
-              diagnostics.push({
-                severity: DiagnosticSeverity.Error,
-                range,
-                message: `Duplicate view specification: "${propertyName}" conflicts with "${otherMatch[1]}" property`,
-                source: "lookml-lsp",
-              });
-              break;
-            }
-          }
-        }
 
         if (currentContext.type === "explore") {
           // Update the explore's base view
           const availableViews = exploreAvailableViews.get(currentContext.name);
-          if (availableViews && !duplicateFound) {
+          if (availableViews) {
             availableViews.delete(currentContext.name); // Remove the explore name
             availableViews.add(viewName); // Add the actual view name
           }
         } else if (currentContext.type === "join" && currentExplore) {
           // Add this join's real view name
           const availableViews = exploreAvailableViews.get(currentExplore);
-          if (availableViews && !duplicateFound) {
+          if (availableViews) {
             availableViews.add(viewName);
-          }
-
-          // Check if the joined view is the same as the base view
-          const exploreInfo = this.workspaceModel.getExplore(currentExplore);
-          if (exploreInfo && exploreInfo.viewName === viewName) {
-            diagnostics.push({
-              severity: DiagnosticSeverity.Warning,
-              range,
-              message: `Joining view "${viewName}" which is already the base view of the explore. This may cause unintended behavior.`,
-              source: "lookml-lsp",
-            });
-          }
-
-          // Check if the view is already joined in this explore
-          let duplicateJoin = false;
-          for (const [joinName, joinInfo] of exploreInfo?.joins.entries() || []) {
-            if (joinName !== currentContext.name && joinInfo.viewName === viewName) {
-              duplicateJoin = true;
-              diagnostics.push({
-                severity: DiagnosticSeverity.Warning,
-                range,
-                message: `View "${viewName}" is already joined in this explore through join "${joinName}". Multiple joins to the same view may cause performance issues.`,
-                source: "lookml-lsp",
-              });
-              break;
-            }
           }
         }
       }
@@ -468,10 +390,6 @@ export class DiagnosticsProvider {
       if (blockMatch) {
         const blockType = blockMatch[1];
         const blockName = blockMatch[2];
-
-        if (blockType === "explore") {
-          currentExplore = blockName;
-        }
 
         const indent = lines[i].length - lines[i].trimLeft().length;
 
