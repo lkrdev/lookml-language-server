@@ -71,7 +71,13 @@ connection.onInitialize((params: InitializeParams) => {
 
   const result: InitializeResult = {
     capabilities: {
-      textDocumentSync: TextDocumentSyncKind.Incremental,
+      textDocumentSync: {
+        openClose: true,
+        change: TextDocumentSyncKind.Incremental,
+        save: {
+          includeText: false
+        }
+      },
       // Completion capabilities
       completionProvider: {
         resolveProvider: true,
@@ -111,7 +117,7 @@ connection.onInitialize((params: InitializeParams) => {
 // Initialize workspace when server is ready
 connection.onInitialized(async () => {
   logger.info("LookML Language Server initialized");
-  await workspaceModel.initialize();
+  await workspaceModel.loadModel();
 });
 
 // Add command handlers
@@ -240,6 +246,21 @@ documents.onDidChangeContent(async (change) => {
     const diagnostics = diagnosticsProvider.validateDocument(change.document);
     connection.sendDiagnostics({ uri: change.document.uri, diagnostics });
   }, 500);
+});
+
+documents.onDidSave(async (change) => {
+  logger.info("Document saved:", change.document.uri);
+
+  // Wait for any pending document updates to complete
+  const updatePromise = documentUpdatePromises.get(change.document.uri);
+  if (updatePromise) {
+    await updatePromise;
+  }
+
+  // Update the model and validate
+  await workspaceModel.loadModel();
+  const diagnostics = diagnosticsProvider.validateDocument(change.document);
+  connection.sendDiagnostics({ uri: change.document.uri, diagnostics });
 });
 
 // Handle document closing
