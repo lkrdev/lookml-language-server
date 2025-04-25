@@ -781,32 +781,6 @@ export class DiagnosticsProvider {
       }
     }> = [];
 
-    // Define valid line patterns
-    const validLinePatterns = [
-      /^\s*$/, // Empty line
-      /^\s*#.*$/, // Comment
-      /^\s*[a-zA-Z0-9_]+:\s*[^{]*;;$/, // SQL-like property with termination
-      /^\s*[a-zA-Z0-9_]+:\s*[^{]*$/, // Regular property declaration
-      /^\s*[a-zA-Z0-9_]+:\s*[a-zA-Z0-9_]+\s*\{/, // Block opening
-      /^\s*}/, // Block closing
-      /^\s*-\s+.*$/, // List item
-      /^\s*include:\s*".*"$/, // Include statement
-      /^\s*extends:\s*[a-zA-Z0-9_]+$/, // Extends statement
-      /^\s*\[/, // Opening square bracket for array
-      /^\s*\]/, // Closing square bracket for array
-      /^\s*[a-zA-Z0-9_]+,?$/, // Array item with optional comma
-    ];
-
-    // Special SQL-related properties that can contain SQL expressions
-    const sqlProperties = new Set([
-      'sql',
-      'sql_on',
-      'sql_where',
-      'sql_having',
-      'sql_always_where',
-      'sql_always_having'
-    ]);
-
     // Define valid properties for different block types
     type LookmlBlockType = "explore" | "join" | "dimension" | "measure";
 
@@ -852,69 +826,7 @@ export class DiagnosticsProvider {
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
-      if (line === "") continue;
-
-      // First check for SQL-related properties which have special syntax
-      const sqlPropMatch = line.match(/^\s*([a-zA-Z0-9_]+):\s*.*$/);
-      if (sqlPropMatch && sqlProperties.has(sqlPropMatch[1])) {
-        // For SQL properties, just check if it ends with ;; or is a multi-line SQL block
-        if (!line.endsWith(";;") && !line.match(/^\s*[a-zA-Z0-9_]+:\s*$/)) {
-          diagnostics.push({
-            severity: DiagnosticSeverity.Error,
-            range: {
-              start: { line: i, character: 0 },
-              end: { line: i, character: lines[i].length }
-            },
-            message: `SQL statement must end with ;; or be a multi-line SQL block`,
-            source: "lookml-lsp"
-          });
-        }
-        continue;
-      }
-
-      // Then check if line matches any other valid pattern
-      if (!validLinePatterns.some(pattern => pattern.test(lines[i]))) {
-        // Get the indent level to check if we're inside a block
-        const indent = lines[i].length - lines[i].trimLeft().length;
-        const currentContext = contextStack.length > 0 ? contextStack[contextStack.length - 1] : null;
-        
-        // If we have any non-empty, non-comment content
-        if (line !== "" && !line.startsWith("#")) {
-          // If we're at root level (no context), only allow block declarations
-          if (!currentContext && !line.match(/^[a-zA-Z0-9_]+:\s+[a-zA-Z0-9_]+\s*\{/)) {
-            diagnostics.push({
-              severity: DiagnosticSeverity.Error,
-              range: {
-                start: { line: i, character: 0 },
-                end: { line: i, character: lines[i].length }
-              },
-              message: `Invalid line format at root level. Only block declarations (like "view: name {" or "explore: name {") are allowed.`,
-              source: "lookml-lsp"
-            });
-          }
-          // If we're inside a block, ensure proper indentation and format
-          else if (currentContext) {
-            // Check if this line is properly indented relative to its parent block
-            const expectedIndent = currentContext.level + 2; // We expect 2 spaces more than the block declaration
-            if (indent !== expectedIndent || !line.includes(":")) {
-              const contextMsg = ` inside ${currentContext.type} block`;
-              const suggestion = line.match(/^[a-zA-Z0-9_]+$/) ? 
-                ` Did you mean to add a property? Try "${line}:" instead.` : 
-                "";
-              
-              diagnostics.push({
-                severity: DiagnosticSeverity.Error,
-                range: {
-                  start: { line: i, character: 0 },
-                  end: { line: i, character: lines[i].length }
-                },
-                message: `Invalid line format${contextMsg}. Lines must be property declarations (prop: value), block declarations (block: name {), or list items.${suggestion}`,
-                source: "lookml-lsp"
-              });
-            }
-          }
-        }
-      }
+      if (line === "" || line.startsWith("#")) continue;
 
       // Track context
       const blockMatch = line.match(/^([a-zA-Z0-9_]+):\s+([a-zA-Z0-9_]+)\s*\{/);
