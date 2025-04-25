@@ -14,7 +14,7 @@ import {
 } from "vscode-languageserver/node";
 
 import { TextDocument } from "vscode-languageserver-textdocument";
-
+import { parseFiles } from "lookml-parser";
 // Import providers
 import { CompletionProvider } from "./providers/completion";
 import { DiagnosticsProvider } from "./providers/diagnostics";
@@ -71,7 +71,13 @@ connection.onInitialize((params: InitializeParams) => {
 
   const result: InitializeResult = {
     capabilities: {
-      textDocumentSync: TextDocumentSyncKind.Incremental,
+      textDocumentSync: {
+        openClose: true,
+        change: TextDocumentSyncKind.Incremental,
+        save: {
+          includeText: false
+        }
+      },
       // Completion capabilities
       completionProvider: {
         resolveProvider: true,
@@ -111,7 +117,38 @@ connection.onInitialize((params: InitializeParams) => {
 // Initialize workspace when server is ready
 connection.onInitialized(async () => {
   logger.info("LookML Language Server initialized");
-  await workspaceModel.initialize();
+  await workspaceModel.loadModel();
+
+
+  // @ts-ignore
+  /*const result =  await parseFiles({
+    // @ts-ignore
+		source:  "*.{view,model,explore}.lkml",
+    // @ts-ignore  
+		fileOutput: "by-name", // or "array" or "by-name". "by-name" is recommended. z
+    // @ts-ignore
+		transformations: {},	
+		globOptions: {},
+		readFileOptions: {encoding:"utf-8"},
+		readFileConcurrency: 4,
+		console: console
+	});*/
+});
+
+// Handle document saves
+documents.onDidSave(async (change) => {
+  logger.info("Document saved:", change.document.uri);
+  
+  // Wait for any pending document updates to complete
+  const updatePromise = documentUpdatePromises.get(change.document.uri);
+  if (updatePromise) {
+    await updatePromise;
+  }
+
+  // Update the model and validate
+  await workspaceModel.loadModel();
+  const diagnostics = diagnosticsProvider.validateDocument(change.document);
+  connection.sendDiagnostics({ uri: change.document.uri, diagnostics });
 });
 
 // Add command handlers
@@ -232,6 +269,8 @@ connection.onExecuteCommand(async (params: ExecuteCommandParams) => {
 
 // Handle document content changes
 documents.onDidChangeContent(async (change) => {
+  logger.info("onDidChangeContent");
+
   const updatePromise = workspaceModel.updateDocument(change.document);
   documentUpdatePromises.set(change.document.uri, updatePromise);
   await updatePromise;

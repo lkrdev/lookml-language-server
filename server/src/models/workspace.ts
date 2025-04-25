@@ -116,7 +116,7 @@ import {
     /**
      * Initialize the workspace by finding and loading the model file
      */
-    public async initialize(): Promise<void> {
+    public async loadModel(): Promise<void> {
       try {
         // Get the project root directory by looking for .git
         const rootDir = process.cwd();
