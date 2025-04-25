@@ -199,7 +199,6 @@ export class DiagnosticsProvider {
       "model",
       "measure",
       "dimension",
-      "dimension_group",
       "parameter",
       "filter",
       "join",
@@ -211,68 +210,6 @@ export class DiagnosticsProvider {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
       if (line === "" || line.startsWith("#")) continue;
-
-      // Check for invalid property declarations
-      const propertyDeclMatch = line.match(/^\s*([^:]+):\s*([^{]*?)(?:;;|\s*$)/);
-      if (propertyDeclMatch && !propertyDeclMatch[1].match(/^[a-zA-Z0-9_]+$/)) {
-        diagnostics.push({
-          severity: DiagnosticSeverity.Error,
-          range: {
-            start: { line: i, character: lines[i].indexOf(propertyDeclMatch[1]) },
-            end: { line: i, character: lines[i].indexOf(propertyDeclMatch[1]) + propertyDeclMatch[1].length },
-          },
-          message: `Invalid property name "${propertyDeclMatch[1]}". Property names must contain only letters, numbers, and underscores.`,
-          source: "lookml-lsp",
-        });
-      }
-
-      // Check for incorrect indentation markers (dots, dashes, etc.)
-      const incorrectIndentMatch = line.match(/^(\s*[.|-]+)([a-zA-Z0-9_]+)\s+/);
-      if (incorrectIndentMatch) {
-        const [_, indentMarker, propertyName] = incorrectIndentMatch;
-        diagnostics.push({
-          severity: DiagnosticSeverity.Error,
-          range: {
-            start: { line: i, character: lines[i].indexOf(indentMarker) },
-            end: { line: i, character: lines[i].indexOf(propertyName) + propertyName.length },
-          },
-          message: `Invalid indentation "${indentMarker.trim()}". Use spaces for indentation and a colon after the property name. Change to: "${propertyName}:"`,
-          source: "lookml-lsp",
-        });
-      }
-
-      // Check for property declarations missing colons
-      const missingColonMatch = line.match(/^\s*([a-zA-Z0-9_]+)\s+([^{:\n]+)$/);
-      if (missingColonMatch && !line.includes("{")) {
-        const [_, propertyName, propertyValue] = missingColonMatch;
-        diagnostics.push({
-          severity: DiagnosticSeverity.Error,
-          range: {
-            start: { line: i, character: lines[i].indexOf(propertyName) },
-            end: { line: i, character: lines[i].indexOf(propertyValue) + propertyValue.length },
-          },
-          message: `Missing colon after property name. Change to: "${propertyName}: ${propertyValue}"`,
-          source: "lookml-lsp",
-        });
-      }
-
-      // Check for common LookML property names that might be missing colons
-      const commonProperties = ["from", "view_name", "type", "sql", "relationship", "fields"];
-      for (const prop of commonProperties) {
-        const noColonMatch = line.match(new RegExp(`^\\s*\\.*(${prop})\\s+([^{:\\n]+)$`));
-        if (noColonMatch) {
-          const [_, propertyName, propertyValue] = noColonMatch;
-          diagnostics.push({
-            severity: DiagnosticSeverity.Error,
-            range: {
-              start: { line: i, character: lines[i].indexOf(propertyName) },
-              end: { line: i, character: lines[i].indexOf(propertyValue) + propertyValue.length },
-            },
-            message: `Missing colon after "${propertyName}". Correct syntax is: "${propertyName}: ${propertyValue}"`,
-            source: "lookml-lsp",
-          });
-        }
-      }
 
       // Check if a block declaration is missing a colon
       const incorrectBlockMatch = line.match(blockRegex);
@@ -297,20 +234,6 @@ export class DiagnosticsProvider {
             },
           },
           message: `Missing colon in block definition. Use "${incorrectBlockMatch[1]}: ${incorrectBlockMatch[2]}" instead`,
-          source: "lookml-lsp",
-        });
-      }
-
-      // Check for invalid block types
-      const blockTypeMatch = line.match(/^\s*([a-zA-Z0-9_]+):\s*[a-zA-Z0-9_]+\s*\{/);
-      if (blockTypeMatch && !validBlockTypes.includes(blockTypeMatch[1])) {
-        diagnostics.push({
-          severity: DiagnosticSeverity.Error,
-          range: {
-            start: { line: i, character: lines[i].indexOf(blockTypeMatch[1]) },
-            end: { line: i, character: lines[i].indexOf(blockTypeMatch[1]) + blockTypeMatch[1].length },
-          },
-          message: `Invalid block type "${blockTypeMatch[1]}". Valid block types are: ${validBlockTypes.join(", ")}.`,
           source: "lookml-lsp",
         });
       }
