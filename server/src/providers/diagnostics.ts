@@ -199,6 +199,7 @@ export class DiagnosticsProvider {
       "model",
       "measure",
       "dimension",
+      "dimension_group",
       "parameter",
       "filter",
       "join",
@@ -210,6 +211,68 @@ export class DiagnosticsProvider {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
       if (line === "" || line.startsWith("#")) continue;
+
+      // Check for invalid property declarations
+      const propertyDeclMatch = line.match(/^\s*([^:]+):\s*([^{]*?)(?:;;|\s*$)/);
+      if (propertyDeclMatch && !propertyDeclMatch[1].match(/^[a-zA-Z0-9_]+$/)) {
+        diagnostics.push({
+          severity: DiagnosticSeverity.Error,
+          range: {
+            start: { line: i, character: lines[i].indexOf(propertyDeclMatch[1]) },
+            end: { line: i, character: lines[i].indexOf(propertyDeclMatch[1]) + propertyDeclMatch[1].length },
+          },
+          message: `Invalid property name "${propertyDeclMatch[1]}". Property names must contain only letters, numbers, and underscores.`,
+          source: "lookml-lsp",
+        });
+      }
+
+      // Check for incorrect indentation markers (dots, dashes, etc.)
+      const incorrectIndentMatch = line.match(/^(\s*[.|-]+)([a-zA-Z0-9_]+)\s+/);
+      if (incorrectIndentMatch) {
+        const [_, indentMarker, propertyName] = incorrectIndentMatch;
+        diagnostics.push({
+          severity: DiagnosticSeverity.Error,
+          range: {
+            start: { line: i, character: lines[i].indexOf(indentMarker) },
+            end: { line: i, character: lines[i].indexOf(propertyName) + propertyName.length },
+          },
+          message: `Invalid indentation "${indentMarker.trim()}". Use spaces for indentation and a colon after the property name. Change to: "${propertyName}:"`,
+          source: "lookml-lsp",
+        });
+      }
+
+      // Check for property declarations missing colons
+      const missingColonMatch = line.match(/^\s*([a-zA-Z0-9_]+)\s+([^{:\n]+)$/);
+      if (missingColonMatch && !line.includes("{")) {
+        const [_, propertyName, propertyValue] = missingColonMatch;
+        diagnostics.push({
+          severity: DiagnosticSeverity.Error,
+          range: {
+            start: { line: i, character: lines[i].indexOf(propertyName) },
+            end: { line: i, character: lines[i].indexOf(propertyValue) + propertyValue.length },
+          },
+          message: `Missing colon after property name. Change to: "${propertyName}: ${propertyValue}"`,
+          source: "lookml-lsp",
+        });
+      }
+
+      // Check for common LookML property names that might be missing colons
+      const commonProperties = ["from", "view_name", "type", "sql", "relationship", "fields"];
+      for (const prop of commonProperties) {
+        const noColonMatch = line.match(new RegExp(`^\\s*\\.*(${prop})\\s+([^{:\\n]+)$`));
+        if (noColonMatch) {
+          const [_, propertyName, propertyValue] = noColonMatch;
+          diagnostics.push({
+            severity: DiagnosticSeverity.Error,
+            range: {
+              start: { line: i, character: lines[i].indexOf(propertyName) },
+              end: { line: i, character: lines[i].indexOf(propertyValue) + propertyValue.length },
+            },
+            message: `Missing colon after "${propertyName}". Correct syntax is: "${propertyName}: ${propertyValue}"`,
+            source: "lookml-lsp",
+          });
+        }
+      }
 
       // Check if a block declaration is missing a colon
       const incorrectBlockMatch = line.match(blockRegex);
@@ -234,6 +297,20 @@ export class DiagnosticsProvider {
             },
           },
           message: `Missing colon in block definition. Use "${incorrectBlockMatch[1]}: ${incorrectBlockMatch[2]}" instead`,
+          source: "lookml-lsp",
+        });
+      }
+
+      // Check for invalid block types
+      const blockTypeMatch = line.match(/^\s*([a-zA-Z0-9_]+):\s*[a-zA-Z0-9_]+\s*\{/);
+      if (blockTypeMatch && !validBlockTypes.includes(blockTypeMatch[1])) {
+        diagnostics.push({
+          severity: DiagnosticSeverity.Error,
+          range: {
+            start: { line: i, character: lines[i].indexOf(blockTypeMatch[1]) },
+            end: { line: i, character: lines[i].indexOf(blockTypeMatch[1]) + blockTypeMatch[1].length },
+          },
+          message: `Invalid block type "${blockTypeMatch[1]}". Valid block types are: ${validBlockTypes.join(", ")}.`,
           source: "lookml-lsp",
         });
       }
@@ -355,21 +432,99 @@ export class DiagnosticsProvider {
       const viewNameMatch = line.match(
         /^\s*(view_name|from):\s+([a-zA-Z0-9_]+)/
       );
+
       if (viewNameMatch && currentContext) {
+        const propertyName = viewNameMatch[1];
         const viewName = viewNameMatch[2];
+        const refStart = lines[i].indexOf(viewName);
+        const range = {
+          start: { line: i, character: refStart },
+          end: { line: i, character: refStart + viewName.length },
+        };
+
+        // Check if view exists in workspace
+        const view = this.workspaceModel.getView(viewName);
+        if (!view) {
+          diagnostics.push({
+            severity: DiagnosticSeverity.Error,
+            range,
+            message: `Referenced view "${viewName}" not found in workspace`,
+            source: "lookml-lsp",
+          });
+        } else if (!includedViews?.has(viewName) && modelName) {
+          // Check if view is included in the model
+          diagnostics.push({
+            severity: DiagnosticSeverity.Error,
+            range,
+            message: `View "${viewName}" exists but is not included in this model`,
+            source: "lookml-lsp",
+          });
+        }
+
+        // Check for duplicate view_name/from properties in the same block
+        let blockStart = i;
+        while (blockStart >= 0 && !lines[blockStart].trim().endsWith("{")) {
+          blockStart--;
+        }
+        let blockEnd = i;
+        while (blockEnd < lines.length && !lines[blockEnd].trim().startsWith("}")) {
+          blockEnd++;
+        }
+        let duplicateFound = false;
+        for (let j = blockStart; j <= blockEnd; j++) {
+          if (j !== i) {
+            const otherMatch = lines[j].match(/^\s*(view_name|from):\s+([a-zA-Z0-9_]+)/);
+            if (otherMatch) {
+              duplicateFound = true;
+              diagnostics.push({
+                severity: DiagnosticSeverity.Error,
+                range,
+                message: `Duplicate view specification: "${propertyName}" conflicts with "${otherMatch[1]}" property`,
+                source: "lookml-lsp",
+              });
+              break;
+            }
+          }
+        }
 
         if (currentContext.type === "explore") {
           // Update the explore's base view
           const availableViews = exploreAvailableViews.get(currentContext.name);
-          if (availableViews) {
+          if (availableViews && !duplicateFound) {
             availableViews.delete(currentContext.name); // Remove the explore name
             availableViews.add(viewName); // Add the actual view name
           }
         } else if (currentContext.type === "join" && currentExplore) {
           // Add this join's real view name
           const availableViews = exploreAvailableViews.get(currentExplore);
-          if (availableViews) {
+          if (availableViews && !duplicateFound) {
             availableViews.add(viewName);
+          }
+
+          // Check if the joined view is the same as the base view
+          const exploreInfo = this.workspaceModel.getExplore(currentExplore);
+          if (exploreInfo && exploreInfo.viewName === viewName) {
+            diagnostics.push({
+              severity: DiagnosticSeverity.Warning,
+              range,
+              message: `Joining view "${viewName}" which is already the base view of the explore. This may cause unintended behavior.`,
+              source: "lookml-lsp",
+            });
+          }
+
+          // Check if the view is already joined in this explore
+          let duplicateJoin = false;
+          for (const [joinName, joinInfo] of exploreInfo?.joins.entries() || []) {
+            if (joinName !== currentContext.name && joinInfo.viewName === viewName) {
+              duplicateJoin = true;
+              diagnostics.push({
+                severity: DiagnosticSeverity.Warning,
+                range,
+                message: `View "${viewName}" is already joined in this explore through join "${joinName}". Multiple joins to the same view may cause performance issues.`,
+                source: "lookml-lsp",
+              });
+              break;
+            }
           }
         }
       }
@@ -390,6 +545,10 @@ export class DiagnosticsProvider {
       if (blockMatch) {
         const blockType = blockMatch[1];
         const blockName = blockMatch[2];
+
+        if (blockType === "explore") {
+          currentExplore = blockName;
+        }
 
         const indent = lines[i].length - lines[i].trimLeft().length;
 
@@ -622,6 +781,32 @@ export class DiagnosticsProvider {
       }
     }> = [];
 
+    // Define valid line patterns
+    const validLinePatterns = [
+      /^\s*$/, // Empty line
+      /^\s*#.*$/, // Comment
+      /^\s*[a-zA-Z0-9_]+:\s*[^{]*;;$/, // SQL-like property with termination
+      /^\s*[a-zA-Z0-9_]+:\s*[^{]*$/, // Regular property declaration
+      /^\s*[a-zA-Z0-9_]+:\s*[a-zA-Z0-9_]+\s*\{/, // Block opening
+      /^\s*}/, // Block closing
+      /^\s*-\s+.*$/, // List item
+      /^\s*include:\s*".*"$/, // Include statement
+      /^\s*extends:\s*[a-zA-Z0-9_]+$/, // Extends statement
+      /^\s*\[/, // Opening square bracket for array
+      /^\s*\]/, // Closing square bracket for array
+      /^\s*[a-zA-Z0-9_]+,?$/, // Array item with optional comma
+    ];
+
+    // Special SQL-related properties that can contain SQL expressions
+    const sqlProperties = new Set([
+      'sql',
+      'sql_on',
+      'sql_where',
+      'sql_having',
+      'sql_always_where',
+      'sql_always_having'
+    ]);
+
     // Define valid properties for different block types
     type LookmlBlockType = "explore" | "join" | "dimension" | "measure";
 
@@ -667,7 +852,69 @@ export class DiagnosticsProvider {
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
-      if (line === "" || line.startsWith("#")) continue;
+      if (line === "") continue;
+
+      // First check for SQL-related properties which have special syntax
+      const sqlPropMatch = line.match(/^\s*([a-zA-Z0-9_]+):\s*.*$/);
+      if (sqlPropMatch && sqlProperties.has(sqlPropMatch[1])) {
+        // For SQL properties, just check if it ends with ;; or is a multi-line SQL block
+        if (!line.endsWith(";;") && !line.match(/^\s*[a-zA-Z0-9_]+:\s*$/)) {
+          diagnostics.push({
+            severity: DiagnosticSeverity.Error,
+            range: {
+              start: { line: i, character: 0 },
+              end: { line: i, character: lines[i].length }
+            },
+            message: `SQL statement must end with ;; or be a multi-line SQL block`,
+            source: "lookml-lsp"
+          });
+        }
+        continue;
+      }
+
+      // Then check if line matches any other valid pattern
+      if (!validLinePatterns.some(pattern => pattern.test(lines[i]))) {
+        // Get the indent level to check if we're inside a block
+        const indent = lines[i].length - lines[i].trimLeft().length;
+        const currentContext = contextStack.length > 0 ? contextStack[contextStack.length - 1] : null;
+        
+        // If we have any non-empty, non-comment content
+        if (line !== "" && !line.startsWith("#")) {
+          // If we're at root level (no context), only allow block declarations
+          if (!currentContext && !line.match(/^[a-zA-Z0-9_]+:\s+[a-zA-Z0-9_]+\s*\{/)) {
+            diagnostics.push({
+              severity: DiagnosticSeverity.Error,
+              range: {
+                start: { line: i, character: 0 },
+                end: { line: i, character: lines[i].length }
+              },
+              message: `Invalid line format at root level. Only block declarations (like "view: name {" or "explore: name {") are allowed.`,
+              source: "lookml-lsp"
+            });
+          }
+          // If we're inside a block, ensure proper indentation and format
+          else if (currentContext) {
+            // Check if this line is properly indented relative to its parent block
+            const expectedIndent = currentContext.level + 2; // We expect 2 spaces more than the block declaration
+            if (indent !== expectedIndent || !line.includes(":")) {
+              const contextMsg = ` inside ${currentContext.type} block`;
+              const suggestion = line.match(/^[a-zA-Z0-9_]+$/) ? 
+                ` Did you mean to add a property? Try "${line}:" instead.` : 
+                "";
+              
+              diagnostics.push({
+                severity: DiagnosticSeverity.Error,
+                range: {
+                  start: { line: i, character: 0 },
+                  end: { line: i, character: lines[i].length }
+                },
+                message: `Invalid line format${contextMsg}. Lines must be property declarations (prop: value), block declarations (block: name {), or list items.${suggestion}`,
+                source: "lookml-lsp"
+              });
+            }
+          }
+        }
+      }
 
       // Track context
       const blockMatch = line.match(/^([a-zA-Z0-9_]+):\s+([a-zA-Z0-9_]+)\s*\{/);
