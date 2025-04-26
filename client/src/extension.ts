@@ -138,7 +138,12 @@ export function activate(context: ExtensionContext) {
   );
 
   client.onRequest("lookml/findMatchingFiles", async (params: any) => {
-    const { baseDir, pattern } = params;   
+    const { baseDir } = params;
+    let { pattern } = params;
+
+    if (!/(\.lkml|\.lookml|\.model\.lkml|\.view\.lkml|\.explore\.lkml)$/i.test(pattern)) {
+      pattern = `${pattern}.{lkml,lookml,model.lkml,view.lkml,explore.lkml}`;
+    }
 
     try {
       // Convert the pattern to a glob that VS Code can understand
