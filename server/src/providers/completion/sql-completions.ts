@@ -51,18 +51,25 @@ public getFieldReferenceCompletions(viewName: string): CompletionItem[] {
   
   // Get the view by name
   const view = this.workspaceModel.getView(viewName);
-  
-  if (view && view.fields) {
-    // Add each field as a completion item
-    view.fields.forEach((field, fieldName) => {
-      items.push({
-        label: fieldName,
-        kind: CompletionItemKind.Field,
-        detail: `${field.type} in ${viewName}`,
-        data: { type: "field-ref", viewName, fieldName }
-      });
-    });
+
+  if (!view) {
+    return items;
   }
+
+  const fields = [...Object.values(view.measure), ...Object.values(view.dimension), ...Object.values(view.dimension_group)];
+
+  if (!fields.length) {
+    return items;
+  }
+
+  fields.forEach((field) => {
+    items.push({
+      label: field.$name,
+      kind: CompletionItemKind.Field,
+      detail: `${field.type} in ${viewName}`,
+      data: { type: "field-ref", viewName, fieldName: field.$name }
+    });
+  });
   
   return items;
 }
@@ -148,14 +155,14 @@ public getFieldReferenceCompletions(viewName: string): CompletionItem[] {
     if (!view) return completions;
 
     // Add all dimensions from the current view
-    for (const [dimensionName, dimension] of view.fields.entries()) {
+    for (const [dimensionName, dimension] of Object.entries(view?.dimension)) {
       completions.push({
         label: dimensionName,
         kind: CompletionItemKind.Field,
         detail: `Dimension from ${context.viewName}`,
         documentation: {
           kind: MarkupKind.Markdown,
-          value: dimension.properties.get("description")?.value || `Dimension: ${dimensionName}`,
+          value: dimension.description || `Dimension: ${dimensionName}`,
         },
         insertText: dimensionName,
       });
@@ -172,10 +179,11 @@ public getFieldReferenceCompletions(viewName: string): CompletionItem[] {
     
     // Add base and join view field references
     if (context.exploreName) {
-      const explore = this.workspaceModel.getExplore(context.exploreName);
-      if (explore && explore.viewName) {
+      const file = this.workspaceModel.getExplore(context.exploreName);
+      const fromView = file?.explore[context.exploreName]?.from;
+      if (fromView) {
         // Add fields from base view
-        this.addFieldReferences(items, explore.viewName);
+        this.addFieldReferences(items, fromView);
         
         // Add fields from join view if available
         if (context.joinName) {
@@ -201,15 +209,19 @@ public getFieldReferenceCompletions(viewName: string): CompletionItem[] {
    */
   private addFieldReferences(items: CompletionItem[], viewName: string): void {
     const view = this.workspaceModel.getView(viewName);
-    if (view) {
-      view.fields.forEach((field, fieldName) => {
-        items.push({
-          label: `\${${viewName}.${fieldName}}`,
-          kind: CompletionItemKind.Reference,
-          data: { type: "field-ref", viewName, fieldName }
-        });
-      });
+    if (!view) {
+      return;
     }
+   
+    const fields = [...Object.values(view.measure), ...Object.values(view.dimension), ...Object.values(view.dimension_group)];
+    fields.forEach((field) => {
+      items.push({
+        label: `\${${viewName}.${field.$name}}`,
+        kind: CompletionItemKind.Reference,
+        data: { type: "field-ref", viewName, fieldName: field.$name }
+      });
+    });
+   
   }
   
   /**

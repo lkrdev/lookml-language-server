@@ -199,6 +199,7 @@ export class DiagnosticsProvider {
       "model",
       "measure",
       "dimension",
+      "dimension_group",
       "parameter",
       "filter",
       "join",
@@ -210,6 +211,68 @@ export class DiagnosticsProvider {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
       if (line === "" || line.startsWith("#")) continue;
+
+      // Check for invalid property declarations
+      const propertyDeclMatch = line.match(/^\s*([^:]+):\s*([^{]*?)(?:;;|\s*$)/);
+      if (propertyDeclMatch && !propertyDeclMatch[1].match(/^[a-zA-Z0-9_]+$/)) {
+        diagnostics.push({
+          severity: DiagnosticSeverity.Error,
+          range: {
+            start: { line: i, character: lines[i].indexOf(propertyDeclMatch[1]) },
+            end: { line: i, character: lines[i].indexOf(propertyDeclMatch[1]) + propertyDeclMatch[1].length },
+          },
+          message: `Invalid property name "${propertyDeclMatch[1]}". Property names must contain only letters, numbers, and underscores.`,
+          source: "lookml-lsp",
+        });
+      }
+
+      // Check for incorrect indentation markers (dots, dashes, etc.)
+      const incorrectIndentMatch = line.match(/^(\s*[.|-]+)([a-zA-Z0-9_]+)\s+/);
+      if (incorrectIndentMatch) {
+        const [_, indentMarker, propertyName] = incorrectIndentMatch;
+        diagnostics.push({
+          severity: DiagnosticSeverity.Error,
+          range: {
+            start: { line: i, character: lines[i].indexOf(indentMarker) },
+            end: { line: i, character: lines[i].indexOf(propertyName) + propertyName.length },
+          },
+          message: `Invalid indentation "${indentMarker.trim()}". Use spaces for indentation and a colon after the property name. Change to: "${propertyName}:"`,
+          source: "lookml-lsp",
+        });
+      }
+
+      // Check for property declarations missing colons
+      const missingColonMatch = line.match(/^\s*([a-zA-Z0-9_]+)\s+([^{:\n]+)$/);
+      if (missingColonMatch && !line.includes("{")) {
+        const [_, propertyName, propertyValue] = missingColonMatch;
+        diagnostics.push({
+          severity: DiagnosticSeverity.Error,
+          range: {
+            start: { line: i, character: lines[i].indexOf(propertyName) },
+            end: { line: i, character: lines[i].indexOf(propertyValue) + propertyValue.length },
+          },
+          message: `Missing colon after property name. Change to: "${propertyName}: ${propertyValue}"`,
+          source: "lookml-lsp",
+        });
+      }
+
+      // Check for common LookML property names that might be missing colons
+      const commonProperties = ["from", "view_name", "type", "sql", "relationship", "fields"];
+      for (const prop of commonProperties) {
+        const noColonMatch = line.match(new RegExp(`^\\s*\\.*(${prop})\\s+([^{:\\n]+)$`));
+        if (noColonMatch) {
+          const [_, propertyName, propertyValue] = noColonMatch;
+          diagnostics.push({
+            severity: DiagnosticSeverity.Error,
+            range: {
+              start: { line: i, character: lines[i].indexOf(propertyName) },
+              end: { line: i, character: lines[i].indexOf(propertyValue) + propertyValue.length },
+            },
+            message: `Missing colon after "${propertyName}". Correct syntax is: "${propertyName}: ${propertyValue}"`,
+            source: "lookml-lsp",
+          });
+        }
+      }
 
       // Check if a block declaration is missing a colon
       const incorrectBlockMatch = line.match(blockRegex);
@@ -234,6 +297,20 @@ export class DiagnosticsProvider {
             },
           },
           message: `Missing colon in block definition. Use "${incorrectBlockMatch[1]}: ${incorrectBlockMatch[2]}" instead`,
+          source: "lookml-lsp",
+        });
+      }
+
+      // Check for invalid block types
+      const blockTypeMatch = line.match(/^\s*([a-zA-Z0-9_]+):\s*[a-zA-Z0-9_]+\s*\{/);
+      if (blockTypeMatch && !validBlockTypes.includes(blockTypeMatch[1])) {
+        diagnostics.push({
+          severity: DiagnosticSeverity.Error,
+          range: {
+            start: { line: i, character: lines[i].indexOf(blockTypeMatch[1]) },
+            end: { line: i, character: lines[i].indexOf(blockTypeMatch[1]) + blockTypeMatch[1].length },
+          },
+          message: `Invalid block type "${blockTypeMatch[1]}". Valid block types are: ${validBlockTypes.join(", ")}.`,
           source: "lookml-lsp",
         });
       }
@@ -355,22 +432,33 @@ export class DiagnosticsProvider {
       const viewNameMatch = line.match(
         /^\s*(view_name|from):\s+([a-zA-Z0-9_]+)/
       );
-      if (viewNameMatch && currentContext) {
-        const viewName = viewNameMatch[2];
 
-        if (currentContext.type === "explore") {
-          // Update the explore's base view
-          const availableViews = exploreAvailableViews.get(currentContext.name);
-          if (availableViews) {
-            availableViews.delete(currentContext.name); // Remove the explore name
-            availableViews.add(viewName); // Add the actual view name
-          }
-        } else if (currentContext.type === "join" && currentExplore) {
-          // Add this join's real view name
-          const availableViews = exploreAvailableViews.get(currentExplore);
-          if (availableViews) {
-            availableViews.add(viewName);
-          }
+      if (viewNameMatch && currentContext) {
+        const propertyName = viewNameMatch[1];
+        const viewName = viewNameMatch[2];
+        const refStart = lines[i].indexOf(viewName);
+        const range = {
+          start: { line: i, character: refStart },
+          end: { line: i, character: refStart + viewName.length },
+        };
+
+        // Check if view exists in workspace
+        const view = this.workspaceModel.getView(viewName);
+        if (!view) {
+          diagnostics.push({
+            severity: DiagnosticSeverity.Error,
+            range,
+            message: `Referenced view "${viewName}" not found in workspace`,
+            source: "lookml-lsp",
+          });
+        } else if (!includedViews?.has(viewName) && modelName) {
+          // Check if view is included in the model
+          diagnostics.push({
+            severity: DiagnosticSeverity.Error,
+            range,
+            message: `View "${viewName}" exists but is not included in this model`,
+            source: "lookml-lsp",
+          });
         }
       }
     }
@@ -390,6 +478,10 @@ export class DiagnosticsProvider {
       if (blockMatch) {
         const blockType = blockMatch[1];
         const blockName = blockMatch[2];
+
+        if (blockType === "explore") {
+          currentExplore = blockName;
+        }
 
         const indent = lines[i].length - lines[i].trimLeft().length;
 
@@ -457,7 +549,8 @@ export class DiagnosticsProvider {
           };
 
           // Check if view exists in workspace and model (your existing checks)
-          const view = this.workspaceModel.getView(viewName);
+          const file = this.workspaceModel.getView(viewName);
+          const view = file?.view?.[fieldName];
           const viewIncluded = includedViews?.has(viewName) || false;
 
           if (!view) {
@@ -474,7 +567,7 @@ export class DiagnosticsProvider {
               message: `View "${viewName}" exists but is not included in this model`,
               source: "lookml-lsp",
             });
-          } else if (!view.fields.has(fieldName)) {
+          } else if (!view.measure?.[fieldName] && !view.dimension?.[fieldName] && !view.dimension_group?.[fieldName]) {
             diagnostics.push({
               severity: DiagnosticSeverity.Error,
               range,
@@ -483,7 +576,7 @@ export class DiagnosticsProvider {
             });
           }
           // NEW CHECK: Verify the view is available in this explore context
-          else if (availableViews && !availableViews.has(viewName)) {
+          else if (availableViews && !availableViews?.has(viewName)) {
             diagnostics.push({
               severity: DiagnosticSeverity.Error,
               range,
@@ -587,9 +680,9 @@ export class DiagnosticsProvider {
           }
 
           // Check if view exists in workspace and model
-          const view = this.workspaceModel.getView(viewName);
-
-          if (!view?.fields.has(fieldName)) {
+          const file = this.workspaceModel.getView(viewName);
+          const view = file?.view?.[fieldName];
+          if (!view?.measure?.[fieldName] && !view?.dimension?.[fieldName] && !view?.dimension_group?.[fieldName]) {
             diagnostics.push({
               severity: DiagnosticSeverity.Error,
               range,
@@ -690,7 +783,7 @@ export class DiagnosticsProvider {
 
         // Check if this block type is valid within its parent
         if (validParentBlocks[blockType]) {
-          if (!validParentBlocks[blockType].has(parent.type)) {
+          if (!validParentBlocks[blockType]?.has(parent.type)) {
             const validParents = Array.from(validParentBlocks[blockType]).join(", ");
             diagnostics.push({
               severity: DiagnosticSeverity.Error,
@@ -702,7 +795,7 @@ export class DiagnosticsProvider {
         }
         // Also check if parent allows this child
         else if (parent && childBlocks[parent.type as LookmlBlockType]) {
-          if (!childBlocks[parent.type as LookmlBlockType].has(blockType)) {
+          if (!childBlocks[parent.type as LookmlBlockType]?.has(blockType)) {
             const validChildren = Array.from(childBlocks[parent.type as LookmlBlockType]).join(", ");
             diagnostics.push({
               severity: DiagnosticSeverity.Error,
@@ -743,7 +836,7 @@ export class DiagnosticsProvider {
           if (propertyMatch) {
             const propertyName = propertyMatch[1];
             // Check if property is in the whitelist for this block type
-            if (!scalarProps[blockType].has(propertyName) && !childBlocks[blockType].has(propertyName)) {
+            if (!scalarProps[blockType]?.has(propertyName) && !childBlocks[blockType]?.has(propertyName)) {
               diagnostics.push({
                 severity: DiagnosticSeverity.Error,
                 range: this.getWordRange(lines[i], i, propertyName),

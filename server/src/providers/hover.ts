@@ -6,6 +6,7 @@ import {
   TextDocument,
 } from "vscode-languageserver/node";
 import { WorkspaceModel } from "../models/workspace";
+import { LookmlMeasure, LookmlDimension, LookmlDimensionGroup } from "lookml-parser";
 
 export class HoverProvider {
   private workspaceModel: WorkspaceModel;
@@ -157,17 +158,18 @@ export class HoverProvider {
 
   /**
    * Get hover info for a keyword
-   */
-  private getKeywordHover(word: string): Hover | null {
-    if (this.lookmlDocs[word]) {
-      return {
-        contents: {
-          kind: MarkupKind.Markdown,
-          value: `**${word}** (LookML Keyword)\n\n${this.lookmlDocs[word]}`,
-        },
-      };
+   */ 
+  private getKeywordHover(word: string): Hover | undefined {
+    if (!this.lookmlDocs[word]) {
+      return;
     }
-    return null;
+
+    return {
+      contents: {
+        kind: MarkupKind.Markdown,
+        value: `**${word}** (LookML Keyword)\n\n${this.lookmlDocs[word]}`,
+      },
+    };
   }
 
   /**
@@ -188,48 +190,45 @@ export class HoverProvider {
   /**
    * Get hover info for a view
    */
-  private getViewHover(word: string): Hover | null {
-    const view = this.workspaceModel.getView(word);
-    if (view) {
-      // Extract field counts by type
-      const fieldCounts = {
-        dimension: 0,
-        measure: 0,
-        parameter: 0,
-        filter: 0,
-      };
+  private getViewHover(word: string): Hover | undefined {
+    const file = this.workspaceModel.getView(word);
 
-      for (const [_, field] of view.fields.entries()) {
-        fieldCounts[field.type]++;
-      }
-
-      // Build view details
-      const details = [];
-
-      // Add SQL table name if available
-      const sqlTableName = view.properties.get("sql_table_name")?.value;
-      if (sqlTableName) {
-        details.push(`**SQL Table:** \`${sqlTableName}\``);
-      }
-
-      // Add extends info if available
-      if (view.extends) {
-        details.push(`**Extends:** \`${view.extends}\``);
-      }
-
-      // Add field counts
-      details.push(
-        `**Fields:** ${view.fields.size} total (${fieldCounts.dimension} dimensions, ${fieldCounts.measure} measures, ${fieldCounts.parameter} parameters, ${fieldCounts.filter} filters)`
-      );
-
-      return {
-        contents: {
-          kind: MarkupKind.Markdown,
-          value: `**${word}** (View)\n\n${details.join("\n\n")}`,
-        },
-      };
+    if (!file) {
+      return;
     }
-    return null;
+
+    // Extract field counts by type
+    const fieldCounts = {
+      dimension: 0,
+      dimensionGroup: 0,
+      measure: 0,
+    };
+
+    fieldCounts.dimension = Object.keys(file.dimension || {}).length;
+    fieldCounts.measure = Object.keys(file.measure || {}).length;
+    fieldCounts.dimensionGroup = Object.keys(file.dimension_group || {}).length;
+
+    // Build view details
+    const details = [];
+
+    // Add SQL table name if available
+    const sqlTableName = file.sql_table_name;
+    if (sqlTableName) {
+      details.push(`**SQL Table:** \`${sqlTableName}\``);
+    }
+
+    // Add field counts
+    const totalFields = fieldCounts.dimension + fieldCounts.dimensionGroup + fieldCounts.measure;
+    details.push(
+      `**Fields:** ${totalFields} total (${fieldCounts.dimension} dimensions, ${fieldCounts.dimensionGroup} dimension groups, ${fieldCounts.measure} measures)`
+    );
+
+    return {
+      contents: {
+        kind: MarkupKind.Markdown,
+        value: `**${word}** (View)\n\n${details.join("\n\n")}`,
+      },
+    };
   }
 
   /**
@@ -240,47 +239,51 @@ export class HoverProvider {
     document: TextDocument,
     position: Position
   ): Hover | null {
+    const views = this.workspaceModel.getViews();
     // Check if this word is a field in any view
-    for (const [viewName, viewInfo] of this.workspaceModel
-      .getViews()
-      .entries()) {
-
-      if (viewInfo.fields.has(word)) {
-        const field = viewInfo.fields.get(word)!;
-
+    for (const [viewName, viewInfo] of views) {
+      const view = viewInfo?.view?. [word];
+      const field = view?.dimension?.[word] || view?.dimension_group?.[word] || view?.measure?.[word];
+      if (field) {
         // Build field details
         const details = [];
 
         // Add type info if available
-        const typeProperty = field.properties.get("type")?.value;
-        if (typeProperty) {
-          details.push(`**Type:** \`${typeProperty}\``);
+        if (field.type) {
+          details.push(`**Type:** \`${field.type}\``);
         }
 
         // Add SQL definition if available
-        const sqlProperty = field.properties.get("sql")?.value;
-        if (sqlProperty) {
-          details.push(`**SQL:** \`${sqlProperty}\``);
+        if (field.sql) {
+          details.push(`**SQL:** \`${field.sql}\``);
         }
 
         // Add label if available
-        const labelProperty = field.properties.get("label")?.value;
-        if (labelProperty) {
-          details.push(`**Label:** ${labelProperty}`);
+        if (field.label) {
+          details.push(`**Label:** ${field.label}`);
         }
 
         // Add description if available
-        const descProperty = field.properties.get("description")?.value;
-        if (descProperty) {
-          details.push(`**Description:** ${descProperty}`);
+        if (field.description) {
+          details.push(`**Description:** ${field.description}`);
+        }
+
+        // Add drill fields if it's a measure
+        const measureField = field as LookmlMeasure;
+        if ('drill_fields' in measureField && measureField.drill_fields?.length) {
+          details.push(`**Drill Fields:** ${measureField.drill_fields.join(', ')}`);
+        }
+
+        // Add timeframes if it's a dimension group
+        const dimensionGroupField = field as LookmlDimensionGroup;
+        if ('timeframes' in dimensionGroupField && dimensionGroupField.timeframes?.length) {
+          details.push(`**Timeframes:** ${dimensionGroupField.timeframes.join(', ')}`);
         }
 
         return {
           contents: {
             kind: MarkupKind.Markdown,
-            value: `**${word}** (${
-              field.type
-            }) in View \`${viewName}\`\n\n${details.join("\n\n")}`,
+            value: `**${word}** (${field.type}) in View \`${viewName}\`\n\n${details.join("\n\n")}`,
           },
         };
       }
@@ -292,39 +295,44 @@ export class HoverProvider {
    * Get hover info for an explore
    */
   private getExploreHover(word: string): Hover | null {
-    const explore = this.workspaceModel.getExplore(word);
-    if (explore) {
-      // Build explore details
-      const details = [];
+    const file = this.workspaceModel.getExplore(word);
 
-      // Add view name if available
-      if (explore.viewName) {
-        details.push(`**Based on view:** \`${explore.viewName}\``);
-      }
-
-      // Add join count
-      details.push(`**Joins:** ${explore.joins.size}`);
-
-      // Add label if available
-      const labelProperty = explore.properties.get("label")?.value;
-      if (labelProperty) {
-        details.push(`**Label:** ${labelProperty}`);
-      }
-
-      // Add description if available
-      const descProperty = explore.properties.get("description")?.value;
-      if (descProperty) {
-        details.push(`**Description:** ${descProperty}`);
-      }
-
-      return {
-        contents: {
-          kind: MarkupKind.Markdown,
-          value: `**${word}** (Explore)\n\n${details.join("\n\n")}`,
-        },
-      };
+    if (!file) {
+      return null;
     }
-    return null;
+
+    const explore = file.explore[word];
+    // Build explore details
+    const details = [];
+
+    // Add view name if available
+    if (explore.view_name) {
+      details.push(`**Based on view:** \`${explore.view_name}\``);
+    }
+
+    if (explore.join) {
+      // Add join count
+      details.push(`**Joins:** ${Object.keys(explore.join).length}`);
+    }
+
+    // Add label if available
+    const labelProperty = explore.label;
+    if (labelProperty) {
+      details.push(`**Label:** ${labelProperty}`);
+    }
+
+    // Add description if available
+    const descProperty = explore.description;
+    if (descProperty) {
+      details.push(`**Description:** ${descProperty}`);
+    }
+
+    return {
+      contents: {
+        kind: MarkupKind.Markdown,
+        value: `**${word}** (Explore)\n\n${details.join("\n\n")}`,
+      },
+    };
   }
 
   /**

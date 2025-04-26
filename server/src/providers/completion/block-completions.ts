@@ -90,7 +90,7 @@ export class BlockCompletionProvider {
    */
   private getViewNameCompletions(includeSpace?: boolean): CompletionItem[] {
     return Array.from(
-      this.workspaceModel.getViews().entries() as Iterable<[string, any]>
+      this.workspaceModel?.getViews()?.entries() as Iterable<[string, any]>
     ).map(([viewName]) => ({
       label: includeSpace ? ` ${viewName}` : viewName,
       kind: CompletionItemKind.Reference,

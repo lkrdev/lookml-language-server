@@ -117,7 +117,7 @@ connection.onInitialize((params: InitializeParams) => {
 // Initialize workspace when server is ready
 connection.onInitialized(async () => {
   logger.info("LookML Language Server initialized");
-  await workspaceModel.loadModel();
+  await workspaceModel.initialize();
 });
 
 // Add command handlers
@@ -258,7 +258,7 @@ documents.onDidSave(async (change) => {
   }
 
   // Update the model and validate
-  await workspaceModel.loadModel();
+  await workspaceModel.initialize();
   const diagnostics = diagnosticsProvider.validateDocument(change.document);
   connection.sendDiagnostics({ uri: change.document.uri, diagnostics });
 });
@@ -283,7 +283,7 @@ connection.onCompletion(async (params) => {
     await updatePromise;
   }
 
-  const result = await completionProvider.getCompletionItems(document, params);
+  const result = completionProvider.getCompletionItems(document, params);
   return result;
 });
 
@@ -301,16 +301,18 @@ connection.onHover((params) => {
 });
 
 // Provide go-to-definition with support for ${view.field} references
-connection.onDefinition((params: DefinitionParams): Definition | null => {
+connection.onDefinition((params: DefinitionParams): Definition | undefined => {
   const document = documents.get(params.textDocument.uri);
-  if (!document) return null;
+  if (!document) return;
 
   const position = params.position;
   const word = getWordAtPosition(document, position);
-  if (!word) return null;
+  console.log("WORD",word);
+
+  if (!word) return;
 
   const lines = document.getText().split("\n");
-  if (position.line >= lines.length) return null;
+  if (position.line >= lines.length) return;
   const line = lines[position.line];
 
   const refRegex = /\$\{([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\}/g;
@@ -318,6 +320,7 @@ connection.onDefinition((params: DefinitionParams): Definition | null => {
 
   while ((refMatch = refRegex.exec(line)) !== null) {
     const [_, viewName, fieldName] = refMatch;
+    console.log("VIEW NAME",viewName);
     const matchStart = refMatch.index;
     const viewStart = matchStart + 2; // after ${
     const viewEnd = viewStart + viewName.length;
@@ -326,48 +329,44 @@ connection.onDefinition((params: DefinitionParams): Definition | null => {
     const cursor = position.character;
 
     const modelName = workspaceModel.getModelNameFromUri(document.uri);
+    console.log("MODEL",modelName);
     if (!modelName) continue;
 
     const includedViews = workspaceModel.getIncludedViewsForModel(modelName);
+    console.log("INCLUDED VIEWS",includedViews);
     if (!includedViews || !includedViews.has(viewName)) continue;
 
     if (cursor >= viewStart && cursor <= viewEnd) {
       const view = workspaceModel.getView(viewName);
+      console.log("VIEW",view);
       if (view) {
-        return {
-          uri: view.location.uri,
-          range: view.location.range,
-        };
+        console.log("VIEW",view);
       }
     }
 
     if (cursor >= fieldStart && cursor <= fieldEnd) {
-      const view = workspaceModel.getView(viewName);
+      const file = workspaceModel.getView(viewName);
+      const view = file?.view?.[fieldName];
       if (!view) continue;
-      const field = view.fields.get(fieldName);
-      if (field) {
-        return {
-          uri: field.location.uri,
-          range: field.location.range,
-        };
-      }
+      const field = view.measure?.[fieldName] || view.dimension?.[fieldName] || view.dimension_group?.[fieldName];
+      console.log("FIELD",field);
     }
   }
 
   // Fallback: treat word as a view name
   const view = workspaceModel.getView(word);
-  if (!view) return null;
+  console.log("VIEW FALLBACK",view);
+  if (!view) return;
 
   const modelName = workspaceModel.getModelNameFromUri(document.uri);
-  if (!modelName) return null;
+  console.log("MODEL NAME",modelName);
+  if (!modelName) return;
 
   const includedViews = workspaceModel.getIncludedViewsForModel(modelName);
-  if (!includedViews || !includedViews.has(word)) return null;
+  console.log("INCLUDED VIEWS",includedViews);
+  if (!includedViews || !includedViews.has(word)) return;
 
-  return {
-    uri: view.location.uri,
-    range: view.location.range,
-  };
+  console.log("VIEW",view);
 });
 
 // Provide document symbols for outline view

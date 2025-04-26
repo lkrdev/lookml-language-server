@@ -144,17 +144,13 @@ export class DocumentationProvider {
     
     let doc = `# View: ${viewName}\n\n`;
     
-    // Add extends information if available
-    if (view.extends) {
-      doc += `Extends: \`${view.extends}\`\n\n`;
-    }
-    
     // Add field counts
-    const fieldCount = view.fields.size || 0;
+    const fieldCount = Object.keys(view.measure).length + Object.keys(view.dimension).length + Object.keys(view.dimension_group).length;
     doc += `Contains ${fieldCount} fields\n\n`;
     
     // Add location
-    doc += `Defined in: ${this.getRelativePath(view.location.uri)}`;
+    console.log("view", view);
+    //doc += `Defined in: ${this.getRelativePath(view.location.uri)}`;
     
     return doc;
   }
@@ -163,30 +159,33 @@ export class DocumentationProvider {
    * Get documentation for a field
    */
   public getFieldDocumentation(viewName: string, fieldName: string): string {
-    const view = this.workspaceModel.getView(viewName);
-    if (!view) return `Field: ${fieldName} in view: ${viewName}`;
+    const file = this.workspaceModel.getView(viewName);
+    const view = file?.view?.[fieldName];
+    if (!view) {
+      return `Field: ${fieldName} in view: ${viewName}`;
+    }
     
-    const field = view.fields.get(fieldName);
+    const field = view.measure?.[fieldName] || view.dimension?.[fieldName] || view.dimension_group?.[fieldName];
     if (!field) return `Field: ${fieldName} in view: ${viewName}`;
     
     let doc = `# ${field.type}: ${fieldName}\n\n`;
     
     // Add description if available
-    const description = field.properties.get('description');
+    const description = field.description
     if (description) {
-      doc += `${description.value}\n\n`;
+      doc += `${description}\n\n`;
     }
     
     // Add field type if available
-    const type = field.properties.get('type');
+    const type = field.type;
     if (type) {
-      doc += `**Type**: ${type.value}\n\n`;
+      doc += `**Type**: ${type}\n\n`;
     }
     
     // Add SQL definition if available
-    const sql = field.properties.get('sql');
+    const sql = field.sql;
     if (sql) {
-      doc += `**SQL**:\n\`\`\`sql\n${sql.value}\n\`\`\`\n\n`;
+      doc += `**SQL**:\n\`\`\`sql\n${sql}\n\`\`\`\n\n`;
     }
     
     doc += `Defined in view: ${viewName}`;

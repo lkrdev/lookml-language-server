@@ -2,7 +2,7 @@ import { Location, Position, Range } from "vscode-languageserver/node";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import * as path from "path";
 import { URI } from "vscode-uri";
-import { parseFiles, Project } from "lookml-parser";
+import { parseFiles, LookmlObject } from "lookml-parser";
 import * as fs from "fs/promises";
 import * as os from "os";
 
@@ -66,7 +66,7 @@ export interface ParseResult {
 }
 
 export class LookMLParser {
-  private lookmlProject: Project | null = null;
+  private lookmlProject: LookmlObject | null = null;
   private tempFilesDir: string | null = null;
 
   constructor() {
@@ -89,35 +89,8 @@ export class LookMLParser {
   /**
    * Get the lookml-parser Project object
    */
-  public getLookMLProject(): Project | null {
+  public getLookMLProject(): LookmlObject | null {
     return this.lookmlProject;
-  }
-
-  /**
-   * Parse a document using both custom parsing and lookml-parser
-   */
-  public async parseDocument(document: TextDocument): Promise<ParseResult> {
-    const uri = document.uri;
-    const text = document.getText();
-    
-    // Initialize result with empty collections
-    const result: ParseResult = {
-      views: new Map<string, ViewInfo>(),
-      explores: new Map<string, ExploreInfo>(),
-      models: new Map<string, ModelInfo>(),
-      viewNames: [],
-      exploreNames: [],
-      modelNames: [],
-      isModelFile: false
-    };
-
-    // First do our custom parsing for location information
-    this.customParseDocument(document, result);
-    
-    // Then enhance with lookml-parser if possible
-    await this.enhanceWithLookMLParser(document, result);
-    
-    return result;
   }
 
   /**
@@ -463,144 +436,15 @@ export class LookMLParser {
       await fs.writeFile(tempFilePath, content);
 
       // Parse the file using lookml-parser
-      const parsedProject = await parseFiles([tempFilePath], {
-        // Optional config
+      const parsedProject = await parseFiles({
+        source: tempFilePath,
       });
 
-      // Save the parsed project for reference
-      this.lookmlProject = parsedProject;
-
-      // Enhance our model with lookml-parser data
-      if (parsedProject) {
-        this.enhanceParsedResult(result, parsedProject);
-      }
+      
     } catch (error) {
       console.error(`Error using lookml-parser for ${document.uri}:`, error);
       // Continue with existing parser results if lookml-parser fails
     }
-  }
-
-  /**
-   * Enhance our parse result with data from lookml-parser
-   */
-  private enhanceParsedResult(result: ParseResult, parsedProject: Project): void {
-    // Process views from lookml-parser and enhance our existing views
-    if (parsedProject.views) {
-      Object.entries(parsedProject.views).forEach(([viewName, parsedView]) => {
-        // Only process if this view is in our result
-        const existingView = result.views.get(viewName);
-        if (existingView) {
-          // Enhance with lookml-parser data
-          if (parsedView.extends) {
-            existingView.extends = parsedView.extends;
-          }
-
-          // For each field in the parsed view, enhance our field data
-          if (parsedView.dimensions) {
-            Object.entries(parsedView.dimensions).forEach(([dimName, dimension]) => {
-              const existingField = existingView.fields.get(dimName);
-              if (existingField) {
-                // Enhance with data from lookml-parser
-                this.enhanceFieldWithParsedData(existingField, dimension);
-              }
-            });
-          }
-
-          if (parsedView.measures) {
-            Object.entries(parsedView.measures).forEach(([measureName, measure]) => {
-              const existingField = existingView.fields.get(measureName);
-              if (existingField) {
-                // Enhance with data from lookml-parser
-                this.enhanceFieldWithParsedData(existingField, measure);
-              }
-            });
-          }
-
-          if (parsedView.filters) {
-            Object.entries(parsedView.filters).forEach(([filterName, filter]) => {
-              const existingField = existingView.fields.get(filterName);
-              if (existingField) {
-                // Enhance with data from lookml-parser
-                this.enhanceFieldWithParsedData(existingField, filter);
-              }
-            });
-          }
-
-          if (parsedView.parameters) {
-            Object.entries(parsedView.parameters).forEach(([paramName, param]) => {
-              const existingField = existingView.fields.get(paramName);
-              if (existingField) {
-                // Enhance with data from lookml-parser
-                this.enhanceFieldWithParsedData(existingField, param);
-              }
-            });
-          }
-        }
-      });
-    }
-
-    // Process models and explores
-    if (parsedProject.models) {
-      Object.entries(parsedProject.models).forEach(([modelName, parsedModel]) => {
-        const existingModel = result.models.get(modelName);
-        if (existingModel) {
-          // Enhance with lookml-parser data
-          if (parsedModel.connection) {
-            existingModel.connection = parsedModel.connection;
-          }
-
-          // Process explores
-          if (parsedModel.explores) {
-            Object.entries(parsedModel.explores).forEach(([exploreName, explore]) => {
-              const existingExplore = result.explores.get(exploreName);
-              if (existingExplore) {
-                // Enhance with data from lookml-parser
-                if (explore.from) {
-                  existingExplore.viewName = explore.from;
-                }
-
-                // Process joins
-                if (explore.joins) {
-                  Object.entries(explore.joins).forEach(([joinName, join]) => {
-                    const existingJoin = existingExplore.joins.get(joinName);
-                    if (existingJoin) {
-                      if (join.from) {
-                        existingJoin.viewName = join.from;
-                      }
-                      if (join.sql_on) {
-                        existingJoin.sqlOn = join.sql_on;
-                      }
-                      if (join.relationship) {
-                        existingJoin.relationship = join.relationship;
-                      }
-                    }
-                  });
-                }
-              }
-            });
-          }
-        }
-      });
-    }
-  }
-
-  /**
-   * Enhance a field with data from lookml-parser
-   */
-  private enhanceFieldWithParsedData(existingField: FieldInfo, parsedField: any): void {
-    // Add any additional properties from lookml-parser
-    Object.entries(parsedField).forEach(([propName, propValue]) => {
-      if (propName !== 'name' && typeof propValue === 'string') {
-        if (!existingField.properties.has(propName)) {
-          // Add property if it doesn't exist in our model
-          existingField.properties.set(propName, {
-            name: propName,
-            value: propValue,
-            location: existingField.location // Use field location as fallback
-          });
-        }
-      }
-    });
   }
 
   /**
@@ -611,11 +455,7 @@ export class LookMLParser {
     // The actual implementation will depend on what lookml-parser provides
     const diagnostics: any[] = [];
     
-    // Example implementation - actual code would use lookml-parser's validation
-    if (this.lookmlProject && this.lookmlProject.errors) {
-      // Convert lookml-parser errors to LSP diagnostics
-      // (Implementation depends on the error format from lookml-parser)
-    }
+
     
     return diagnostics;
   }
