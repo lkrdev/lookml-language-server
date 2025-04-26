@@ -155,7 +155,6 @@ export class WorkspaceModel {
 
         // Parse the model file
         const modelParseResult = await this.lookmlParser.parseDocument(modelDocument);
-        console.log("modelParseResult", modelUri, modelParseResult);
         this.modelName = modelParseResult.modelName;
 
         // Update our model with the model parse results
@@ -171,7 +170,6 @@ export class WorkspaceModel {
         // Process includes for model files
         if (modelParseResult.isModelFile && modelParseResult.modelName) {
           const modelInfo = this.models.get(modelParseResult.modelName);
-          console.log("modelInfo", modelInfo);
           if (modelInfo && modelInfo.includes.length > 0) {
             const modelName = modelParseResult.modelName;
 
@@ -188,9 +186,6 @@ export class WorkspaceModel {
     } catch (error) {
       console.error(`Error loading model file ${modelFilePath}:`, error);
     }
-
-    console.log("views", this.views);
-    console.log("models", this.models);
   }
 
   /**
@@ -406,7 +401,6 @@ export class WorkspaceModel {
         baseDir,
         cleanPattern
       );
-      console.log("matchedFiles", matchedFiles);
 
       for (const filePath of matchedFiles) {
         // Skip already loaded files
@@ -471,8 +465,6 @@ export class WorkspaceModel {
           pattern,
         }
       );
-
-      console.log("response", response);
 
       // The response should be an array of file paths
       if (Array.isArray(response)) {
