@@ -406,6 +406,7 @@ export class WorkspaceModel {
         baseDir,
         cleanPattern
       );
+      console.log("matchedFiles", matchedFiles);
 
       for (const filePath of matchedFiles) {
         // Skip already loaded files
@@ -470,6 +471,8 @@ export class WorkspaceModel {
           pattern,
         }
       );
+
+      console.log("response", response);
 
       // The response should be an array of file paths
       if (Array.isArray(response)) {
