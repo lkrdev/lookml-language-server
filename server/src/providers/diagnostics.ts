@@ -499,6 +499,12 @@ export class DiagnosticsProvider {
   }
 
   private validateViewReferences(document: TextDocument): Diagnostic[] {
+    const fileViewName = this.workspaceModel.getViewNameFromFile(document);
+
+    if (!fileViewName) {
+      return [];
+    }
+
     const diagnostics: Diagnostic[] = [];
     const text = document.getText();
     const lines = text.split("\n");
@@ -508,12 +514,6 @@ export class DiagnosticsProvider {
 
 
     for (let i = 0; i < lines.length; i++) {
-      let viewName = this.workspaceModel.getViewNameFromFile(document);
-
-      if (!viewName) {
-        continue;
-      }
-
       const line = lines[i].trim();
       if (line === "" || line.startsWith("#")) continue;
 
@@ -566,6 +566,7 @@ export class DiagnosticsProvider {
         let fieldMatch;
 
         while ((fieldMatch = fieldRefPattern.exec(sqlContent)) !== null) {
+          let viewName = fileViewName;
           let fieldName = fieldMatch[1];
 
           const refStart = lines[i].indexOf(fieldMatch[0]);
@@ -588,6 +589,7 @@ export class DiagnosticsProvider {
 
           // Check if view exists in workspace and model
           const view = this.workspaceModel.getView(viewName);
+          
 
           if (!view?.fields.has(fieldName)) {
             diagnostics.push({

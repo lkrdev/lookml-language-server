@@ -305,6 +305,8 @@ connection.onDefinition((params: DefinitionParams): Definition | null => {
   const document = documents.get(params.textDocument.uri);
   if (!document) return null;
 
+  const isView = /\.view(\.lkml)?$/i.test(document.uri);
+
   const position = params.position;
   const word = getWordAtPosition(document, position);
   if (!word) return null;
@@ -312,6 +314,38 @@ connection.onDefinition((params: DefinitionParams): Definition | null => {
   const lines = document.getText().split("\n");
   if (position.line >= lines.length) return null;
   const line = lines[position.line];
+
+  if (isView) {
+    const fieldOnlyRefRegex = /\$\{([a-zA-Z0-9_]+)\}/g;
+    let fieldOnlyMatch: RegExpExecArray | null;
+
+    while ((fieldOnlyMatch = fieldOnlyRefRegex.exec(line)) !== null) {
+      const [_, fieldName] = fieldOnlyMatch;
+      const matchStart = fieldOnlyMatch.index;
+      const fieldStart = matchStart + 2; // after ${
+      const fieldEnd = fieldStart + fieldName.length;
+      const cursor = position.character;
+
+      if (cursor >= fieldStart && cursor <= fieldEnd) {
+        const viewText = document.getText();
+        const viewLines = viewText.split("\n");
+
+        for (let i = 0; i < viewLines.length; i++) {
+          const viewLine = viewLines[i];
+          const fieldMatch = viewLine.match(/^\s*(dimension|measure)\s*:\s*([a-zA-Z0-9_]+)\s*\{/);
+          if (fieldMatch && fieldMatch[2] === fieldName) {
+            return {
+              uri: document.uri,
+              range: {
+                start: { line: i, character: 0 },
+                end: { line: i, character: viewLine.length },
+              },
+            };
+          }
+        }
+      }
+    }
+  }
 
   const refRegex = /\$\{([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\}/g;
   let refMatch: RegExpExecArray | null;
@@ -325,7 +359,7 @@ connection.onDefinition((params: DefinitionParams): Definition | null => {
     const fieldEnd = fieldStart + fieldName.length;
     const cursor = position.character;
 
-    const modelName = workspaceModel.getModelNameFromUri(document.uri);
+    const modelName = workspaceModel.getModelName();
     if (!modelName) continue;
 
     const includedViews = workspaceModel.getIncludedViewsForModel(modelName);
@@ -354,15 +388,15 @@ connection.onDefinition((params: DefinitionParams): Definition | null => {
     }
   }
 
-  // Fallback: treat word as a view name
-  const view = workspaceModel.getView(word);
-  if (!view) return null;
-
-  const modelName = workspaceModel.getModelNameFromUri(document.uri);
+  // fallback: treat word as a view name
+  const modelName = workspaceModel.getModelName();
   if (!modelName) return null;
 
   const includedViews = workspaceModel.getIncludedViewsForModel(modelName);
   if (!includedViews || !includedViews.has(word)) return null;
+
+  const view = workspaceModel.getView(word);
+  if (!view) return null;
 
   return {
     uri: view.location.uri,

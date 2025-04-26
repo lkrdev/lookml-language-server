@@ -21,6 +21,7 @@ import {
   export class WorkspaceModel {
     public connection: Connection;
     private lookmlParser: LookMLParser;
+    public modelName?: string;
 
     // Document tracking
     private views: Map<string, ViewInfo> = new Map();
@@ -154,6 +155,7 @@ import {
 
           // Parse the model file
           const modelParseResult = await this.lookmlParser.parseDocument(modelDocument);
+          this.modelName = modelParseResult.modelName;
           
           // Update our model with the model parse results
           this.views = new Map([...this.views, ...modelParseResult.views]);
@@ -357,6 +359,10 @@ import {
     public getModelNameFromUri(uri: string): string | null {
       const fileNameMatch = uri.match(/([^\/]+)\.model\.lkml$/);
       return fileNameMatch ? fileNameMatch[1] : null;
+    }
+
+    public getModelName(): string | undefined {
+      return this.modelName;
     }
 
     /**
