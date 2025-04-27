@@ -139,13 +139,19 @@ export class DocumentationProvider {
    * Get documentation for a view
    */
   public getViewDocumentation(viewName: string): string {
-    const view = this.workspaceModel.getView(viewName);
+    const viewDetails = this.workspaceModel.getView(viewName);
+    const view = viewDetails?.view;
     if (!view) return `View: ${viewName}`;
     
     let doc = `# View: ${viewName}\n\n`;
     
     // Add field counts
-    const fieldCount = Object.keys(view.measure).length + Object.keys(view.dimension).length + Object.keys(view.dimension_group).length;
+    const fieldCount = (
+      Object.keys(view.measure || {}).length + 
+      Object.keys(view.dimension || {}).length + 
+      Object.keys(view.dimension_group || {}).length
+    );
+
     doc += `Contains ${fieldCount} fields\n\n`;
     
     // Add location
@@ -159,8 +165,8 @@ export class DocumentationProvider {
    * Get documentation for a field
    */
   public getFieldDocumentation(viewName: string, fieldName: string): string {
-    const file = this.workspaceModel.getView(viewName);
-    const view = file?.view?.[fieldName];
+    const viewDetails = this.workspaceModel.getView(viewName);
+    const view = viewDetails?.view;
     if (!view) {
       return `Field: ${fieldName} in view: ${viewName}`;
     }

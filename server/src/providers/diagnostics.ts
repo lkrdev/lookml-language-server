@@ -443,7 +443,8 @@ export class DiagnosticsProvider {
         };
 
         // Check if view exists in workspace
-        const view = this.workspaceModel.getView(viewName);
+        const viewDetails = this.workspaceModel.getView(viewName);
+        const view = viewDetails?.view;
         if (!view) {
           diagnostics.push({
             severity: DiagnosticSeverity.Error,
@@ -549,8 +550,8 @@ export class DiagnosticsProvider {
           };
 
           // Check if view exists in workspace and model (your existing checks)
-          const file = this.workspaceModel.getView(viewName);
-          const view = file?.view?.[fieldName];
+          const viewDetails = this.workspaceModel.getView(viewName);
+          const view = viewDetails?.view;
           const viewIncluded = includedViews?.has(viewName) || false;
 
           if (!view) {
@@ -680,8 +681,8 @@ export class DiagnosticsProvider {
           }
 
           // Check if view exists in workspace and model
-          const file = this.workspaceModel.getView(viewName);
-          const view = file?.view?.[fieldName];
+          const viewDetails = this.workspaceModel.getView(viewName);
+          const view = viewDetails?.view;
           if (!view?.measure?.[fieldName] && !view?.dimension?.[fieldName] && !view?.dimension_group?.[fieldName]) {
             diagnostics.push({
               severity: DiagnosticSeverity.Error,

@@ -50,13 +50,18 @@ public getFieldReferenceCompletions(viewName: string): CompletionItem[] {
   const items: CompletionItem[] = [];
   
   // Get the view by name
-  const view = this.workspaceModel.getView(viewName);
+  const viewDetails = this.workspaceModel.getView(viewName);
+  const view = viewDetails?.view;
 
   if (!view) {
     return items;
   }
 
-  const fields = [...Object.values(view.measure), ...Object.values(view.dimension), ...Object.values(view.dimension_group)];
+  const fields = [
+    ...Object.values(view.measure || {}), 
+    ...Object.values(view.dimension || {}), 
+    ...Object.values(view.dimension_group || {})
+  ];
 
   if (!fields.length) {
     return items;
@@ -64,7 +69,7 @@ public getFieldReferenceCompletions(viewName: string): CompletionItem[] {
 
   fields.forEach((field) => {
     items.push({
-      label: field.$name,
+      label: field.label || field.$name || "",
       kind: CompletionItemKind.Field,
       detail: `${field.type} in ${viewName}`,
       data: { type: "field-ref", viewName, fieldName: field.$name }
@@ -151,11 +156,12 @@ public getFieldReferenceCompletions(viewName: string): CompletionItem[] {
     if (!context.viewName) return completions;
 
     // Get the current view
-    const view = this.workspaceModel.getView(context.viewName);
+    const viewDetails = this.workspaceModel.getView(context.viewName);
+    const view = viewDetails?.view;
     if (!view) return completions;
 
     // Add all dimensions from the current view
-    for (const [dimensionName, dimension] of Object.entries(view?.dimension)) {
+    for (const [dimensionName, dimension] of Object.entries(view?.dimension || {})) {
       completions.push({
         label: dimensionName,
         kind: CompletionItemKind.Field,
@@ -179,8 +185,8 @@ public getFieldReferenceCompletions(viewName: string): CompletionItem[] {
     
     // Add base and join view field references
     if (context.exploreName) {
-      const file = this.workspaceModel.getExplore(context.exploreName);
-      const fromView = file?.explore[context.exploreName]?.from;
+      const exploreFile = this.workspaceModel.getExplore(context.exploreName);
+      const fromView = exploreFile?.explore?.from;
       if (fromView) {
         // Add fields from base view
         this.addFieldReferences(items, fromView);
@@ -208,12 +214,18 @@ public getFieldReferenceCompletions(viewName: string): CompletionItem[] {
    * Add field references from a view to the completion items
    */
   private addFieldReferences(items: CompletionItem[], viewName: string): void {
-    const view = this.workspaceModel.getView(viewName);
+    const viewDetails = this.workspaceModel.getView(viewName);
+    const view = viewDetails?.view;
     if (!view) {
       return;
     }
    
-    const fields = [...Object.values(view.measure), ...Object.values(view.dimension), ...Object.values(view.dimension_group)];
+    const fields = [
+      ...Object.values(view.measure || {}), 
+      ...Object.values(view.dimension || {}), 
+      ...Object.values(view.dimension_group || {})
+    ];
+
     fields.forEach((field) => {
       items.push({
         label: `\${${viewName}.${field.$name}}`,

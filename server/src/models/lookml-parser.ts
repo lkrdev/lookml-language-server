@@ -2,7 +2,7 @@ import { Location, Position, Range } from "vscode-languageserver/node";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import * as path from "path";
 import { URI } from "vscode-uri";
-import { parseFiles, LookmlObject } from "lookml-parser";
+import { LookmlProject, parseFiles } from "lookml-parser";
 import * as fs from "fs/promises";
 import * as os from "os";
 
@@ -66,7 +66,7 @@ export interface ParseResult {
 }
 
 export class LookMLParser {
-  private lookmlProject: LookmlObject | null = null;
+  private lookmlProject: LookmlProject | null = null;
   private tempFilesDir: string | null = null;
 
   constructor() {
@@ -89,7 +89,7 @@ export class LookMLParser {
   /**
    * Get the lookml-parser Project object
    */
-  public getLookMLProject(): LookmlObject | null {
+  public getLookMLProject(): LookmlProject | null {
     return this.lookmlProject;
   }
 

@@ -13,17 +13,17 @@ import { URI } from "vscode-uri";
 import {
   LookMLParser,
 } from "./lookml-parser";
-import { parseFiles, parse, LookmlObject, LookmlViewFile, LookmlModelFile, LookmlExploreFile, LookmlModel } from "lookml-parser";
+import { parseFiles, parse, LookmlView, LookmlExplore, LookmlModel, LookmlProject, LookmlViewWithFileInfo, LookmlExploreWithFileInfo, LookmlModelWithFileInfo } from "lookml-parser";
 
 export class WorkspaceModel {
   public connection: Connection;
   private lookmlParser: LookMLParser;
-  public project?: LookmlObject;
+  public project?: LookmlProject;
 
   // Document tracking
-  private views: Map<string, LookmlViewFile> = new Map();
-  private explores: Map<string, LookmlExploreFile> = new Map();
-  private models: Map<string, LookmlModelFile> = new Map();
+  private views: Map<string, LookmlViewWithFileInfo> = new Map();
+  private explores: Map<string, LookmlExploreWithFileInfo> = new Map();
+  private models: Map<string, LookmlModelWithFileInfo> = new Map();
   private viewsByFile: Map<DocumentUri, string[]> = new Map();
   private includedViews: Map<string, Set<string>> = new Map();
   private exploresByFile: Map<DocumentUri, string[]> = new Map();
@@ -41,7 +41,7 @@ export class WorkspaceModel {
   /**
    * Get all views in the workspace
    */
-  public getViews(): Map<string, LookmlViewFile> {
+  public getViews(): Map<string, LookmlViewWithFileInfo> {
     return this.views;
   }
 
@@ -52,35 +52,35 @@ export class WorkspaceModel {
   /**
    * Get a specific view by name
    */
-  public getView(name: string): LookmlViewFile | undefined {
+  public getView(name: string): LookmlViewWithFileInfo | undefined {
     return this.views.get(name);
   }
 
   /**
    * Get all explores in the workspace
    */
-  public getExplores(): Map<string, LookmlExploreFile> {
+  public getExplores(): Map<string, LookmlExploreWithFileInfo> {
     return this.explores;
   }
 
   /**
    * Get a specific explore by name
    */
-  public getExplore(name: string): LookmlExploreFile | undefined {
+  public getExplore(name: string): LookmlExploreWithFileInfo | undefined {
     return this.explores.get(name);
   }
 
   /**
    * Get all models in the workspace
    */
-  public getModels(): Map<string, LookmlModelFile> {
+  public getModels(): Map<string, LookmlModelWithFileInfo> {
     return this.models;
   }
 
   /**
    * Get a specific model by name
    */
-  public getModel(name: string): LookmlModel | undefined {
+  public getModel(name: string): LookmlModelWithFileInfo | undefined {
     return this.models.get(name);
   }
 
@@ -125,65 +125,94 @@ export class WorkspaceModel {
     await this.parseProject(project);
   }
 
-  public async parseProject(project: LookmlObject): Promise<void> {
-    this.views = this.views ?? new Map<string, LookmlViewFile>();
-    this.explores = this.explores ?? new Map<string, LookmlExploreFile>();
-    this.models = this.models ?? new Map<string, LookmlModelFile>();
+  public async parseProject(project: LookmlProject): Promise<void> {
+    this.views = this.views ?? new Map<string, LookmlView>();
+    this.explores = this.explores ?? new Map<string, LookmlExplore>();
+    this.models = this.models ?? new Map<string, LookmlModel>();
 
     if (!project?.file) {
       return;
     }
 
-    for (const file of Object.values(project.file)) {
-      console.log("file", file);
+    const projectFiles = Object.values(project.file);
+    // Sort files to process views before models
+    projectFiles.sort((a, b) => {
+      // Views come first
+      if (a.$file_type === 'view' && b.$file_type !== 'view') return -1;
+      if (a.$file_type !== 'view' && b.$file_type === 'view') return 1;
+      // Then explores
+      if (a.$file_type === 'explore' && b.$file_type === 'model') return -1;
+      if (a.$file_type === 'model' && b.$file_type === 'explore') return 1;
+      // Otherwise maintain original order
+      return 0;
+    });
+
+    for (const file of projectFiles) {
       switch (file.$file_type) {
-        case "view":
+        case "view": {
           const viewName = file.$file_name;
-          const view = file.view[viewName];
-
-          if (view) {
-            this.views.set(viewName, view);
-            const uri =`file://${process.cwd()}/${file.$file_path}`
-            console.log("uri", uri);
-            const viewNames = this.viewsByFile.get(uri) || [];
-            viewNames.push(viewName);
-            this.viewsByFile.set(uri, viewNames);
-            console.log("viewsByFile", this.viewsByFile);
+          if (!viewName) {
+            continue;
           }
-          break;
+          const view = file?.view?.[viewName];
 
-        case "explore":
+          if (!view) {
+            continue;
+          }
+
+          this.views.set(viewName, { view, file });
+          const uri = `file://${process.cwd()}/${file.$file_path}`
+          const viewNames = this.viewsByFile.get(uri) || [];
+          viewNames.push(viewName);
+          this.viewsByFile.set(uri, viewNames);
+          break;
+        }
+
+        case "explore": {
           const exploreName = file.$file_name;
-          const explore = file.explore[exploreName];
-          if (explore) {
-            this.explores.set(exploreName, explore);
-            const uri =`file://${process.cwd()}/${file.$file_path}`
-            const exploreNames = this.exploresByFile.get(uri) || [];
-            exploreNames.push(exploreName);
-            this.exploresByFile.set(uri, exploreNames);
+          if (!exploreName) {
+            continue;
           }
+          const explore = file?.explore?.[exploreName];
+          if (!explore) {
+            continue;
+          }
+
+          this.explores.set(exploreName, { explore, file });
+          const uri = `file://${process.cwd()}/${file.$file_path}`
+          const exploreNames = this.exploresByFile.get(uri) || [];
+          exploreNames.push(exploreName);
+          this.exploresByFile.set(uri, exploreNames);
           break;
+        }
 
-        case "model":
+        case "model": {
           const modelName = file.$file_name;
-          const model = file.model[modelName];
+          if (!modelName) {
+            continue;
+          }
+          const model = file?.model?.[modelName];
 
-          if (model) {
-            this.models.set(modelName, model);
-            const uri =`file://${process.cwd()}/${file.$file_path}`
-            const modelNames = this.modelsByFile.get(uri) || [];
-            modelNames.push(modelName);
-            this.modelsByFile.set(uri, modelNames);
+          if (!model) {
+            continue;
+          }
 
-            const includes = typeof model.include === 'string' ? [model.include] : model.include;
-            if (includes) {
-              for (const include of includes) {
-                console.log("resolve include", include);
-                await this.resolveInclude(uri, include, modelName);
-              }
+          this.models.set(modelName, { model, file });
+          const uri = `file://${process.cwd()}/${file.$file_path}`
+          const modelNames = this.modelsByFile.get(uri) || [];
+          modelNames.push(modelName);
+          this.modelsByFile.set(uri, modelNames);
+
+          const includes = typeof model.include === 'string' ? [model.include] : model.include;
+          if (includes) {
+            for (const include of includes) {
+              console.log("resolve include", include);
+              await this.resolveInclude(uri, include, modelName);
             }
           }
+
           break;
+        }
       }
     }
   }
@@ -204,7 +233,7 @@ export class WorkspaceModel {
     this.clearDocumentData(uri);
 
     // Parse the document using our parser
-    this.parseProject(parse(document.getText()));
+    this.parseProject({ file: { [document.uri]: parse(document.getText()) } });
   }
 
   /**
@@ -346,21 +375,12 @@ export class WorkspaceModel {
 
         try {
           // Request file content via LSP
-          const documentUri = URI.file(filePath).toString();
-        
-
-          console.log("viewsByFile", this.viewsByFile);
-          console.log("viewsByFile", URI.file(filePath).toString());
-
           const viewsFromThisFile =
-            this.viewsByFile.get(documentUri) || [];
-
-          viewsFromThisFile.push(filePath);
+            this.viewsByFile.get(URI.file(filePath).toString()) || [];
 
           // Add these views to the includedViews map for this model
           if (modelName) {
-            let modelIncludes =
-              this.includedViews.get(modelName) || new Set();
+            let modelIncludes = this.includedViews.get(modelName) || new Set();
             viewsFromThisFile.forEach((view) => modelIncludes.add(view));
             this.includedViews.set(modelName, modelIncludes);
           }
@@ -454,27 +474,28 @@ export class WorkspaceModel {
     tableName: string
   ): { name: string; type: string }[] | null {
     // Look up the view in our workspace
-    const view = this.getView(tableName);
+    const viewDetails = this.getView(tableName);
+    const view = viewDetails?.view;
 
     if (!view || !view.measure || !view.dimension) {
       return null;
     }
 
     // Convert the Map to an array of field objects
-    const measureFields = Object.entries(view.measure).map(([fieldName, field]) => ({
+    const measureFields = view.measure ? Object.entries(view.measure).map(([fieldName, field]) => ({
       name: fieldName,
       type: field.type,
-    }));
+    })) : [];
 
-    const dimensionFields = Object.entries(view.dimension).map(([fieldName, field]) => ({
+    const dimensionFields = view.dimension ? Object.entries(view.dimension).map(([fieldName, field]) => ({
       name: fieldName,
       type: field.type,
-    }));
+    })) : [];
 
-    const dimensionGroupFields = Object.entries(view.dimension_group).map(([fieldName, field]) => ({
+    const dimensionGroupFields = view.dimension_group ? Object.entries(view.dimension_group).map(([fieldName, field]) => ({
       name: fieldName,
       type: field.type,
-    }));
+    })) : [];
 
     return [...measureFields, ...dimensionFields, ...dimensionGroupFields];
   }

@@ -191,9 +191,10 @@ export class HoverProvider {
    * Get hover info for a view
    */
   private getViewHover(word: string): Hover | undefined {
-    const file = this.workspaceModel.getView(word);
+    const viewDetails = this.workspaceModel.getView(word);
+    const view = viewDetails?.view;
 
-    if (!file) {
+    if (!view) {
       return;
     }
 
@@ -204,15 +205,15 @@ export class HoverProvider {
       measure: 0,
     };
 
-    fieldCounts.dimension = Object.keys(file.dimension || {}).length;
-    fieldCounts.measure = Object.keys(file.measure || {}).length;
-    fieldCounts.dimensionGroup = Object.keys(file.dimension_group || {}).length;
+    fieldCounts.dimension = Object.keys(view.dimension || {}).length;
+    fieldCounts.measure = Object.keys(view.measure || {}).length;
+    fieldCounts.dimensionGroup = Object.keys(view.dimension_group || {}).length;
 
     // Build view details
     const details = [];
 
     // Add SQL table name if available
-    const sqlTableName = file.sql_table_name;
+    const sqlTableName = view.sql_table_name;
     if (sqlTableName) {
       details.push(`**SQL Table:** \`${sqlTableName}\``);
     }
@@ -241,8 +242,8 @@ export class HoverProvider {
   ): Hover | null {
     const views = this.workspaceModel.getViews();
     // Check if this word is a field in any view
-    for (const [viewName, viewInfo] of views) {
-      const view = viewInfo?.view?. [word];
+    for (const [viewName, viewDetails] of views) {
+      const view = viewDetails?.view;
       const field = view?.dimension?.[word] || view?.dimension_group?.[word] || view?.measure?.[word];
       if (field) {
         // Build field details
@@ -295,19 +296,19 @@ export class HoverProvider {
    * Get hover info for an explore
    */
   private getExploreHover(word: string): Hover | null {
-    const file = this.workspaceModel.getExplore(word);
+    const exploreDetails = this.workspaceModel.getExplore(word);
+    const explore = exploreDetails?.explore;
 
-    if (!file) {
+    if (!explore) {
       return null;
     }
 
-    const explore = file.explore[word];
     // Build explore details
     const details = [];
 
     // Add view name if available
-    if (explore.view_name) {
-      details.push(`**Based on view:** \`${explore.view_name}\``);
+    if (explore.from) {
+      details.push(`**Based on view:** \`${explore.from}\``);
     }
 
     if (explore.join) {

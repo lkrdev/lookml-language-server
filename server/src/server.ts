@@ -307,7 +307,6 @@ connection.onDefinition((params: DefinitionParams): Definition | undefined => {
 
   const position = params.position;
   const word = getWordAtPosition(document, position);
-  console.log("WORD",word);
 
   if (!word) return;
 
@@ -321,19 +320,25 @@ connection.onDefinition((params: DefinitionParams): Definition | undefined => {
 
 
   // Fallback: treat word as a view name
-  const view = workspaceModel.getView(word);
-  console.log("VIEW FALLBACK",view);
+  const viewDetails = workspaceModel.getView(word);
+  const view = viewDetails?.view;
+  const viewFile = viewDetails?.file;
   if (!view) return;
 
   const modelName = workspaceModel.getModelNameFromUri(document.uri);
-  console.log("MODEL NAME",modelName);
   if (!modelName) return;
 
   const includedViews = workspaceModel.getIncludedViewsForModel(modelName);
-  console.log("INCLUDED VIEWS",includedViews);
   if (!includedViews || !includedViews.has(word)) return;
 
-  console.log("VIEW",view);
+  console.log("view", view,  `file://${process.cwd()}/${viewFile?.$file_path}`);
+  return {
+    uri: `file://${process.cwd()}/${viewFile?.$file_path}`,
+    range: {
+      start: { line: 0, character: 0 },
+      end: { line: 1, character: 1 },
+    },
+  };
 });
 
 // Provide document symbols for outline view
