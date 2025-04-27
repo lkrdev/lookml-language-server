@@ -138,25 +138,35 @@ export function activate(context: ExtensionContext) {
   );
 
   client.onRequest("lookml/findMatchingFiles", async (params: any) => {
-    const { baseDir, pattern } = params;
-
-    const patternWithExtension = `${pattern}.{lkml,lookml,model.lkml,view.lkml,explore.lkml}`;
+    const { baseDir } = params;
+    let { pattern } = params;
 
     try {
-      // Convert the pattern to a glob that VS Code can understand
-      const glob = new vscode.RelativePattern(
-        vscode.Uri.file(baseDir),
-        patternWithExtension
-      );
+      // Validate base directory
+      if (!baseDir) {
+        throw new Error('Base directory is required');
+      }
 
-      // Use VS Code's API to find files
-      const files = await vscode.workspace.findFiles(glob);
+      // Ensure pattern ends with appropriate extension
+      if (!/(\.lkml|\.lookml|\.model\.lkml|\.view\.lkml|\.explore\.lkml)$/i.test(pattern)) {
+        pattern = `${pattern}.{lkml,lookml,model.lkml,view.lkml,explore.lkml}`;
+      }
 
-      // Return absolute file paths
-      return files.map((file) => file.fsPath);
+      // Remove leading slash if present
+      if (pattern.startsWith("/")) {
+        pattern = pattern.slice(1);
+      }
+  
+      // 🔥 This was missing:
+      const files = await vscode.workspace.findFiles(pattern);
+
+
+      const filePaths = files.map((file) => file.fsPath);
+      
+      return filePaths;
     } catch (error) {
-      outputChannel.appendLine(`Error finding files: ${error}`);
-      return [];
+      console.error(error);
+      throw error; // Re-throw to ensure the client knows about the error
     }
   });
 

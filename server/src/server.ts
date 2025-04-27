@@ -315,43 +315,10 @@ connection.onDefinition((params: DefinitionParams): Definition | undefined => {
   if (position.line >= lines.length) return;
   const line = lines[position.line];
 
-  const refRegex = /\$\{([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\}/g;
-  let refMatch: RegExpExecArray | null;
+ 
 
-  while ((refMatch = refRegex.exec(line)) !== null) {
-    const [_, viewName, fieldName] = refMatch;
-    console.log("VIEW NAME",viewName);
-    const matchStart = refMatch.index;
-    const viewStart = matchStart + 2; // after ${
-    const viewEnd = viewStart + viewName.length;
-    const fieldStart = viewEnd + 1; // after .
-    const fieldEnd = fieldStart + fieldName.length;
-    const cursor = position.character;
+  
 
-    const modelName = workspaceModel.getModelNameFromUri(document.uri);
-    console.log("MODEL",modelName);
-    if (!modelName) continue;
-
-    const includedViews = workspaceModel.getIncludedViewsForModel(modelName);
-    console.log("INCLUDED VIEWS",includedViews);
-    if (!includedViews || !includedViews.has(viewName)) continue;
-
-    if (cursor >= viewStart && cursor <= viewEnd) {
-      const view = workspaceModel.getView(viewName);
-      console.log("VIEW",view);
-      if (view) {
-        console.log("VIEW",view);
-      }
-    }
-
-    if (cursor >= fieldStart && cursor <= fieldEnd) {
-      const file = workspaceModel.getView(viewName);
-      const view = file?.view?.[fieldName];
-      if (!view) continue;
-      const field = view.measure?.[fieldName] || view.dimension?.[fieldName] || view.dimension_group?.[fieldName];
-      console.log("FIELD",field);
-    }
-  }
 
   // Fallback: treat word as a view name
   const view = workspaceModel.getView(word);
