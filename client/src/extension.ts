@@ -145,6 +145,10 @@ export function activate(context: ExtensionContext) {
       pattern = `${pattern}.{lkml,lookml,model.lkml,view.lkml,explore.lkml}`;
     }
 
+    if (pattern.startsWith("/")) {
+      pattern = pattern.slice(1);
+    }
+
     try {
       // Convert the pattern to a glob that VS Code can understand
       const glob = new vscode.RelativePattern(
