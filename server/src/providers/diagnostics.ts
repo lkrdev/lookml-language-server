@@ -239,17 +239,37 @@ export class DiagnosticsProvider {
       }
 
       // Check for missing semicolons in SQL statements
-      const sqlMatch = line.match(/^\s*sql:\s+(.+)$/);
-      if (sqlMatch && !line.endsWith(";;")) {
-        diagnostics.push({
-          severity: DiagnosticSeverity.Error,
-          range: {
-            start: { line: i, character: 0 },
-            end: { line: i, character: line.length },
-          },
-          message: "SQL statement missing terminating semicolons (;;)",
-          source: "lookml-lsp",
-        });
+      const sqlMatch = line.match(/^\s*sql:\s*(.*)$/);
+      if (sqlMatch) {
+        // Start scanning from the current line
+        let foundTerminator = false;
+        let j = i;
+        while (j < lines.length) {
+          const checkLine = lines[j].trim();
+          if (checkLine === "" || checkLine.startsWith("#")) {
+            j++;
+            continue;
+          }
+          if (checkLine.endsWith(";;")) {
+            foundTerminator = true;
+            break;
+          }
+          // If we hit a new property or block end, stop
+          if (/^[a-zA-Z0-9_]+:/.test(checkLine) && j !== i) break;
+          if (checkLine === "}" && j !== i) break;
+          j++;
+        }
+        if (!foundTerminator) {
+          diagnostics.push({
+            severity: DiagnosticSeverity.Error,
+            range: {
+              start: { line: i, character: 0 },
+              end: { line: i, character: line.length },
+            },
+            message: "SQL statement missing terminating semicolons (;;)",
+            source: "lookml-lsp",
+          });
+        }
       }
     }
 
