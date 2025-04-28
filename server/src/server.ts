@@ -336,7 +336,7 @@ connection.onDefinition((params: DefinitionParams): Definition | undefined => {
     uri: `file://${process.cwd()}/${viewFile?.$file_path}`,
     range: {
       start: { line: 0, character: 0 },
-      end: { line: 1, character: 1 },
+      end: { line: 0, character: 1 },
     },
   };
 });
