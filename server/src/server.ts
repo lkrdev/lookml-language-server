@@ -14,6 +14,7 @@ import {
 } from "vscode-languageserver/node";
 
 import { TextDocument } from "vscode-languageserver-textdocument";
+import { URI } from "vscode-uri";
 
 // Import providers
 import { CompletionProvider } from "./providers/completion";
@@ -302,6 +303,7 @@ connection.onHover((params) => {
 
 // Provide go-to-definition with support for ${view.field} references
 connection.onDefinition((params: DefinitionParams): Definition | undefined => {
+  console.log("params.textDocument.uri", params.textDocument.uri);
   const document = documents.get(params.textDocument.uri);
   if (!document) return;
 
@@ -310,34 +312,41 @@ connection.onDefinition((params: DefinitionParams): Definition | undefined => {
 
   if (!word) return;
 
-  const lines = document.getText().split("\n");
-  if (position.line >= lines.length) return;
-  const line = lines[position.line];
-
- 
-
-  
-
-
+  console.log("word", word);
   // Fallback: treat word as a view name
   const viewDetails = workspaceModel.getView(word);
-  const view = viewDetails?.view;
-  const viewFile = viewDetails?.file;
-  if (!view) return;
 
-  const modelName = workspaceModel.getModelNameFromUri(document.uri);
-  if (!modelName) return;
+  console.log("viewDetails", viewDetails);
+  if (viewDetails) {
+    const viewUri = viewDetails?.uri;
 
-  const includedViews = workspaceModel.getIncludedViewsForModel(modelName);
-  if (!includedViews || !includedViews.has(word)) return;
+    const modelName = workspaceModel.getModelNameFromUri(document.uri);
+    if (!modelName) return;
 
-  console.log("view", view,  `file://${process.cwd()}/${viewFile?.$file_path}`);
-  return {
-    uri: `file://${process.cwd()}/${viewFile?.$file_path}`,
-    range: {
-      start: { line: 0, character: 0 },
-      end: { line: 0, character: 1 },
-    },
+    const includedViews = workspaceModel.getIncludedViewsForModel(modelName);
+    if (!includedViews || !includedViews.has(word)) return;
+
+    console.log("documents", documents);
+    const viewDocument = documents.get(viewUri);
+
+    if (viewDocument) {
+      const text = viewDocument.getText();
+      const viewRegex = new RegExp(`view:\\s*${word}`);
+      const match = viewRegex.exec(text);
+      
+      if (match) {
+        const startPos = viewDocument.positionAt(match.index);
+        const endPos = viewDocument.positionAt(match.index + match[0].length);
+        
+        return {
+          uri: viewUri,
+          range: {
+            start: startPos,
+            end: endPos,
+          },
+        };
+      }
+    }
   };
 });
 

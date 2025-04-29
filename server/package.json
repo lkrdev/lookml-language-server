@@ -14,7 +14,7 @@
   "dependencies": {
     "@looker/sdk": "^25.4.0",
     "@looker/sdk-node": "^25.4.0",
-    "lookml-parser": "^6.11.1",
+    "lookml-parser": "^7.0.0-0",
     "vscode": "^1.1.37",
     "vscode-languageserver": "^8.1.0",
     "vscode-languageserver-textdocument": "^1.0.8",

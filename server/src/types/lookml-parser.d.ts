@@ -1,16 +1,17 @@
 declare module "lookml-parser" {
-    export type LookmlValue = string | number | boolean | LookmlObject | LookmlValue[];
+    export type LookmlValue = string | number | boolean | LookmlValue[];
 
     export interface LookmlFile extends LookmlFileAttributes {
-        view?: Record<string, LookmlView>;
-        model?: Record<string, LookmlModel>;
-        explore?: Record<string, LookmlExplore>;
-        manifest?: Record<string, LookmlManifest>;
-        dashboard?: Record<string, LookmlDashboard>;
+        view?: Record<string, LookmlFileAttributes & { view: { [key: string]: LookmlView } }>;
+        model?: Record<string, LookmlModel >;
+        explore?: Record<string, LookmlFileAttributes & { explore: { [key: string]: LookmlExplore } }>;
+        manifest?: Record<string, LookmlFileAttributes & { manifest: { [key: string]: LookmlManifest } }>;
+        dashboard?: Record<string, LookmlFileAttributes & { dashboard: { [key: string]: LookmlDashboard } }>;
     }
 
     export interface LookmlProject extends LookmlFileAttributes {
-        file: Record<string, LookmlFile>;
+        file: LookmlFile;
+        model: Record<string, LookmlModel>;
     }
 
     export interface LookmlFileAttributes {
@@ -89,31 +90,31 @@ declare module "lookml-parser" {
         dimension?: Record<string, LookmlDimension>;
         dimension_group?: Record<string, LookmlDimensionGroup>;
         measure?: Record<string, LookmlMeasure>;
-        filter?: Record<string, LookmlObject>;
-        set?: Record<string, LookmlObject>;
-        derived_table?: Record<string, LookmlObject>;
+        derived_table?: Record<string, string>;
         extension?: boolean;
         extends?: string | string[];
         tags?: string[];
-        access_filter?: Record<string, LookmlObject>;
     }
 
     export interface LookmlViewWithFileInfo {
-        view: LookmlView;
         file: LookmlFileAttributes;
+        uri: string;
+        view: LookmlView;
     }
 
     export interface LookmlExploreWithFileInfo {
         explore: LookmlExplore;
+        uri: string;
         file: LookmlFileAttributes;
     }
 
     export interface LookmlModelWithFileInfo {
         model: LookmlModel;
+        uri: string;
         file: LookmlFileAttributes;
     }
 
-    export interface LookmlExplore extends LookmlObject {
+    export interface LookmlExplore {
         label?: string;
         description?: string;
         hidden?: boolean;
@@ -122,40 +123,28 @@ declare module "lookml-parser" {
         extension?: boolean;
         sql_always_where?: string;
         sql_always_having?: string;
-        access_filter?: Record<string, LookmlObject>;
-        always_filter?: Record<string, LookmlObject>;
         join?: Record<string, LookmlJoin>;
-        set?: Record<string, LookmlObject>;
         tags?: string[];
         group_label?: string;
     }
 
-    export interface LookmlModel extends LookmlObject {
+    export interface LookmlModel extends LookmlFileAttributes {
         label?: string;
         include?: string | string[];
         explore?: Record<string, LookmlExplore>;
-        access_filter?: Record<string, LookmlObject>;
         extension?: boolean;
-        sets?: Record<string, LookmlObject>;
-        parameters?: Record<string, LookmlObject>;
         tags?: string[];
     }
 
-    export interface LookmlManifest extends LookmlObject {
+    export interface LookmlManifest {
         project_name?: string;
         application?: string;
         includes?: string[];
         timezone?: string;
-        localization_settings?: LookmlObject;
-        parameter?: Record<string, LookmlObject>;
     }
 
-    export interface LookmlDashboard extends LookmlObject {
+    export interface LookmlDashboard {
         title?: string;
-        layout?: LookmlObject;
-        element?: Record<string, LookmlObject>;
-        filter?: Record<string, LookmlObject>;
-        alert?: Record<string, LookmlObject>;
         label?: string;
         description?: string;
         tags?: string[];
@@ -177,7 +166,6 @@ declare module "lookml-parser" {
         | LookmlExploreFile
         | LookmlManifestFile
         | LookmlDashboardFile
-        | LookmlObject;
 
     export interface TransformOptions {
         s?: boolean;
@@ -197,7 +185,7 @@ declare module "lookml-parser" {
         conditionalComment?: string;
     }
 
-    export function parse(lkml: string): LookmlObject;
+    export function parse(lkml: string): LookmlProject;
 
     export function parseFiles(options: ParseFilesOptions & { fileOutput?: 'by-type' }): Promise<LookmlProject>;
     export function parseFiles(options: ParseFilesOptions & { fileOutput: 'by-name' }): Promise<LookmlProject>;
