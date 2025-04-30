@@ -232,12 +232,13 @@ export class WorkspaceModel {
     // Remove existing data for this file
     this.clearDocumentData(uri);
 
-    const parsedDocument = parse(document.getText());
-    
-
-    console.log("updateDocument parse", parse(document.getText()));
-    // Parse the document using our parser
-    //this.parseProject({ file: { [document.uri]: parse(document.getText()) } });
+    try {
+      const parsedDocument = parse(document.getText());
+      console.log("updateDocument parse", parsedDocument);
+    } catch (error) {
+      console.error("updateDocument parse error", error);
+      console.error("JSON parse error", (error as any).toJSON());
+    }
   }
 
   /**
