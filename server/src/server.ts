@@ -363,73 +363,75 @@ connection.onDefinition((params: DefinitionParams): Definition | undefined => {
     const fieldRefMatch = line.match(fieldRefRegex);
     const fullFieldRef = fieldRefMatch ? fieldRefMatch[0] : word;
     
-    if (drillFields.includes(fullFieldRef)) {
-      let viewName = workspaceModel.getViewNameFromFile(document);
-      if (fullFieldRef.includes(".")) {
-        const fieldSplit = fullFieldRef.split(".");
-        viewName = fieldSplit[0];
-        word = fieldSplit[1];
-      }
+    if (!drillFields.includes(fullFieldRef)) {
+      return;
+    }
+    
+    let viewName = workspaceModel.getViewNameFromFile(document);
+    if (fullFieldRef.includes(".")) {
+      const fieldSplit = fullFieldRef.split(".");
+      viewName = fieldSplit[0];
+      word = fieldSplit[1];
+    }
 
-      // Try to find the field in the current view first
-      if (viewName) {
-        const currentViewDetails = workspaceModel.getView(viewName);
-        if (currentViewDetails) {
-          const fieldPosition = currentViewDetails.positions.dimension?.[word]?.$name?.$p ||
-                               currentViewDetails.positions.measure?.[word]?.$name?.$p ||
-                               currentViewDetails.positions.dimension_group?.[word]?.$name?.$p;
+    // Try to find the field in the current view first
+    if (viewName) {
+      const currentViewDetails = workspaceModel.getView(viewName);
+      if (currentViewDetails) {
+        const fieldPosition = currentViewDetails.positions.dimension?.[word]?.$name?.$p ||
+                              currentViewDetails.positions.measure?.[word]?.$name?.$p ||
+                              currentViewDetails.positions.dimension_group?.[word]?.$name?.$p;
 
-          if (fieldPosition) {
-            const startPosition: Position = {
-              line: fieldPosition[0] - 1,
-              character: fieldPosition[1]
-            };
+        if (fieldPosition) {
+          const startPosition: Position = {
+            line: fieldPosition[0] - 1,
+            character: fieldPosition[1]
+          };
 
-            const endPosition: Position = {
-              line: fieldPosition[2] - 1,
-              character: fieldPosition[3]
-            };
+          const endPosition: Position = {
+            line: fieldPosition[2] - 1,
+            character: fieldPosition[3]
+          };
 
-            return {
-              uri: currentViewDetails.uri,
-              range: {
-                start: startPosition,
-                end: endPosition
-              }
-            };
-          }
+          return {
+            uri: currentViewDetails.uri,
+            range: {
+              start: startPosition,
+              end: endPosition
+            }
+          };
         }
       }
+    }
 
-      // If the field reference contains a dot, look in the referenced view
-      if (fullFieldRef.includes('.')) {
-        const [viewName, fieldName] = fullFieldRef.split('.');
-        const viewDetails = workspaceModel.getView(viewName);
-        console.log("viewDetails", viewDetails);
-        if (viewDetails) {
-          const fieldPosition = viewDetails.positions.dimension?.[fieldName]?.$name?.$p ||
-                               viewDetails.positions.measure?.[fieldName]?.$name?.$p ||
-                               viewDetails.positions.dimension_group?.[fieldName]?.$name?.$p;
+    // If the field reference contains a dot, look in the referenced view
+    if (fullFieldRef.includes('.')) {
+      const [viewName, fieldName] = fullFieldRef.split('.');
+      const viewDetails = workspaceModel.getView(viewName);
 
-          if (fieldPosition) {
-            const startPosition: Position = {
-              line: fieldPosition[0] - 1,
-              character: fieldPosition[1]
-            };
+      if (viewDetails) {
+        const fieldPosition = viewDetails.positions.dimension?.[fieldName]?.$name?.$p ||
+                              viewDetails.positions.measure?.[fieldName]?.$name?.$p ||
+                              viewDetails.positions.dimension_group?.[fieldName]?.$name?.$p;
 
-            const endPosition: Position = {
-              line: fieldPosition[2] - 1,
-              character: fieldPosition[3]
-            };
+        if (fieldPosition) {
+          const startPosition: Position = {
+            line: fieldPosition[0] - 1,
+            character: fieldPosition[1]
+          };
 
-            return {
-              uri: viewDetails.uri,
-              range: {
-                start: startPosition,
-                end: endPosition
-              }
-            };
-          }
+          const endPosition: Position = {
+            line: fieldPosition[2] - 1,
+            character: fieldPosition[3]
+          };
+
+          return {
+            uri: viewDetails.uri,
+            range: {
+              start: startPosition,
+              end: endPosition
+            }
+          };
         }
       }
     }

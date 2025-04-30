@@ -194,18 +194,19 @@ export class DiagnosticsProvider {
     // Check for missing colons in block declarations
     const blockRegex = /^\s*([a-zA-Z0-9_]+)\s+([a-zA-Z0-9_]+)\s*\{/;
     const validBlockTypes = [
-      "view",
-      "explore",
-      "model",
-      "measure",
-      "dimension",
+      "access_grant",
+      "datagroup",
+      "derived_table",
       "dimension_group",
-      "parameter",
+      "dimension",
+      "explore",
       "filter",
       "join",
-      "derived_table",
-      "datagroup",
-      "access_grant",
+      "measure",
+      "model",
+      "parameter",
+      "set",
+      "view",
     ];
 
     for (let i = 0; i < lines.length; i++) {
@@ -695,6 +696,10 @@ export class DiagnosticsProvider {
    */
   private validateProperties(document: TextDocument): Diagnostic[] {
     try {
+      const viewName = this.workspaceModel.getViewNameFromFile(document);
+      const viewDetails = viewName ? this.workspaceModel.getView(viewName) : null;
+      console.log("validateProperties viewDetails", viewDetails);
+      
       const diagnostics: Diagnostic[] = [];
       const text = document.getText();
       const lines = text.split("\n");
@@ -906,12 +911,27 @@ export class DiagnosticsProvider {
                       field = fieldSplit[1];
                     } 
 
-                    if (!viewName) {
+                    if (field.includes("*") && viewDetails?.view?.set) {
+                      const fieldWithoutAsterisk = field.replace("*", "");
+
+                      if (!viewDetails?.view?.set?.[fieldWithoutAsterisk]) {
+                        const fieldPos = line.indexOf(originalField, currentPos);
+
+                        diagnostics.push({
+                          severity: DiagnosticSeverity.Error,
+                          range: {
+                            start: { line: i, character: fieldPos },
+                            end: { line: i, character: fieldPos + originalField.length },
+                          },
+                          message: `Set "${fieldWithoutAsterisk}" not found in view "${viewName}"`,
+                          source: "lookml-lsp",
+                        });
+                      }
+
                       continue;
                     }
 
-                    const view = this.workspaceModel.getView(viewName);
-                    if (!view?.view?.dimension?.[field] && !view?.view?.measure?.[field] && !view?.view?.dimension_group?.[field]) {
+                    if (!viewDetails?.view?.dimension?.[field] && !viewDetails?.view?.measure?.[field] && !viewDetails?.view?.dimension_group?.[field]) {
                       // Find the exact position of this field in the list
                       const fieldPos = line.indexOf(originalField, currentPos);
                       diagnostics.push({

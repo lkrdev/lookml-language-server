@@ -97,6 +97,7 @@ declare module "lookml-parser" {
         extension?: boolean;
         extends?: string | string[];
         tags?: string[];
+        set?: Record<string, LookmlSet>;
     }
 
     export interface Position {
