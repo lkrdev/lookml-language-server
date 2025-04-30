@@ -115,7 +115,6 @@ export class WorkspaceModel {
    * Initialize the workspace by finding and loading the model file
    */
   public async initialize(): Promise<void> {
-    console.log("initialize");
     const project = await parseFiles({
       source: "**/*.{view,model,explore}.lkml",
       fileOutput: 'by-name',
@@ -150,7 +149,6 @@ export class WorkspaceModel {
           const uri = `${process.cwd()}/${filePath}`;
           const filePositions = project.positions.file[viewName];
 
-          console.log("positions", JSON.stringify(filePositions.view[fileName], null, 2)  );
           this.views.set(fileName, {
             file: rest,
             uri,
@@ -234,6 +232,10 @@ export class WorkspaceModel {
     // Remove existing data for this file
     this.clearDocumentData(uri);
 
+    const parsedDocument = parse(document.getText());
+    
+
+    console.log("updateDocument parse", parse(document.getText()));
     // Parse the document using our parser
     //this.parseProject({ file: { [document.uri]: parse(document.getText()) } });
   }
@@ -304,7 +306,7 @@ export class WorkspaceModel {
     // Check if it's a view
     if (this.views.has(name)) {
       const view = this.views.get(name)!;
-      console.log("view", view);
+      console.log("findReferencesview", view);
     }
     return references;
   }
@@ -335,7 +337,6 @@ export class WorkspaceModel {
   public getIncludedViewsForModel(
     modelName: string
   ): Set<string> | undefined {
-    console.log("includedViews", this.includedViews);
     return this.includedViews.get(modelName);
   }
 
@@ -375,15 +376,10 @@ export class WorkspaceModel {
           // Request file content via LSP
           const viewsFromThisFile =
             this.viewsByFile.get(filePath) || [];
-          console.log("this.viewsByFile", this.viewsByFile);
-          console.log("viewsFromThisFile", viewsFromThisFile);
-          // Add these views to the includedViews map for this model
-
-
+      
           const modelIncludes = this.includedViews.get(modelName) || new Set();
 
           viewsFromThisFile.forEach((view) => modelIncludes.add(view));
-          console.log("modelIncludes", modelIncludes);
           this.includedViews.set(modelName, modelIncludes);
 
         } catch (fileError) {
@@ -403,17 +399,6 @@ export class WorkspaceModel {
     pattern: string
   ): Promise<string[]> {
     try {
-      console.log("Connection status:", {
-        hasConnection: !!this.connection,
-        baseDir,
-        pattern,
-      });
-
-      console.log("Sending request to find matching files:", {
-        baseDir,
-        pattern,
-      });
-
       // Send a custom request to the client
       const response = await this.connection.sendRequest(
         "lookml/findMatchingFiles",
@@ -422,8 +407,6 @@ export class WorkspaceModel {
           pattern,
         }
       );
-
-      console.log("Received response:", response);
 
       // The response should be an array of file paths
       if (Array.isArray(response)) {

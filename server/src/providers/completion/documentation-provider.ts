@@ -155,7 +155,7 @@ export class DocumentationProvider {
     doc += `Contains ${fieldCount} fields\n\n`;
     
     // Add location
-    console.log("view", view);
+    console.log("getViewDocumentation view", view);
     //doc += `Defined in: ${this.getRelativePath(view.location.uri)}`;
     
     return doc;

@@ -241,34 +241,35 @@ export class DiagnosticsProvider {
         });
       }
 
-      // Check for property declarations missing colons
-      const missingColonMatch = line.match(/^\s*([a-zA-Z0-9_]+)\s+([^{:\n]+)$/);
-      if (missingColonMatch && !line.includes("{")) {
-        const [_, propertyName, propertyValue] = missingColonMatch;
-        diagnostics.push({
-          severity: DiagnosticSeverity.Error,
-          range: {
-            start: { line: i, character: lines[i].indexOf(propertyName) },
-            end: { line: i, character: lines[i].indexOf(propertyValue) + propertyValue.length },
-          },
-          message: `Missing colon after property name. Change to: "${propertyName}: ${propertyValue}"`,
-          source: "lookml-lsp",
-        });
-      }
-
-      // Check for common LookML property names that might be missing colons
-      const commonProperties = ["from", "view_name", "type", "sql", "relationship", "fields"];
-      for (const prop of commonProperties) {
-        const noColonMatch = line.match(new RegExp(`^\\s*\\.*(${prop})\\s+([^{:\\n]+)$`));
-        if (noColonMatch) {
-          const [_, propertyName, propertyValue] = noColonMatch;
+      // Check for missing semicolons in SQL statements
+      const sqlMatch = line.match(/^\s*sql:\s*(.*)$/);
+      if (sqlMatch) {
+        // Start scanning from the current line
+        let foundTerminator = false;
+        let j = i;
+        while (j < lines.length) {
+          const checkLine = lines[j].trim();
+          if (checkLine === "" || checkLine.startsWith("#")) {
+            j++;
+            continue;
+          }
+          if (checkLine.endsWith(";;")) {
+            foundTerminator = true;
+            break;
+          }
+          // If we hit a new property or block end, stop
+          if (/^[a-zA-Z0-9_]+:/.test(checkLine) && j !== i) break;
+          if (checkLine === "}" && j !== i) break;
+          j++;
+        }
+        if (!foundTerminator) {
           diagnostics.push({
             severity: DiagnosticSeverity.Error,
             range: {
-              start: { line: i, character: lines[i].indexOf(propertyName) },
-              end: { line: i, character: lines[i].indexOf(propertyValue) + propertyValue.length },
+              start: { line: i, character: 0 },
+              end: { line: i, character: line.length },
             },
-            message: `Missing colon after "${propertyName}". Correct syntax is: "${propertyName}: ${propertyValue}"`,
+            message: "SQL statement missing terminating semicolons (;;)",
             source: "lookml-lsp",
           });
         }
@@ -311,20 +312,6 @@ export class DiagnosticsProvider {
             end: { line: i, character: lines[i].indexOf(blockTypeMatch[1]) + blockTypeMatch[1].length },
           },
           message: `Invalid block type "${blockTypeMatch[1]}". Valid block types are: ${validBlockTypes.join(", ")}.`,
-          source: "lookml-lsp",
-        });
-      }
-
-      // Check for missing semicolons in SQL statements
-      const sqlMatch = line.match(/^\s*sql:\s+(.+)$/);
-      if (sqlMatch && !line.endsWith(";;")) {
-        diagnostics.push({
-          severity: DiagnosticSeverity.Error,
-          range: {
-            start: { line: i, character: 0 },
-            end: { line: i, character: line.length },
-          },
-          message: "SQL statement missing terminating semicolons (;;)",
           source: "lookml-lsp",
         });
       }
