@@ -357,16 +357,10 @@ connection.onDefinition((params: DefinitionParams): Definition | undefined => {
   const drillFieldsMatch = line.match(drillFieldsRegex);
   
   if (drillFieldsMatch) {
-    const drillFields = drillFieldsMatch[1].split(',').map(f => f.trim());    
-    // Find the full field reference in the line that contains our word
-    const fieldRefRegex = new RegExp(`\\b([a-zA-Z_][a-zA-Z0-9_]*\\.)?${word}\\b`);
+    const fieldRefRegex = new RegExp(`([a-zA-Z_][a-zA-Z0-9_]*)\\.${word}`);
     const fieldRefMatch = line.match(fieldRefRegex);
     const fullFieldRef = fieldRefMatch ? fieldRefMatch[0] : word;
-    
-    if (!drillFields.includes(fullFieldRef)) {
-      return;
-    }
-    
+
     let viewName = workspaceModel.getViewNameFromFile(document);
     if (fullFieldRef.includes(".")) {
       const fieldSplit = fullFieldRef.split(".");

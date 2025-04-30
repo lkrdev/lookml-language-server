@@ -670,12 +670,14 @@ export class DiagnosticsProvider {
           }
 
           // Check if view exists in workspace and model
-          const view = this.workspaceModel.getView(viewName);
+          const viewDetails = this.workspaceModel.getView(viewName);
           
+          console.log("viewDetails", viewDetails);
+          console.log("fieldName", fieldName);
           if (
-              !view?.view?.dimension?.[fieldName] && 
-              !view?.view?.measure?.[fieldName] && 
-              !view?.view?.dimension_group?.[fieldName]
+              !viewDetails?.view?.dimension?.[fieldName] && 
+              !viewDetails?.view?.measure?.[fieldName] && 
+              !viewDetails?.view?.dimension_group?.[fieldName]
             ) {
             diagnostics.push({
               severity: DiagnosticSeverity.Error,
@@ -697,8 +699,7 @@ export class DiagnosticsProvider {
   private validateProperties(document: TextDocument): Diagnostic[] {
     try {
       const viewName = this.workspaceModel.getViewNameFromFile(document);
-      const viewDetails = viewName ? this.workspaceModel.getView(viewName) : null;
-      console.log("validateProperties viewDetails", viewDetails);
+      let viewDetails = viewName ? this.workspaceModel.getView(viewName) : null;
       
       const diagnostics: Diagnostic[] = [];
       const text = document.getText();
@@ -909,6 +910,7 @@ export class DiagnosticsProvider {
                       const fieldSplit = field.split(".");
                       viewName = fieldSplit[0];
                       field = fieldSplit[1];
+                      viewDetails = this.workspaceModel.getView(viewName);
                     } 
 
                     if (field.includes("*") && viewDetails?.view?.set) {
