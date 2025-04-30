@@ -303,51 +303,92 @@ connection.onHover((params) => {
 
 // Provide go-to-definition with support for ${view.field} references
 connection.onDefinition((params: DefinitionParams): Definition | undefined => {
-  console.log("params.textDocument.uri", params.textDocument.uri);
   const document = documents.get(params.textDocument.uri);
   if (!document) return;
 
+  const isModelFile = workspaceModel.isModelFile(document);
   const position = params.position;
+  const lineNumber = position.line;
   const word = getWordAtPosition(document, position);
 
+  const documentText = document.getText();
+  const line = documentText.split("\n")[lineNumber];
+  
+  // Get the exact word at cursor position
   if (!word) return;
 
-  console.log("word", word);
-  // Fallback: treat word as a view name
-  const viewDetails = workspaceModel.getView(word);
+  // Check if we're in a SQL expression
+  const sqlFieldRegex = new RegExp(`\\$\\{([a-zA-Z_][a-zA-Z0-9_]*)\\.${word}\\}`);
+  const sqlMatch = line.match(sqlFieldRegex);
+  
+  if (sqlMatch) {
+    const [, viewName] = sqlMatch;
+    const viewDetails = workspaceModel.getView(viewName);
+    if (!viewDetails) return;
 
-  console.log("viewDetails", viewDetails);
-  if (viewDetails) {
+    // Check if the field exists in the view
+    const fieldPosition = viewDetails.positions.dimension?.[word]?.$name?.$p ||
+                         viewDetails.positions.measure?.[word]?.$name?.$p ||
+                         viewDetails.positions.dimension_group?.[word]?.$name?.$p;
+
+    if (fieldPosition) {
+      const startPosition: Position = {
+        line: fieldPosition[0] - 1,
+        character: fieldPosition[1]
+      };
+
+      const endPosition: Position = {
+        line: fieldPosition[2] - 1,
+        character: fieldPosition[3]
+      };
+
+      return {
+        uri: viewDetails.uri,
+        range: {
+          start: startPosition,
+          end: endPosition
+        }
+      };
+    }
+  }
+
+  // If not in a SQL expression, try to find a view reference
+  const viewDetails = workspaceModel.getView(word);
+  const viewName = viewDetails?.file?.$file_name;
+
+  if (viewName) {
+    const viewNamePosition = viewDetails?.positions?.$name?.$p;
+    if (!viewNamePosition) return;
+    
     const viewUri = viewDetails?.uri;
 
-    const modelName = workspaceModel.getModelNameFromUri(document.uri);
-    if (!modelName) return;
+    if (isModelFile) {
+      // make sure the view is included in the model
+      const modelName = workspaceModel.getModelNameFromUri(document.uri);
+      if (!modelName) return;
 
-    const includedViews = workspaceModel.getIncludedViewsForModel(modelName);
-    if (!includedViews || !includedViews.has(word)) return;
-
-    console.log("documents", documents);
-    const viewDocument = documents.get(viewUri);
-
-    if (viewDocument) {
-      const text = viewDocument.getText();
-      const viewRegex = new RegExp(`view:\\s*${word}`);
-      const match = viewRegex.exec(text);
-      
-      if (match) {
-        const startPos = viewDocument.positionAt(match.index);
-        const endPos = viewDocument.positionAt(match.index + match[0].length);
-        
-        return {
-          uri: viewUri,
-          range: {
-            start: startPos,
-            end: endPos,
-          },
-        };
-      }
+      const includedViewsForModel = workspaceModel.getIncludedViewsForModel(modelName);
+      if (!includedViewsForModel?.has(viewName)) return;
     }
-  };
+
+    const startPosition: Position = {
+      line: viewNamePosition[0] - 1,
+      character: viewNamePosition[1] - 1
+    };
+
+    const endPosition: Position = {
+      line: viewNamePosition[2] - 1,
+      character: viewNamePosition[3] - 1
+    };
+
+    return {
+      uri: viewUri,
+      range: {
+        start: startPosition,
+        end: endPosition
+      }
+    };
+  }
 });
 
 // Provide document symbols for outline view

@@ -12,6 +12,9 @@ declare module "lookml-parser" {
     export interface LookmlProject extends LookmlFileAttributes {
         file: LookmlFile;
         model: Record<string, LookmlModel>;
+        positions: {
+            file: Record<string, any>;
+        }
     }
 
     export interface LookmlFileAttributes {
@@ -96,22 +99,72 @@ declare module "lookml-parser" {
         tags?: string[];
     }
 
+    export interface Position {
+        $p: [number, number, number, number];
+    }
+
+    export interface BaseFieldPosition extends Position {
+        $type?: Position;
+        $name?: Position;
+        type?: Position;
+        sql?: Position;
+    }
+
+    export interface DrillFieldsPosition extends Position {
+        [index: string]: Position;
+    }
+
+    export interface TimeframesPosition extends Position {
+        [index: string]: Position;
+    }
+
+    export interface DimensionPosition extends BaseFieldPosition {
+        primary_key?: Position;
+        map_layer_name?: Position;
+        drill_fields?: DrillFieldsPosition;
+    }
+
+    export interface DimensionGroupPosition extends BaseFieldPosition {
+        timeframes?: TimeframesPosition;
+    }
+
+    export interface MeasurePosition extends BaseFieldPosition {
+        drill_fields?: DrillFieldsPosition;
+    }
+
     export interface LookmlViewWithFileInfo {
         file: LookmlFileAttributes;
         uri: string;
         view: LookmlView;
+        positions: {
+            $type?: Position;
+            $name?: Position;
+            sql_table_name?: Position;
+            drill_fields?: DrillFieldsPosition;
+            dimension?: Position & {
+                [fieldName: string]: DimensionPosition;
+            };
+            dimension_group?: Position & {
+                [fieldName: string]: DimensionGroupPosition;
+            };
+            measure?: Position & {
+                [fieldName: string]: MeasurePosition;
+            };
+            $p: [number, number, number, number];
+        };
     }
 
     export interface LookmlExploreWithFileInfo {
         explore: LookmlExplore;
         uri: string;
         file: LookmlFileAttributes;
+        positions: any;
     }
 
     export interface LookmlModelWithFileInfo {
         model: LookmlModel;
         uri: string;
-        file: LookmlFileAttributes;
+        positions: any;
     }
 
     export interface LookmlExplore {
@@ -184,6 +237,10 @@ declare module "lookml-parser" {
         console?: Console;
         conditionalComment?: string;
     }
+    
+    export const transformations: {
+        addPositions: (project: LookmlProject) => void;
+    };
 
     export function parse(lkml: string): LookmlProject;
 
