@@ -6,6 +6,7 @@ import {
   Range,
 } from "vscode-languageserver/node";
 import { WorkspaceModel } from "../models/workspace";
+import { parseMultiLineProperty, findFieldPosition, getWordRange } from '../utils/lookml-parser';
 
 export class DiagnosticsProvider {
   private workspaceModel: WorkspaceModel;
@@ -672,8 +673,6 @@ export class DiagnosticsProvider {
           // Check if view exists in workspace and model
           const viewDetails = this.workspaceModel.getView(viewName);
           
-          console.log("viewDetails", viewDetails);
-          console.log("fieldName", fieldName);
           if (
               !viewDetails?.view?.dimension?.[fieldName] && 
               !viewDetails?.view?.measure?.[fieldName] && 
@@ -883,8 +882,10 @@ export class DiagnosticsProvider {
 
             switch (propertyName) {
               case "drill_fields": {
-                // Check for correct list syntax and validate field references
-                const drillFieldsMatch = line.match(/^\s*drill_fields:\s*\[(.*)\]/);
+                // First check if the line has proper array syntax
+                const lineContent = lines[i].trim();
+                const drillFieldsMatch = lineContent.match(/^\s*drill_fields:\s*(.+)$/);
+                
                 if (!drillFieldsMatch) {
                   diagnostics.push({
                     severity: DiagnosticSeverity.Error,
@@ -892,17 +893,95 @@ export class DiagnosticsProvider {
                       start: { line: i, character: line.indexOf("drill_fields:") },
                       end: { line: i, character: line.length },
                     },
-                    message: 'drill_fields must be a list. Use format: drill_fields: [field1, field2]',
+                    message: 'drill_fields must be a list. Use format: drill_fields: [field1, field2] or multi-line array format',
+                    source: "lookml-lsp",
+                  });
+                  break;
+                }
+
+                const content = drillFieldsMatch[1].trim();
+                
+                // Check for single line format
+                if (!content.startsWith('[')) {
+                  diagnostics.push({
+                    severity: DiagnosticSeverity.Error,
+                    range: {
+                      start: { line: i, character: line.indexOf("drill_fields:") },
+                      end: { line: i, character: line.length },
+                    },
+                    message: 'drill_fields must start with [',
+                    source: "lookml-lsp",
+                  });
+                  break;
+                }
+
+                // Handle multi-line format
+                if (!content.includes(']')) {
+                  // Look ahead for closing bracket
+                  let foundClosingBracket = false;
+                  let currentLine = i + 1;
+                  
+                  while (currentLine < lines.length) {
+                    const nextLine = lines[currentLine].trim();
+                    if (nextLine === ']' || nextLine.endsWith(']')) {
+                      foundClosingBracket = true;
+                      break;
+                    }
+                    // Stop if we hit another property or block end
+                    if (nextLine.match(/^[a-zA-Z0-9_]+:/) || nextLine === '}') {
+                      break;
+                    }
+                    currentLine++;
+                  }
+
+                  if (!foundClosingBracket) {
+                    diagnostics.push({
+                      severity: DiagnosticSeverity.Error,
+                      range: {
+                        start: { line: i, character: line.indexOf("drill_fields:") },
+                        end: { line: i, character: line.length },
+                      },
+                      message: 'drill_fields array must end with ]',
+                      source: "lookml-lsp",
+                    });
+                    break;
+                  }
+                }
+
+                // For single line format, check for proper comma separation
+                if (content.includes(']')) {
+                  const fields = content.substring(1, content.indexOf(']')).split(',');
+                  if (fields.length > 1) {
+                    const hasEmptyFields = fields.some(field => field.trim() === '');
+                    if (hasEmptyFields) {
+                      diagnostics.push({
+                        severity: DiagnosticSeverity.Error,
+                        range: {
+                          start: { line: i, character: line.indexOf("drill_fields:") },
+                          end: { line: i, character: line.length },
+                        },
+                        message: 'Fields in drill_fields must be separated by commas',
+                        source: "lookml-lsp",
+                      });
+                      break;
+                    }
+                  }
+                }
+
+                const parseResult = this.parseMultiLineProperty(lines, i, "drill_fields");
+                
+                if (parseResult.content.length === 0) {
+                  diagnostics.push({
+                    severity: DiagnosticSeverity.Error,
+                    range: {
+                      start: { line: i, character: line.indexOf("drill_fields:") },
+                      end: { line: i, character: line.length },
+                    },
+                    message: 'drill_fields must be a list. Use format: drill_fields: [field1, field2] or multi-line array format',
                     source: "lookml-lsp",
                   });
                 } else {
-                  const fields = drillFieldsMatch[1].split(",").map(f => f.trim()).filter(f => f);
-                  
-                  // Get the position of the opening bracket
-                  const openBracketPos = line.indexOf("[");
-                  let currentPos = openBracketPos + 1;
-                  
-                  for (let field of fields) {
+                  for (let field of parseResult.content) {
                     let viewName = this.workspaceModel.getViewNameFromFile(document);
                     let originalField = field;
                     
@@ -917,37 +996,48 @@ export class DiagnosticsProvider {
                       const fieldWithoutAsterisk = field.replace("*", "");
 
                       if (!viewDetails?.view?.set?.[fieldWithoutAsterisk]) {
-                        const fieldPos = line.indexOf(originalField, currentPos);
+                        const fieldPosition = this.findFieldPosition(
+                          lines,
+                          parseResult.startLineNumber,
+                          parseResult.endLineNumber,
+                          originalField
+                        );
 
-                        diagnostics.push({
-                          severity: DiagnosticSeverity.Error,
-                          range: {
-                            start: { line: i, character: fieldPos },
-                            end: { line: i, character: fieldPos + originalField.length },
-                          },
-                          message: `Set "${fieldWithoutAsterisk}" not found in view "${viewName}"`,
-                          source: "lookml-lsp",
-                        });
+                        if (fieldPosition) {
+                          diagnostics.push({
+                            severity: DiagnosticSeverity.Error,
+                            range: {
+                              start: { line: fieldPosition.line, character: fieldPosition.character },
+                              end: { line: fieldPosition.line, character: fieldPosition.character + originalField.length },
+                            },
+                            message: `Set "${fieldWithoutAsterisk}" not found in view "${viewName}"`,
+                            source: "lookml-lsp",
+                          });
+                        }
                       }
-
                       continue;
                     }
 
                     if (!viewDetails?.view?.dimension?.[field] && !viewDetails?.view?.measure?.[field] && !viewDetails?.view?.dimension_group?.[field]) {
-                      // Find the exact position of this field in the list
-                      const fieldPos = line.indexOf(originalField, currentPos);
-                      diagnostics.push({
-                        severity: DiagnosticSeverity.Error,
-                        range: {
-                          start: { line: i, character: fieldPos },
-                          end: { line: i, character: fieldPos + originalField.length },
-                        },
-                        message: `Field "${originalField}" not found in view "${viewName}"`,
-                        source: "lookml-lsp",
-                      });
+                      const fieldPosition = this.findFieldPosition(
+                        lines,
+                        parseResult.startLineNumber,
+                        parseResult.endLineNumber,
+                        originalField
+                      );
+
+                      if (fieldPosition) {
+                        diagnostics.push({
+                          severity: DiagnosticSeverity.Error,
+                          range: {
+                            start: { line: fieldPosition.line, character: fieldPosition.character },
+                            end: { line: fieldPosition.line, character: fieldPosition.character + originalField.length },
+                          },
+                          message: `Field "${originalField}" not found in view "${viewName}"`,
+                          source: "lookml-lsp",
+                        });
+                      }
                     }
-                    // Move current position past this field and its comma
-                    currentPos = line.indexOf(originalField, currentPos) + originalField.length + 1;
                   }
                 }
                 break;
@@ -1006,13 +1096,13 @@ export class DiagnosticsProvider {
   /**
    * Helper method to get a range for a specific word in a line
    */
-  private getWordRange(line: string, lineNumber: number, word: string): Range {
-    const start = line.indexOf(word);
+  private getWordRange(lines: string, lineNumber: number, word: string): Range {
+    const start = lines.indexOf(word);
     if (start === -1) {
       // Fallback if we can't find the word
       return Range.create(
         Position.create(lineNumber, 0),
-        Position.create(lineNumber, line.length)
+        Position.create(lineNumber, lines.length)
       );
     }
 
@@ -1020,5 +1110,102 @@ export class DiagnosticsProvider {
       Position.create(lineNumber, start),
       Position.create(lineNumber, start + word.length)
     );
+  }
+
+  /**
+   * Utility function to parse multi-line property values that use array or block syntax
+   * @param lines All lines of the document
+   * @param startLine The line number where the property starts
+   * @param propertyName The name of the property being parsed
+   * @param openChar Opening character ('[' for arrays, '{' for blocks)
+   * @param closeChar Closing character (']' for arrays, '}' for blocks)
+   * @returns Object containing the parsed content and line information
+   */
+  private parseMultiLineProperty(
+    lines: string[],
+    startLine: number,
+    propertyName: string,
+    openChar: string = '[',
+    closeChar: string = ']'
+  ): {
+    content: string[];
+    startLineNumber: number;
+    endLineNumber: number;
+    isMultiLine: boolean;
+  } {
+    const firstLine = lines[startLine].trim();
+    const propertyMatch = firstLine.match(new RegExp(`^\\s*${propertyName}:\\s*\\${openChar}(.*)$`));
+    
+    if (!propertyMatch) {
+      return {
+        content: [],
+        startLineNumber: startLine,
+        endLineNumber: startLine,
+        isMultiLine: false
+      };
+    }
+
+    let arrayContent = propertyMatch[1];
+    let foundClosingChar = arrayContent.includes(closeChar);
+    let currentLine = startLine;
+    let content: string[] = [];
+
+    // If it's a single line property
+    if (foundClosingChar) {
+      arrayContent = arrayContent.substring(0, arrayContent.indexOf(closeChar));
+      content = arrayContent.split(",").map(f => f.trim()).filter(f => f);
+      return {
+        content,
+        startLineNumber: startLine,
+        endLineNumber: startLine,
+        isMultiLine: false
+      };
+    }
+
+    // Handle multi-line property
+    while (currentLine < lines.length && !foundClosingChar) {
+      if (currentLine > startLine) {
+        const nextLine = lines[currentLine].trim();
+        if (nextLine.includes(closeChar)) {
+          arrayContent = nextLine.substring(0, nextLine.indexOf(closeChar));
+          foundClosingChar = true;
+        } else {
+          arrayContent = nextLine;
+        }
+      }
+      
+      if (arrayContent) {
+        const lineContent = arrayContent.split(",").map(f => f.trim()).filter(f => f);
+        content.push(...lineContent);
+      }
+      
+      currentLine++;
+    }
+
+    return {
+      content,
+      startLineNumber: startLine,
+      endLineNumber: currentLine - 1,
+      isMultiLine: true
+    };
+  }
+
+  /**
+   * Find the line and character position of a field in a range of lines
+   */
+  private findFieldPosition(
+    lines: string[],
+    startLine: number,
+    endLine: number,
+    field: string
+  ): { line: number; character: number } | null {
+    for (let searchLine = startLine; searchLine <= endLine; searchLine++) {
+      const lineContent = lines[searchLine];
+      const fieldPos = lineContent.indexOf(field);
+      if (fieldPos !== -1) {
+        return { line: searchLine, character: fieldPos };
+      }
+    }
+    return null;
   }
 }

@@ -36,6 +36,7 @@ import {
 } from "./commands";
 import { WorkspaceModel } from "./models/workspace";
 import { Logger } from "./utils/logger";
+import { DefinitionProvider } from "./providers/definition";
 
 // Create a connection for the server
 const connection = createConnection(ProposedFeatures.all);
@@ -60,6 +61,8 @@ const documentUpdatePromises = new Map<string, Promise<void>>();
 const workspaceModel = new WorkspaceModel({
   connection,
 });
+
+const definitionProvider = new DefinitionProvider(workspaceModel);
 
 // Create providers
 const completionProvider = new CompletionProvider(workspaceModel);
@@ -306,168 +309,7 @@ connection.onDefinition((params: DefinitionParams): Definition | undefined => {
   const document = documents.get(params.textDocument.uri);
   if (!document) return;
 
-  const isModelFile = workspaceModel.isModelFile(document);
-  const position = params.position;
-  const lineNumber = position.line;
-  let word = getWordAtPosition(document, position);
-
-  const documentText = document.getText();
-  const line = documentText.split("\n")[lineNumber];
-  
-  // Get the exact word at cursor position
-  if (!word) return;
-
-  // Check if we're in a SQL expression
-  const sqlFieldRegex = new RegExp(`\\$\\{([a-zA-Z_][a-zA-Z0-9_]*)\\.${word}\\}`);
-  const sqlMatch = line.match(sqlFieldRegex);
-  
-  if (sqlMatch) {
-    const [, viewName] = sqlMatch;
-    const viewDetails = workspaceModel.getView(viewName);
-    if (!viewDetails) return;
-
-    // Check if the field exists in the view
-    const fieldPosition = viewDetails.positions.dimension?.[word]?.$name?.$p ||
-                         viewDetails.positions.measure?.[word]?.$name?.$p ||
-                         viewDetails.positions.dimension_group?.[word]?.$name?.$p;
-
-    if (fieldPosition) {
-      const startPosition: Position = {
-        line: fieldPosition[0] - 1,
-        character: fieldPosition[1]
-      };
-
-      const endPosition: Position = {
-        line: fieldPosition[2] - 1,
-        character: fieldPosition[3]
-      };
-
-      return {
-        uri: viewDetails.uri,
-        range: {
-          start: startPosition,
-          end: endPosition
-        }
-      };
-    }
-  }
-
-  // Check if we're in a drill_fields array
-  const drillFieldsRegex = new RegExp(`drill_fields:\\s*\\[([^\\]]*)\\]`);
-  const drillFieldsMatch = line.match(drillFieldsRegex);
-  
-  if (drillFieldsMatch) {
-    const fieldRefRegex = new RegExp(`([a-zA-Z_][a-zA-Z0-9_]*)\\.${word}`);
-    const fieldRefMatch = line.match(fieldRefRegex);
-    const fullFieldRef = fieldRefMatch ? fieldRefMatch[0] : word;
-
-    let viewName = workspaceModel.getViewNameFromFile(document);
-    if (fullFieldRef.includes(".")) {
-      const fieldSplit = fullFieldRef.split(".");
-      viewName = fieldSplit[0];
-      word = fieldSplit[1];
-    }
-
-    // Try to find the field in the current view first
-    if (viewName) {
-      const currentViewDetails = workspaceModel.getView(viewName);
-      if (currentViewDetails) {
-        const fieldPosition = currentViewDetails.positions.dimension?.[word]?.$name?.$p ||
-                              currentViewDetails.positions.measure?.[word]?.$name?.$p ||
-                              currentViewDetails.positions.dimension_group?.[word]?.$name?.$p;
-
-        if (fieldPosition) {
-          const startPosition: Position = {
-            line: fieldPosition[0] - 1,
-            character: fieldPosition[1]
-          };
-
-          const endPosition: Position = {
-            line: fieldPosition[2] - 1,
-            character: fieldPosition[3]
-          };
-
-          return {
-            uri: currentViewDetails.uri,
-            range: {
-              start: startPosition,
-              end: endPosition
-            }
-          };
-        }
-      }
-    }
-
-    // If the field reference contains a dot, look in the referenced view
-    if (fullFieldRef.includes('.')) {
-      const [viewName, fieldName] = fullFieldRef.split('.');
-      const viewDetails = workspaceModel.getView(viewName);
-
-      if (viewDetails) {
-        const fieldPosition = viewDetails.positions.dimension?.[fieldName]?.$name?.$p ||
-                              viewDetails.positions.measure?.[fieldName]?.$name?.$p ||
-                              viewDetails.positions.dimension_group?.[fieldName]?.$name?.$p;
-
-        if (fieldPosition) {
-          const startPosition: Position = {
-            line: fieldPosition[0] - 1,
-            character: fieldPosition[1]
-          };
-
-          const endPosition: Position = {
-            line: fieldPosition[2] - 1,
-            character: fieldPosition[3]
-          };
-
-          return {
-            uri: viewDetails.uri,
-            range: {
-              start: startPosition,
-              end: endPosition
-            }
-          };
-        }
-      }
-    }
-  }
-
-  // If not in a SQL expression or drill_fields, try to find a view reference
-  const viewDetails = workspaceModel.getView(word);
-  const viewName = viewDetails?.file?.$file_name;
-
-  if (viewName) {
-    const viewNamePosition = viewDetails?.positions?.$name?.$p;
-    if (!viewNamePosition) return;
-    
-    const viewUri = viewDetails?.uri;
-
-    if (isModelFile) {
-      // make sure the view is included in the model
-      const modelName = workspaceModel.getModelNameFromUri(document.uri);
-      if (!modelName) return;
-
-      const includedViewsForModel = workspaceModel.getIncludedViewsForModel(modelName);
-      if (!includedViewsForModel?.has(viewName)) return;
-    }
-
-    const startPosition: Position = {
-      line: viewNamePosition[0] - 1,
-      character: viewNamePosition[1] - 1
-    };
-
-    const endPosition: Position = {
-      line: viewNamePosition[2] - 1,
-      character: viewNamePosition[3] - 1
-    };
-
-    return {
-      uri: viewUri,
-      range: {
-        start: startPosition,
-        end: endPosition
-      }
-    };
-  }
+  return definitionProvider.getDefinition(document, params.position);
 });
 
 // Provide document symbols for outline view
@@ -516,50 +358,7 @@ connection.onDocumentOnTypeFormatting((params) => {
   );
 });
 
-// Helper function to get word at position
-function getWordAtPosition(
-  document: TextDocument,
-  position: Position
-): string | null {
-  const text = document.getText();
-  const lines = text.split("\n");
-
-  if (position.line >= lines.length) {
-    return null;
-  }
-
-  const line = lines[position.line];
-  const character = position.character;
-
-  // Find word boundaries
-  let start = character;
-  let end = character;
-
-  // Find start position
-  while (start > 0) {
-    const char = line.charAt(start - 1);
-    if (!/[a-zA-Z0-9_]/.test(char)) {
-      break;
-    }
-    start--;
-  }
-
-  // Find end position
-  while (end < line.length) {
-    const char = line.charAt(end);
-    if (!/[a-zA-Z0-9_]/.test(char)) {
-      break;
-    }
-    end++;
-  }
-
-  // No word found
-  if (start === end) {
-    return null;
-  }
-
-  return line.substring(start, end);
-}
+// Helper function to get word at positi
 
 // Make the text document manager listen on the connection
 documents.listen(connection);

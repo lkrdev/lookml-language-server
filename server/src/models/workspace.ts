@@ -307,7 +307,7 @@ export class WorkspaceModel {
     // Check if it's a view
     if (this.views.has(name)) {
       const view = this.views.get(name)!;
-      console.log("findReferencesview", view);
+      console.log("findReferences view", view);
     }
     return references;
   }
