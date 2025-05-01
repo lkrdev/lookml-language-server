@@ -205,6 +205,8 @@ export class WorkspaceModel {
           const fileRel = model.$file_rel;
           const fileName = value.$file_name;
 
+          this.includedViews.set(fileName, new Set<string>)
+
           const uri = `${process.cwd()}/${filePath}`;
           const filePositions = project.positions.file[`${fileRel}.model`];
 
