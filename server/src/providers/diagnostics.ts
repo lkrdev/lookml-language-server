@@ -561,7 +561,7 @@ export class DiagnosticsProvider {
             diagnostics.push({
               severity: DiagnosticSeverity.Error,
               range,
-              message: `Field "${fieldName}" not found in view "${viewName}"`,
+              message: `Field1 "${fieldName}" not found in view "${viewName}"`,
               source: "lookml-lsp",
             });
           }
@@ -681,7 +681,7 @@ export class DiagnosticsProvider {
             diagnostics.push({
               severity: DiagnosticSeverity.Error,
               range,
-              message: `Field "${fieldName}" not found in view "${viewName}"`,
+              message: `Field2 "${fieldName}" not found in view "${viewName}"`,
               source: "lookml-lsp",
             });
           } 
@@ -695,10 +695,10 @@ export class DiagnosticsProvider {
   /**
    * Validate properties based on their context
    */
-  private validateProperties(document: TextDocument): Diagnostic[] {
+  protected validateProperties(document: TextDocument): Diagnostic[] {
     try {
       const viewName = this.workspaceModel.getViewNameFromFile(document);
-      let viewDetails = viewName ? this.workspaceModel.getView(viewName) : null;
+      const fileViewDetails = viewName ? this.workspaceModel.getView(viewName) : null;
       
       const diagnostics: Diagnostic[] = [];
       const text = document.getText();
@@ -984,18 +984,41 @@ export class DiagnosticsProvider {
                   for (let field of parseResult.content) {
                     let viewName = this.workspaceModel.getViewNameFromFile(document);
                     let originalField = field;
+
+                    let targetViewDetails = fileViewDetails;
                     
                     if (field.includes(".")) {
                       const fieldSplit = field.split(".");
                       viewName = fieldSplit[0];
                       field = fieldSplit[1];
-                      viewDetails = this.workspaceModel.getView(viewName);
+                      targetViewDetails = this.workspaceModel.getView(viewName);
+
+                      if (!targetViewDetails) {
+                        const fieldPosition = this.findFieldPosition(
+                          lines,
+                          parseResult.startLineNumber,
+                          parseResult.endLineNumber,
+                          originalField
+                        );
+
+                        if (fieldPosition) {
+                          diagnostics.push({
+                            severity: DiagnosticSeverity.Error,
+                            range: {
+                              start: { line: fieldPosition.line, character: fieldPosition.character },
+                              end: { line: fieldPosition.line, character: fieldPosition.character + originalField.length },
+                            },
+                            message: `Referenced view "${viewName}" not found in workspace "${viewName}"`,
+                            source: "lookml-lsp",
+                          });
+                        }
+                      }
                     } 
 
-                    if (field.includes("*") && viewDetails?.view?.set) {
+                    if (field.includes("*")) {
                       const fieldWithoutAsterisk = field.replace("*", "");
 
-                      if (!viewDetails?.view?.set?.[fieldWithoutAsterisk]) {
+                      if (!targetViewDetails?.view?.set?.[fieldWithoutAsterisk]) {
                         const fieldPosition = this.findFieldPosition(
                           lines,
                           parseResult.startLineNumber,
@@ -1018,7 +1041,7 @@ export class DiagnosticsProvider {
                       continue;
                     }
 
-                    if (!viewDetails?.view?.dimension?.[field] && !viewDetails?.view?.measure?.[field] && !viewDetails?.view?.dimension_group?.[field]) {
+                    if (!targetViewDetails?.view?.dimension?.[field] && !targetViewDetails?.view?.measure?.[field] && !targetViewDetails?.view?.dimension_group?.[field]) {
                       const fieldPosition = this.findFieldPosition(
                         lines,
                         parseResult.startLineNumber,
@@ -1033,7 +1056,7 @@ export class DiagnosticsProvider {
                             start: { line: fieldPosition.line, character: fieldPosition.character },
                             end: { line: fieldPosition.line, character: fieldPosition.character + originalField.length },
                           },
-                          message: `Field "${originalField}" not found in view "${viewName}"`,
+                          message: `Field3 "${originalField}" not found in view "${viewName}"`,
                           source: "lookml-lsp",
                         });
                       }

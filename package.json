@@ -97,10 +97,13 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc --build",
     "watch": "tsc --build --watch",
-    "lint": "eslint src --ext ts"
+    "lint": "eslint src --ext ts",
+    "test": "jest"
   },
   "devDependencies": {
+    "@types/jest": "^29.5.14",
     "@types/node": "^20.17.30",
+    "ts-jest": "^29.3.2",
     "typescript": "^5.2.2"
   },
   "dependencies": {
