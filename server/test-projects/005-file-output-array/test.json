@@ -1,0 +1,52 @@
+{
+	"note":"Array order (aplhabetical) is determined by the default sorting included in the glob library",
+	"parseFileOptions":{
+			"fileOutput":"array"
+	},
+	"expected":{
+		"model":{
+			"foobar":{
+				"explore":{
+					"foo_view":{},
+					"bar":{}
+				}
+			}
+		},
+		"files":[
+			{
+				"$file_type":"explore",
+				"$file_name":"bar",
+				"explore":{
+					"bar":{}
+				},
+				"view":{
+					"bar":{}
+				}
+			},
+			{
+				"$file_type":"view",
+				"$file_name":"foo",
+				"view": {
+					"foo_view": {}
+				}
+			},
+			{
+				"$file_type":"model",
+				"$file_name":"foobar",	
+				"model": {
+					"foobar": {
+						"connection":"conn",
+						"include":["*.view.lkml","bar.explore.lkml"],
+						"explore":{
+							"foo_view": {}
+						}
+					}
+				}
+			},
+			{
+				"$file_type":"manifest",
+				"project_name":"proj"
+			}
+		]
+	}
+}

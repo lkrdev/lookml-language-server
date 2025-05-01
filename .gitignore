@@ -4,3 +4,5 @@ client/server
 .vscode-test
 tsconfig.tsbuildinfo
 server/lookml-server.log
+.DS_Store
+.vscode

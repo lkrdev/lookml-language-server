@@ -1,0 +1,76 @@
+{
+	"expected":{
+		"model":{
+			"foobar":{
+				"explore":{
+					"foo_view":{},
+					"bar":{}
+				},
+				"view":{
+					"foo_view":{},
+					"bar":{},
+					"baz":{}
+				}
+			},
+			"in_folder":{
+				"explore":{
+					"baz":{}
+				},
+				"view":{
+					"baz":{}
+				}
+			}
+		},
+		"file":{
+			"manifest":{
+				"project_name":"proj"
+			},
+			"view": {
+				"foo": {
+					"view": {
+						"foo_view": {}
+					}
+				},
+				"sub1/sub2/baz":{
+					"view":{
+						"baz":{}
+					}
+				}
+			},
+			"model": {
+				"foobar": {
+					"model": {
+						"foobar": {
+							"connection":"conn",
+							"include":["/**/*.view.lkml","bar.explore.lkml"],
+							"explore":{
+								"foo_view": {}
+							}
+						}
+					}
+				},
+				"sub1/in_folder":{
+					"model":{
+						"in_folder":{
+							"include":"sub2/baz.view.lkml",
+							"explore":{
+								"baz":{}
+							}
+						}
+					}
+				}
+			},
+			"explore":{
+				"bar":{
+					"explore":{
+						"bar":{}
+					},
+					"view":{
+						"bar":{}
+					}
+					
+				}
+			}
+		}
+	}
+}
