@@ -152,8 +152,8 @@ export class WorkspaceModel {
           this.views.set(fileName, {
             file: rest,
             uri,
-            view: view[fileName],
-            positions: filePositions.view[fileName],
+            view: view?.[fileName],
+            positions: filePositions?.view?.[fileName],
           });
 
           const fileViewNames = this.viewsByFile.get(uri) || [];
@@ -173,10 +173,10 @@ export class WorkspaceModel {
           const filePositions = project.positions.file[exploreName];
 
           this.explores.set(fileName, {
-            explore: explore[fileName],
+            explore: explore?.[fileName],
             file: rest,
             uri,
-            positions: filePositions.explore[fileName],
+            positions: filePositions.explore?.[fileName],
           });
 
           const fileExploreNames = this.exploresByFile.get(uri) || [];

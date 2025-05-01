@@ -8,6 +8,61 @@ import {
 import { WorkspaceModel } from "../models/workspace";
 import { parseMultiLineProperty, findFieldPosition, getWordRange } from '../utils/lookml-parser';
 
+export enum DiagnosticCode {
+  // Syntax validation (10000-19999)
+  SYNTAX_UNBALANCED_CLOSING_BRACE = 10001,
+  SYNTAX_UNCLOSED_BRACE = 10002,
+  SYNTAX_INVALID_PROPERTY_NAME = 10003,
+  SYNTAX_INVALID_INDENTATION = 10004,
+  SYNTAX_MISSING_SQL_TERMINATOR = 10005,
+  SYNTAX_MISSING_BLOCK_COLON = 10006,
+  SYNTAX_INVALID_BLOCK_TYPE = 10007,
+
+  // View Reference validation (20000-29999)
+  VIEW_REF_FIELD_NOT_FOUND = 20001,
+  VIEW_REF_VIEW_NOT_FOUND = 20002,
+  VIEW_REF_VIEW_NOT_INCLUDED = 20003,
+  VIEW_REF_FIELD_IN_SQL = 20004,
+
+  // SQL Reference validation (30000-39999)
+  SQL_REF_FIELD_NOT_FOUND = 30001,
+  SQL_REF_VIEW_NOT_FOUND = 30002,
+  SQL_REF_VIEW_NOT_INCLUDED = 30003,
+  SQL_REF_VIEW_NOT_AVAILABLE = 30004,
+
+  // Drill Fields validation (40000-49999)
+  DRILL_FIELDS_INVALID_FORMAT = 40001,
+  DRILL_FIELDS_MISSING_BRACKET = 40002,
+  DRILL_FIELDS_MISSING_CLOSING = 40003,
+  DRILL_FIELDS_EMPTY_FIELD = 40004,
+  DRILL_FIELDS_VIEW_NOT_FOUND = 40005,
+  DRILL_FIELDS_SET_NOT_FOUND = 40006,
+  DRILL_FIELDS_FIELD_NOT_FOUND = 40007,
+
+  // Property validation (50000-59999)
+  PROP_INVALID_BLOCK_PARENT = 50001,
+  PROP_INVALID_CHILD_BLOCK = 50002,
+  PROP_INVALID_PROPERTY = 50003,
+  PROP_INVALID_TYPE = 50004,
+  PROP_INVALID_CONTEXT = 50005,
+  PROP_INVALID_HIDDEN_VALUE = 50006,
+  PROP_PRIMARY_KEY_INVALID_CONTEXT = 50007,
+  PROP_RELATIONSHIP_INVALID_CONTEXT = 50008,
+
+  // Join validation (60000-69999)
+  JOIN_VIEW_NOT_FOUND = 60001,
+  JOIN_FIELD_NOT_FOUND = 60002,
+  JOIN_VIEW_NOT_INCLUDED = 60003,
+  JOIN_INVALID_RELATIONSHIP = 60004,
+  JOIN_VIEW_NOT_AVAILABLE = 60005,
+
+  // Explore validation (70000-79999)
+  EXPLORE_VIEW_NOT_FOUND = 70001,
+  EXPLORE_FIELD_NOT_FOUND = 70002,
+  EXPLORE_VIEW_NOT_INCLUDED = 70003,
+  EXPLORE_INVALID_EXTENDS = 70004,
+}
+
 export class DiagnosticsProvider {
   private workspaceModel: WorkspaceModel;
 
@@ -166,6 +221,7 @@ export class DiagnosticsProvider {
               },
               message: "Unbalanced closing brace",
               source: "lookml-lsp",
+              code: DiagnosticCode.SYNTAX_UNBALANCED_CLOSING_BRACE
             });
             openBraces = 0;
             braceStack = [];
@@ -188,6 +244,7 @@ export class DiagnosticsProvider {
           },
           message: "Unclosed brace",
           source: "lookml-lsp",
+          code: DiagnosticCode.SYNTAX_UNCLOSED_BRACE
         });
       }
     }
@@ -225,6 +282,7 @@ export class DiagnosticsProvider {
           },
           message: `Invalid property name "${propertyDeclMatch[1]}". Property names must contain only letters, numbers, and underscores.`,
           source: "lookml-lsp",
+          code: DiagnosticCode.SYNTAX_INVALID_PROPERTY_NAME
         });
       }
 
@@ -240,6 +298,7 @@ export class DiagnosticsProvider {
           },
           message: `Invalid indentation "${indentMarker.trim()}". Use spaces for indentation and a colon after the property name. Change to: "${propertyName}:"`,
           source: "lookml-lsp",
+          code: DiagnosticCode.SYNTAX_INVALID_INDENTATION
         });
       }
 
@@ -273,6 +332,7 @@ export class DiagnosticsProvider {
             },
             message: "SQL statement missing terminating semicolons (;;)",
             source: "lookml-lsp",
+            code: DiagnosticCode.SYNTAX_MISSING_SQL_TERMINATOR
           });
         }
       }
@@ -301,6 +361,7 @@ export class DiagnosticsProvider {
           },
           message: `Missing colon in block definition. Use "${incorrectBlockMatch[1]}: ${incorrectBlockMatch[2]}" instead`,
           source: "lookml-lsp",
+          code: DiagnosticCode.SYNTAX_MISSING_BLOCK_COLON
         });
       }
 
@@ -315,6 +376,7 @@ export class DiagnosticsProvider {
           },
           message: `Invalid block type "${blockTypeMatch[1]}". Valid block types are: ${validBlockTypes.join(", ")}.`,
           source: "lookml-lsp",
+          code: DiagnosticCode.SYNTAX_INVALID_BLOCK_TYPE
         });
       }
     }
@@ -440,6 +502,7 @@ export class DiagnosticsProvider {
             range,
             message: `Referenced view "${viewName}" not found in workspace`,
             source: "lookml-lsp",
+            code: DiagnosticCode.VIEW_REF_VIEW_NOT_FOUND
           });
         } else if (!includedViews?.has(viewName) && modelName) {
           // Check if view is included in the model
@@ -448,6 +511,7 @@ export class DiagnosticsProvider {
             range,
             message: `View "${viewName}" exists but is not included in this model`,
             source: "lookml-lsp",
+            code: DiagnosticCode.VIEW_REF_VIEW_NOT_INCLUDED
           });
         }
       }
@@ -549,6 +613,7 @@ export class DiagnosticsProvider {
               range,
               message: `Referenced view "${viewName}" not found in workspace`,
               source: "lookml-lsp",
+              code: DiagnosticCode.SQL_REF_VIEW_NOT_FOUND
             });
           } else if (!viewIncluded && modelName) {
             diagnostics.push({
@@ -556,13 +621,15 @@ export class DiagnosticsProvider {
               range,
               message: `View "${viewName}" exists but is not included in this model`,
               source: "lookml-lsp",
+              code: DiagnosticCode.SQL_REF_VIEW_NOT_INCLUDED
             });
           } else if (!view.measure?.[fieldName] && !view.dimension?.[fieldName] && !view.dimension_group?.[fieldName]) {
             diagnostics.push({
               severity: DiagnosticSeverity.Error,
               range,
-              message: `Field1 "${fieldName}" not found in view "${viewName}"`,
+              message: `Field "${fieldName}" not found in view "${viewName}"`,
               source: "lookml-lsp",
+              code: DiagnosticCode.SQL_REF_FIELD_NOT_FOUND
             });
           }
           // NEW CHECK: Verify the view is available in this explore context
@@ -572,6 +639,7 @@ export class DiagnosticsProvider {
               range,
               message: `View "${viewName}" is not available in this explore context. It must be joined before it can be referenced.`,
               source: "lookml-lsp",
+              code: DiagnosticCode.SQL_REF_VIEW_NOT_AVAILABLE
             });
           }
         }
@@ -681,8 +749,9 @@ export class DiagnosticsProvider {
             diagnostics.push({
               severity: DiagnosticSeverity.Error,
               range,
-              message: `Field2 "${fieldName}" not found in view "${viewName}"`,
+              message: `Field "${fieldName}" not found in view "${viewName}"`,
               source: "lookml-lsp",
+              code: DiagnosticCode.VIEW_REF_FIELD_NOT_FOUND
             });
           } 
         }
@@ -789,6 +858,7 @@ export class DiagnosticsProvider {
                 range: this.getWordRange(lines[i], i, blockType),
                 message: `"${blockType}" blocks can only be defined inside ${validParents} files.`,
                 source: "lookml-lsp",
+                code: DiagnosticCode.PROP_INVALID_BLOCK_PARENT
               });
             }
           }
@@ -801,6 +871,7 @@ export class DiagnosticsProvider {
                 range: this.getWordRange(lines[i], i, blockType),
                 message: `"${blockType}" blocks cannot be defined inside ${parent.type}s. Valid blocks include: ${validChildren}.`,
                 source: "lookml-lsp",
+                code: DiagnosticCode.PROP_INVALID_CHILD_BLOCK
               });
             }
           }
@@ -841,6 +912,7 @@ export class DiagnosticsProvider {
                   range: this.getWordRange(lines[i], i, propertyName),
                   message: `"${propertyName}" is not a valid property for ${blockType}s. Valid scalar properties include: ${Array.from(scalarProps[blockType]).join(", ")}. Valid block properties include: ${Array.from(childBlocks[blockType]).join(", ")}.`,
                   source: "lookml-lsp",
+                  code: DiagnosticCode.PROP_INVALID_PROPERTY
                 });
               }
             }
@@ -869,6 +941,7 @@ export class DiagnosticsProvider {
                       ", "
                     )}`,
                     source: "lookml-lsp",
+                    code: DiagnosticCode.PROP_INVALID_TYPE
                   });
                 }
               }
@@ -895,6 +968,7 @@ export class DiagnosticsProvider {
                     },
                     message: 'drill_fields must be a list. Use format: drill_fields: [field1, field2] or multi-line array format',
                     source: "lookml-lsp",
+                    code: DiagnosticCode.DRILL_FIELDS_INVALID_FORMAT
                   });
                   break;
                 }
@@ -911,6 +985,7 @@ export class DiagnosticsProvider {
                     },
                     message: 'drill_fields must start with [',
                     source: "lookml-lsp",
+                    code: DiagnosticCode.DRILL_FIELDS_MISSING_BRACKET
                   });
                   break;
                 }
@@ -943,6 +1018,7 @@ export class DiagnosticsProvider {
                       },
                       message: 'drill_fields array must end with ]',
                       source: "lookml-lsp",
+                      code: DiagnosticCode.DRILL_FIELDS_MISSING_CLOSING
                     });
                     break;
                   }
@@ -962,6 +1038,7 @@ export class DiagnosticsProvider {
                         },
                         message: 'Fields in drill_fields must be separated by commas',
                         source: "lookml-lsp",
+                        code: DiagnosticCode.DRILL_FIELDS_EMPTY_FIELD
                       });
                       break;
                     }
@@ -979,6 +1056,7 @@ export class DiagnosticsProvider {
                     },
                     message: 'drill_fields must be a list. Use format: drill_fields: [field1, field2] or multi-line array format',
                     source: "lookml-lsp",
+                    code: DiagnosticCode.DRILL_FIELDS_INVALID_FORMAT
                   });
                 } else {
                   for (let field of parseResult.content) {
@@ -1010,6 +1088,7 @@ export class DiagnosticsProvider {
                             },
                             message: `Referenced view "${viewName}" not found in workspace "${viewName}"`,
                             source: "lookml-lsp",
+                            code: DiagnosticCode.SQL_REF_VIEW_NOT_FOUND
                           });
                         }
                       }
@@ -1035,6 +1114,7 @@ export class DiagnosticsProvider {
                             },
                             message: `Set "${fieldWithoutAsterisk}" not found in view "${viewName}"`,
                             source: "lookml-lsp",
+                            code: DiagnosticCode.DRILL_FIELDS_SET_NOT_FOUND
                           });
                         }
                       }
@@ -1056,8 +1136,9 @@ export class DiagnosticsProvider {
                             start: { line: fieldPosition.line, character: fieldPosition.character },
                             end: { line: fieldPosition.line, character: fieldPosition.character + originalField.length },
                           },
-                          message: `Field3 "${originalField}" not found in view "${viewName}"`,
+                          message: `Field "${originalField}" not found in view "${viewName}"`,
                           source: "lookml-lsp",
+                          code: DiagnosticCode.DRILL_FIELDS_FIELD_NOT_FOUND
                         });
                       }
                     }
@@ -1073,6 +1154,7 @@ export class DiagnosticsProvider {
                     range: this.getWordRange(lines[i], i, propertyName),
                     message: `"primary_key" is only valid within dimension blocks`,
                     source: "lookml-lsp",
+                    code: DiagnosticCode.PROP_PRIMARY_KEY_INVALID_CONTEXT
                   });
                 }
                 break;
@@ -1085,6 +1167,7 @@ export class DiagnosticsProvider {
                     range: this.getWordRange(lines[i], i, propertyName),
                     message: `"relationship" is only valid within join blocks`,
                     source: "lookml-lsp",
+                    code: DiagnosticCode.PROP_RELATIONSHIP_INVALID_CONTEXT
                   });
                 }
                 break;
@@ -1100,6 +1183,7 @@ export class DiagnosticsProvider {
                     range: this.getWordRange(lines[i], i, invalidValue),
                     message: `The "hidden" property should use "yes" or "no" instead of "${invalidValue}". Use "${correctValue}" instead.`,
                     source: "lookml-lsp",
+                    code: DiagnosticCode.PROP_INVALID_HIDDEN_VALUE
                   });
                 }
                 break;
