@@ -139,9 +139,10 @@ export class WorkspaceModel {
 
     if (project.errors) {
       for (const error of project.errors) {
-        const existingErrors = this.errors.get(error.$file_path) ?? [];
+        const fileName = error.$file_path.split("/").pop() ?? "";
+        const existingErrors = this.errors.get(fileName) ?? [];
         existingErrors.push(error);
-        this.errors.set(error.$file_path, existingErrors);
+        this.errors.set(fileName, existingErrors);
       }
     }
 

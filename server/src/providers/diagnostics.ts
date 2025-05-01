@@ -195,8 +195,8 @@ export class DiagnosticsProvider {
         severity: DiagnosticSeverity.Error,
         message: errorDetails.error.exception.message,
         range: {
-          start: { line: errorDetails.error.exception.location.start.line, character: errorDetails.error.exception.location.start.column },
-          end: { line: errorDetails.error.exception.location.end.line, character: errorDetails.error.exception.location.end.column },
+          start: { line: errorDetails.error.exception.location.start.line - 1 , character: errorDetails.error.exception.location.start.column - 1 },
+          end: { line: errorDetails.error.exception.location.end.line - 1, character: errorDetails.error.exception.location.end.column - 1 },
         },
       });
     }
