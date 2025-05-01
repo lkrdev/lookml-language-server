@@ -187,6 +187,20 @@ export class DiagnosticsProvider {
       diagnostics.push(...this.validateReferences(document));
     diagnostics.push(...this.validateProperties(document));
 
+    const fileName = document.uri.split("/").pop() ?? "";
+    const errors = this.workspaceModel.getErrorsByFileName(fileName);
+    
+    for (const errorDetails of errors) {
+      diagnostics.push({
+        severity: DiagnosticSeverity.Error,
+        message: errorDetails.error.exception.message,
+        range: {
+          start: { line: errorDetails.error.exception.location.start.line, character: errorDetails.error.exception.location.start.column },
+          end: { line: errorDetails.error.exception.location.end.line, character: errorDetails.error.exception.location.end.column },
+        },
+      });
+    }
+    
     return diagnostics;
   }
 

@@ -9,7 +9,35 @@ declare module "lookml-parser" {
         dashboard?: Record<string, LookmlFileAttributes & { dashboard: { [key: string]: LookmlDashboard } }>;
     }
 
+    interface LookmlError {
+        $file_name: string;
+        $file_path: string;
+        $file_rel: string;
+        $file_type: 'view' | 'model' | 'explore' | 'manifest' | 'dashboard';
+        error: {
+            exception: {
+                message: string;
+                location: {
+                    end: {
+                        offset: number;
+                        line: number;
+                        column: number;
+                    }
+                    start: {
+                        offset: number;
+                        line: number;
+                        column: number;
+                    }
+                }
+            }
+            context: string;
+            name: string;
+            stack: string;
+        }
+    }
+
     export interface LookmlProject extends LookmlFileAttributes {
+        errors?: LookmlError[];
         file: LookmlFile;
         model: Record<string, LookmlModel>;
         positions: {

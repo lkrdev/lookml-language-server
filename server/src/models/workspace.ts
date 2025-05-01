@@ -13,7 +13,7 @@ import { URI } from "vscode-uri";
 import {
   LookMLParser,
 } from "./lookml-parser";
-import { parseFiles, parse, LookmlView, LookmlExplore, LookmlModel, LookmlProject, LookmlViewWithFileInfo, LookmlExploreWithFileInfo, transformations, LookmlModelWithFileInfo, } from "lookml-parser";
+import { parseFiles, parse, LookmlView, LookmlExplore, LookmlModel, LookmlProject, LookmlViewWithFileInfo, LookmlExploreWithFileInfo, transformations, LookmlModelWithFileInfo, LookmlError, } from "lookml-parser";
 
 export class WorkspaceModel {
   public connection: Connection;
@@ -21,6 +21,7 @@ export class WorkspaceModel {
   public project?: LookmlProject;
 
   // Document tracking
+  private errors: Map<string, LookmlError[]> = new Map();
   private views: Map<string, LookmlViewWithFileInfo> = new Map();
   private explores: Map<string, LookmlExploreWithFileInfo> = new Map();
   private models: Map<string, LookmlModelWithFileInfo> = new Map();
@@ -43,6 +44,10 @@ export class WorkspaceModel {
    */
   public getViews(): Map<string, LookmlViewWithFileInfo> {
     return this.views;
+  }
+
+  public getErrorsByFileName(fileName: string): LookmlError[] {
+    return this.errors.get(fileName) ?? [];
   }
 
   public getExploresByFile(uri: DocumentUri): string[] | undefined {
@@ -127,9 +132,18 @@ export class WorkspaceModel {
   }
 
   public async parseProject(project: LookmlProject): Promise<void> {
-    this.views = this.views ?? new Map<string, LookmlView>();
-    this.explores = this.explores ?? new Map<string, LookmlExplore>();
-    this.models = this.models ?? new Map<string, LookmlModel>();
+    this.errors = new Map<string, LookmlError[]>();
+    this.views = new Map<string, LookmlViewWithFileInfo>();
+    this.explores = new Map<string, LookmlExploreWithFileInfo>();
+    this.models = new Map<string, LookmlModelWithFileInfo>();
+
+    if (project.errors) {
+      for (const error of project.errors) {
+        const existingErrors = this.errors.get(error.$file_path) ?? [];
+        existingErrors.push(error);
+        this.errors.set(error.$file_path, existingErrors);
+      }
+    }
 
     // process files in order of view, explore, model
     const entires = Object.entries(project.file).sort(([, valueA], [, valueB]) => {
