@@ -133,8 +133,6 @@ export class WorkspaceModel {
     reset?: boolean;
   }): Promise<void> {
     source = source ?? "**/*.{view,model,explore}.lkml";
-    console.log("parseFiles source", source);
-    console.log("parseFiles reset", reset);
 
     const project = await parseFiles({
       source,
@@ -142,8 +140,6 @@ export class WorkspaceModel {
       readFileOptions: { encoding: "utf-8" },
       readFileConcurrency: 4,
     });
-
-    console.log("parseFiles project", project);
 
     transformations.addPositions(project)
 

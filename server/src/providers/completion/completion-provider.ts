@@ -57,7 +57,6 @@ export class CompletionProvider {
       // Detect context at current position
       const context = this.contextDetector.getContext(document, position);
       
-      console.log("getCompletionItems context", context);
       let items: CompletionItem[] = [];
       
       // Get completions based on context

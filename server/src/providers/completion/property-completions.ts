@@ -132,7 +132,6 @@ export class PropertyCompletionProvider {
    * Get completions for properties and property values
    */
   public getCompletions(context: CompletionContext): CompletionItem[] {
-    console.log("getCompletions context", context);
     if (context.type === "property") {
       return this.getPropertyCompletions(context.blockType);
     }
@@ -196,7 +195,6 @@ export class PropertyCompletionProvider {
    * Get type completions based on the current block type
    */
   private getTypeCompletions(blockType: string | undefined): CompletionItem[] {
-    console.log("getTypeCompletions blockType", blockType);
     if (
       blockType === "dimension" ||
       blockType === "filter" ||
