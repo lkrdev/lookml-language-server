@@ -1,4 +1,6 @@
-// In-memory storage implementation
+import { AuthSession, AuthToken, IAccessToken, ICryptoHash, IError, IPlatformServices, IRequestProps, sdkError } from '@looker/sdk-rtl';
+import { saveAuthToken, AuthRecord } from '../../utils/sqlite';
+
 class InMemorySessionStorage {
     private storage: Map<string, string> = new Map();
 
@@ -16,13 +18,7 @@ class InMemorySessionStorage {
 }
 
 // Replace the global sessionStorage with our implementation
-declare const global: any;
-const sessionStorage = global.sessionStorage || new InMemorySessionStorage();
-
-import * as open from 'open';
-
-import { AuthSession, AuthToken, IAccessToken, ICryptoHash, IError, IPlatformServices, IRequestProps, sdkError } from '@looker/sdk-rtl';
-import { saveAuthToken, AuthRecord } from '../../utils/sqlite';
+const sessionStorage = new InMemorySessionStorage();
 
 interface IAuthCodeGrantTypeParams {
     grant_type: 'authorization_code';
