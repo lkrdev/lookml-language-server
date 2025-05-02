@@ -10,32 +10,70 @@ export async function handleAuthenticate(
   args: any[],
   authService: AuthenticationService | null
 ): Promise<CommandResponse> {
-  if (!args || args.length !== 3) {
-    throw new Error('Invalid arguments for authenticate command');
+
+  const base_url = "https://gcpl252.cloud.looker.com";
+  const client_id = "lkr-cli";
+  
+  // Validate base URL format
+  try {
+    new URL(base_url);
+  } catch (e) {
+    return { 
+      success: false, 
+      message: 'Invalid base_url format. Must be a valid URL (e.g., https://company.looker.com)' 
+    };
   }
 
-  const [base_url, client_id, client_secret] = args as string[];
-  
   try {
+    const config = {
+      base_url,
+      client_id,
+    };
+
     if (!authService) {
-      authService = new AuthenticationService(base_url, client_id, client_secret);
-    } else {
-      await authService.updateCredentials(base_url, client_id, client_secret);
+      authService = new AuthenticationService();
     }
 
-    const credentials = { base_url, client_id, client_secret };
-    const success = await authService.testConnection(credentials);
+    console.log("authService.testConnection1");
+
+    const success = await authService.testConnection(config);
     
     if (success) {
-      await authService.updateCredentials(credentials.base_url, credentials.client_id, credentials.client_secret);
       const branch_name = await getCurrentBranch();
-      console.log('branch_name', branch_name);
-      return { success: true, message: 'Successfully authenticated with Looker' };
+      console.log('Connected to Looker development mode on branch:', branch_name);
+      return { 
+        success: true, 
+        message: 'Successfully authenticated with Looker via OAuth' 
+      };
     } else {
-      return { success: false, message: 'Failed to authenticate with Looker' };
+      return { 
+        success: false, 
+        message: 'Failed to authenticate with Looker. Please check your credentials and try again.' 
+      };
     }
   } catch (error) {
     console.error('Authentication error:', error);
-    return { success: false, message: `Authentication failed: ${error instanceof Error ? error.message : String(error)}` };
+    
+    // Provide more specific error messages based on common failure scenarios
+    let errorMessage = 'Authentication failed: ';
+    
+    if (error instanceof Error) {
+      if (error.message.includes('ECONNREFUSED')) {
+        errorMessage += 'Could not connect to Looker instance. Please check the base_url and ensure you have network access.';
+      } else if (error.message.includes('code_verifier')) {
+        errorMessage += 'OAuth flow was interrupted. Please try again.';
+      } else if (error.message.includes('EADDRINUSE')) {
+        errorMessage += 'Port 8000 is already in use. Please ensure no other authentication flows are in progress.';
+      } else {
+        errorMessage += error.message;
+      }
+    } else {
+      errorMessage += String(error);
+    }
+
+    return { 
+      success: false, 
+      message: errorMessage
+    };
   }
 } 

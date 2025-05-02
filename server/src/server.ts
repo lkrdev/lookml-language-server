@@ -24,7 +24,6 @@ import { FormattingProvider } from "./providers/formatting";
 import { HoverProvider } from "./providers/hover";
 
 // Import services
-import { AuthenticationService } from "./services/authentication";
 
 // Import models
 import {
@@ -37,6 +36,7 @@ import {
 import { WorkspaceModel } from "./models/workspace";
 import { Logger } from "./utils/logger";
 import { DefinitionProvider } from "./providers/definition";
+import { AuthenticationService } from "./services/authentication";
 
 // Create a connection for the server
 const connection = createConnection(ProposedFeatures.all);
@@ -127,38 +127,31 @@ connection.onInitialized(async () => {
 // Add command handlers
 connection.onExecuteCommand(async (params: ExecuteCommandParams) => {
   const { command, arguments: args } = params;
+  console.log("command", command);
   switch (command) {
     case "looker.authenticate":
-      if (!args || args.length !== 3) {
-        throw new Error("Invalid arguments for authenticate command");
-      }
+      const base_url = "https://gcpl252.cloud.looker.com";
+      const client_id = "lkr-cli";
 
-      const [base_url, client_id, client_secret] = args as string[];
 
       try {
+
         if (!authService) {
-          authService = new AuthenticationService(
-            base_url,
-            client_id,
-            client_secret
-          );
-        } else {
-          await authService.updateCredentials(
-            base_url,
-            client_id,
-            client_secret
-          );
+          authService = new AuthenticationService();
         }
 
-        const credentials = { base_url, client_id, client_secret };
-        const success = await authService.testConnection(credentials);
+
+        console.log("authService.testConnection2");
+        const success = await authService.testConnection(
+          {
+            base_url,
+            client_id,
+          }
+        );
+
+        console.log("success", success);
 
         if (success) {
-          await authService.updateCredentials(
-            credentials.base_url,
-            credentials.client_id,
-            credentials.client_secret
-          );
           return {
             success: true,
             message: "Successfully authenticated with Looker",

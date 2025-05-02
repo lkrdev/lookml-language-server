@@ -1,4 +1,3 @@
-import { AuthenticationService } from "../services/authentication";
 
 interface CommandResponse {
   success: boolean;
@@ -7,7 +6,7 @@ interface CommandResponse {
 }
 
 export async function handleGetExploreUrlAsMe(
-  authService: AuthenticationService,
+  authService: any,
   args: {
     base_url: string;
     model_name: string;

@@ -14,10 +14,19 @@
   "dependencies": {
     "@looker/sdk": "^25.4.0",
     "@looker/sdk-node": "^25.4.0",
+    "@types/sqlite3": "^3.1.11",
+    "express": "^5.1.0",
     "lookml-parser": "^7.0.0-0",
+    "open": "^8.4.2",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7",
     "vscode": "^1.1.37",
     "vscode-languageserver": "^8.1.0",
     "vscode-languageserver-textdocument": "^1.0.8",
     "vscode-uri": "^3.1.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/express": "^5.0.1"
   }
 }

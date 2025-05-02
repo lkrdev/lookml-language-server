@@ -1,4 +1,3 @@
-import { AuthenticationService } from '../services/authentication';
 
 interface CommandResponse {
   success: boolean;
@@ -6,7 +5,7 @@ interface CommandResponse {
 }
 
 export async function handleSwitchToDev(
-  authService: AuthenticationService,
+  authService: any,
   args: {
     project_name: string,
     branch_name: string,
