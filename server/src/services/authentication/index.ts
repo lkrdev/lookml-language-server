@@ -1,11 +1,11 @@
 import { Looker40SDK } from '@looker/sdk';
 import { ApiSettings } from '@looker/sdk-rtl';
 import { NodeCryptoHash, NodeTransport } from '@looker/sdk-node';
-import { NodeOAuthSession } from './authentication/oauth';
+import { NodeOAuthSession } from './oauth';
 import open from 'open';
 import * as http from 'http';
 import * as url from 'url';
-import { getValidAuthToken } from '../utils/sqlite';
+import { getValidAuthToken } from '../../utils/sqlite';
 
 interface LookerOAuthConfig {
     base_url: string;

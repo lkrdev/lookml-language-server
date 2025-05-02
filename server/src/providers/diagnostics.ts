@@ -6,7 +6,7 @@ import {
   Range,
 } from "vscode-languageserver/node";
 import { WorkspaceModel } from "../models/workspace";
-import { parseMultiLineProperty, findFieldPosition, getWordRange } from '../utils/lookml-parser';
+import { ensureMinRangeLength } from '../utils/range';
 
 export enum DiagnosticCode {
   // Syntax validation (10000-19999)
@@ -194,10 +194,10 @@ export class DiagnosticsProvider {
       diagnostics.push({
         severity: DiagnosticSeverity.Error,
         message: errorDetails.error.exception.message,
-        range: {
+        range: ensureMinRangeLength({
           start: { line: errorDetails.error.exception.location.start.line - 1 , character: errorDetails.error.exception.location.start.column - 1 },
           end: { line: errorDetails.error.exception.location.end.line - 1, character: errorDetails.error.exception.location.end.column - 1 },
-        },
+        }),
       });
     }
     

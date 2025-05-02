@@ -57,6 +57,7 @@ export class BlockCompletionProvider {
   private getBlockNameCompletions(
     context: CompletionContext
   ): CompletionItem[] {
+    console.log("getBlockNameCompletions context", context);
     if (!context.blockType) return [];
 
     // For explore or join blocks, suggest view names

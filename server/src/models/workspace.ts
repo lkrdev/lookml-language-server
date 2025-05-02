@@ -13,7 +13,7 @@ import { URI } from "vscode-uri";
 import {
   LookMLParser,
 } from "./lookml-parser";
-import { parseFiles, parse, LookmlView, LookmlExplore, LookmlModel, LookmlProject, LookmlViewWithFileInfo, LookmlExploreWithFileInfo, transformations, LookmlModelWithFileInfo, LookmlError, } from "lookml-parser";
+import { parseFiles, LookmlProject, LookmlViewWithFileInfo, LookmlExploreWithFileInfo, transformations, LookmlModelWithFileInfo, LookmlError, } from "lookml-parser";
 
 export class WorkspaceModel {
   public connection: Connection;
@@ -120,22 +120,39 @@ export class WorkspaceModel {
    * Initialize the workspace by finding and loading the model file
    */
   public async initialize(): Promise<void> {
+    await this.parseFiles({
+      reset: true,
+    });
+  }
+
+  public async parseFiles({
+    source,
+    reset = false,
+  }: {
+    source?: string;
+    reset?: boolean;
+  }): Promise<void> {
+    source = source ?? "**/*.{view,model,explore}.lkml";
+
     const project = await parseFiles({
-      source: "**/*.{view,model,explore}.lkml",
+      source,
       fileOutput: 'by-name',
       readFileOptions: { encoding: "utf-8" },
       readFileConcurrency: 4,
     });
 
     transformations.addPositions(project)
-    await this.parseProject(project);
-  }
 
-  public async parseProject(project: LookmlProject): Promise<void> {
-    this.errors = new Map<string, LookmlError[]>();
-    this.views = new Map<string, LookmlViewWithFileInfo>();
-    this.explores = new Map<string, LookmlExploreWithFileInfo>();
-    this.models = new Map<string, LookmlModelWithFileInfo>();
+    if (reset) {
+      this.errors = new Map<string, LookmlError[]>();
+      this.views = new Map<string, LookmlViewWithFileInfo>();
+      this.explores = new Map<string, LookmlExploreWithFileInfo>();
+      this.models = new Map<string, LookmlModelWithFileInfo>();
+    }
+
+    if (!reset) {
+      // TODO: remove this once we have a better way to handle updates
+    }
 
     if (project.errors) {
       for (const error of project.errors) {
@@ -242,6 +259,7 @@ export class WorkspaceModel {
 
     // Skip if we've already processed this version
     if (version && this.documentVersions.get(uri) === version) {
+      console.log("SKIPPING UPDATE DOCUMENT", uri, version);
       return;
     }
     this.documentVersions.set(uri, version);
@@ -250,8 +268,9 @@ export class WorkspaceModel {
     this.clearDocumentData(uri);
 
     try {
-      const parsedDocument = parse(document.getText());
-      console.log("updateDocument parse", parsedDocument);
+      await this.parseFiles({
+        source: uri.replace("file://", ""),
+      });
     } catch (error) {
       console.error("updateDocument parse error", error);
       console.error("JSON parse error", (error as any).toJSON());

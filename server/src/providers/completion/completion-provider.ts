@@ -61,7 +61,7 @@ export class CompletionProvider {
       
       // Get completions based on context
       switch (context.type) {
-        case 'empty':
+        //case 'empty':
         case 'block':
           items = this.blockCompletions.getCompletions(context);
           break;
@@ -108,6 +108,7 @@ export class CompletionProvider {
         ]);
       }
       
+      /*
       // If we're potentially in a snippet context, add all snippets
       const line = document.getText({
         start: { line: position.position.line, character: 0 },
@@ -117,6 +118,7 @@ export class CompletionProvider {
       if (line.trim() === '' || this.isAtWordBoundary(line)) {
         items = [...items, ...getAllSnippets()];
       }
+      */
       
       return {
         isIncomplete: false,
