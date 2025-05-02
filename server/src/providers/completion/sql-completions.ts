@@ -2,6 +2,19 @@ import { CompletionItem, CompletionItemKind, InsertTextFormat, MarkupKind } from
 import { CompletionContext } from "./context-detector";
 import { WorkspaceModel } from "../../models/workspace";
 
+interface LookMLField {
+  $name: string;
+  type: string;
+  label?: string;
+  description?: string;
+}
+
+interface LookMLView {
+  dimension?: { [key: string]: LookMLField };
+  measure?: { [key: string]: LookMLField };
+  dimension_group?: { [key: string]: LookMLField };
+}
+
 export class SQLCompletionProvider {
   private workspaceModel: WorkspaceModel;
   
@@ -51,7 +64,7 @@ public getFieldReferenceCompletions(viewName: string): CompletionItem[] {
   
   // Get the view by name
   const viewDetails = this.workspaceModel.getView(viewName);
-  const view = viewDetails?.view;
+  const view = viewDetails?.view as LookMLView | undefined;
 
   if (!view) {
     return items;
@@ -61,7 +74,7 @@ public getFieldReferenceCompletions(viewName: string): CompletionItem[] {
     ...Object.values(view.measure || {}), 
     ...Object.values(view.dimension || {}), 
     ...Object.values(view.dimension_group || {})
-  ];
+  ] as LookMLField[];
 
   if (!fields.length) {
     return items;
@@ -157,7 +170,7 @@ public getFieldReferenceCompletions(viewName: string): CompletionItem[] {
 
     // Get the current view
     const viewDetails = this.workspaceModel.getView(context.viewName);
-    const view = viewDetails?.view;
+    const view = viewDetails?.view as LookMLView | undefined;
     if (!view) return completions;
 
     // Add all dimensions from the current view
@@ -215,7 +228,7 @@ public getFieldReferenceCompletions(viewName: string): CompletionItem[] {
    */
   private addFieldReferences(items: CompletionItem[], viewName: string): void {
     const viewDetails = this.workspaceModel.getView(viewName);
-    const view = viewDetails?.view;
+    const view = viewDetails?.view as LookMLView | undefined;
     if (!view) {
       return;
     }
@@ -224,7 +237,7 @@ public getFieldReferenceCompletions(viewName: string): CompletionItem[] {
       ...Object.values(view.measure || {}), 
       ...Object.values(view.dimension || {}), 
       ...Object.values(view.dimension_group || {})
-    ];
+    ] as LookMLField[];
 
     fields.forEach((field) => {
       items.push({

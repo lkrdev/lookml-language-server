@@ -150,7 +150,6 @@ describe('DiagnosticsProvider', () => {
       `);
       // Mock the other view to not exist
       mockWorkspaceModel.getView.mockImplementation((viewName: string): LookmlViewWithFileInfo | undefined => {
-        console.log("GET VIEW", viewName);
         if (viewName === 'test_view') {
           return createMockViewWithFileInfo({
             dimension: {
