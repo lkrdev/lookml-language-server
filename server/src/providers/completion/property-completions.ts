@@ -21,7 +21,7 @@ export class PropertyCompletionProvider {
       "type",
       "sql",
       "label",
-      "group_label",
+      "group_label", 
       "description",
       "hidden",
       "primary_key",
@@ -132,6 +132,7 @@ export class PropertyCompletionProvider {
    * Get completions for properties and property values
    */
   public getCompletions(context: CompletionContext): CompletionItem[] {
+    console.log("getCompletions context", context);
     if (context.type === "property") {
       return this.getPropertyCompletions(context.blockType);
     }
@@ -195,6 +196,7 @@ export class PropertyCompletionProvider {
    * Get type completions based on the current block type
    */
   private getTypeCompletions(blockType: string | undefined): CompletionItem[] {
+    console.log("getTypeCompletions blockType", blockType);
     if (
       blockType === "dimension" ||
       blockType === "filter" ||
@@ -205,13 +207,17 @@ export class PropertyCompletionProvider {
         kind: CompletionItemKind.TypeParameter,
         data: { type: "type" },
       }));
-    } else if (blockType === "measure") {
+    }
+    
+    if (blockType === "measure") {
       return this.measureTypes.map((type) => ({
         label: type,
         kind: CompletionItemKind.TypeParameter,
         data: { type: "type" },
       }));
-    } else if (blockType === "dimension_group") {
+    }
+    
+    if (blockType === "dimension_group") {
       return [
         {
           label: "time",
@@ -220,7 +226,9 @@ export class PropertyCompletionProvider {
           documentation: "Creates a set of time-based dimensions",
         },
       ];
-    } else if (blockType === "join") {
+    }
+    
+    if (blockType === "join") {
       return this.joinTypes.map((type) => ({
         label: ` ${type}`,
         kind: CompletionItemKind.EnumMember,

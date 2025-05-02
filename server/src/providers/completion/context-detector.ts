@@ -135,16 +135,6 @@ export class ContextDetector {
       };
     }
 
-    // Check if we're declaring a new block
-    const blockDeclaration = linePrefix.match(/^\s*([a-zA-Z0-9_]+):\s*$/);
-    if (blockDeclaration) {
-      return {
-        type: "block",
-        blockType: blockDeclaration[1],
-        linePrefix,
-      };
-    }
-
     // Check if we're inside a block and providing a property
     const propertyColonMatch = linePrefix.match(/^\s+([a-zA-Z0-9_]+):$/);
     if (propertyColonMatch) {
@@ -152,6 +142,16 @@ export class ContextDetector {
         type: "value",
         propertyName: propertyColonMatch[1],
         blockType: this.getCurrentBlockType(document, position),
+        linePrefix,
+      };
+    }
+
+    // Check if we're declaring a new block
+    const blockDeclaration = linePrefix.match(/^\s*([a-zA-Z0-9_]+):\s*$/);
+    if (blockDeclaration) {
+      return {
+        type: "block",
+        blockType: blockDeclaration[1],
         linePrefix,
       };
     }
