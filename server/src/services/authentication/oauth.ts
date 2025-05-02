@@ -3,17 +3,14 @@ class InMemorySessionStorage {
     private storage: Map<string, string> = new Map();
 
     getItem(key: string): string | null {
-        console.log("getItem", key, this.storage.get(key));
         return this.storage.get(key) || null;
     }
 
     setItem(key: string, value: string): void {
-        console.log("setItem", key, value);
         this.storage.set(key, value);
     }
 
     removeItem(key: string): void {
-        console.log("removeItem", key);
         this.storage.delete(key);
     }
 }
@@ -25,7 +22,7 @@ const sessionStorage = global.sessionStorage || new InMemorySessionStorage();
 import * as open from 'open';
 
 import { AuthSession, AuthToken, IAccessToken, ICryptoHash, IError, IPlatformServices, IRequestProps, sdkError } from '@looker/sdk-rtl';
-import { saveAuthToken, AuthRecord, getValidAuthToken } from '../../utils/sqlite';
+import { saveAuthToken, AuthRecord } from '../../utils/sqlite';
 
 interface IAuthCodeGrantTypeParams {
     grant_type: 'authorization_code';
@@ -177,8 +174,6 @@ export class NodeOAuthSession extends AuthSession {
                 body
             )
         );
-
-        console.log("token", token);
 
         return this.activeToken.setToken(token);
     }

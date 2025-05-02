@@ -10,9 +10,7 @@ export async function handleAuthenticate(
   args: any[],
   authService: AuthenticationService | null
 ): Promise<CommandResponse> {
-
-  const base_url = "https://gcpl252.cloud.looker.com";
-  const client_id = "lkr-cli";
+  const [base_url, client_id] = args;
   
   // Validate base URL format
   try {
@@ -33,9 +31,7 @@ export async function handleAuthenticate(
     if (!authService) {
       authService = new AuthenticationService();
     }
-
-    console.log("authService.testConnection1");
-
+    
     const success = await authService.testConnection(config);
     
     if (success) {

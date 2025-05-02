@@ -127,7 +127,6 @@ connection.onInitialized(async () => {
 // Add command handlers
 connection.onExecuteCommand(async (params: ExecuteCommandParams) => {
   const { command, arguments: args } = params;
-  console.log("command", command);
   switch (command) {
     case "looker.authenticate":
       const base_url = "https://gcpl252.cloud.looker.com";
@@ -140,16 +139,12 @@ connection.onExecuteCommand(async (params: ExecuteCommandParams) => {
           authService = new AuthenticationService();
         }
 
-
-        console.log("authService.testConnection2");
         const success = await authService.testConnection(
           {
             base_url,
             client_id,
           }
         );
-
-        console.log("success", success);
 
         if (success) {
           return {

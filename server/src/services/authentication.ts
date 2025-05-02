@@ -79,6 +79,7 @@ export class AuthenticationService {
     public async initializeOAuth(config: LookerOAuthConfig) {
         const redirect_uri = `http://localhost:${AuthenticationService.DEFAULT_PORT}${AuthenticationService.DEFAULT_CALLBACK_PATH}`;
 
+        console.log("config", config);
         // Check for a valid token in the database first
         const existing = await getValidAuthToken(config.client_id, config.base_url);
         if (existing) {
@@ -148,13 +149,11 @@ export class AuthenticationService {
             await this.initializeOAuth(config);
             const sdk = this.getSDK();
             if (!sdk) {
-                console.log("sdk not initialized");
-                throw new Error('SDK not initialized');
+                return false;
             }
 
             // Verify connection by fetching user info
-            const me = await sdk.ok(sdk.me());
-            console.log("me", me);
+            await sdk.ok(sdk.me());
             return true;
         } catch (error) {
             console.error('Failed to connect to Looker:', error);

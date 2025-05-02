@@ -14,7 +14,7 @@ const PROJECT_NAME_KEY = 'looker.projectName';
 
 
 const getCredentials = () => {
-  return vscode.workspace.getConfiguration().get(CREDENTIALS_KEY, { base_url: '', client_id: '', client_secret: '' });
+  return vscode.workspace.getConfiguration().get(CREDENTIALS_KEY, { base_url: '', client_id: '' });
 }
 
 const getProjectName = () => {
@@ -28,7 +28,7 @@ const setProjectName = (projectName: string) => {
 const authLooker = async (reset?: boolean) => {
   try {
     // Prompt for credentials
-    let { base_url, client_id, client_secret } = reset ? { base_url: '', client_id: '', client_secret: '' } : getCredentials();
+    let { base_url, client_id } = reset ? { base_url: '', client_id: '' } : getCredentials();
 
     if (!base_url?.length) {
       base_url = await vscode.window.showInputBox({
@@ -43,7 +43,7 @@ const authLooker = async (reset?: boolean) => {
       }
       await vscode.workspace.getConfiguration().update(
         CREDENTIALS_KEY,
-        { base_url: base_url, client_id: client_id, client_secret: client_secret },
+        { base_url, client_id },
         true
       );
     }
@@ -55,33 +55,20 @@ const authLooker = async (reset?: boolean) => {
       });
       await vscode.workspace.getConfiguration().update(
         CREDENTIALS_KEY,
-        { base_url: base_url, client_id: client_id, client_secret: client_secret },
-        true
-      );
-    }
-
-    if (!client_secret?.length) {
-      client_secret = await vscode.window.showInputBox({
-        prompt: 'Enter Looker client secret',
-        placeHolder: 'your_client_secret',
-        password: true
-      });
-      await vscode.workspace.getConfiguration().update(
-        CREDENTIALS_KEY,
-        { base_url: base_url, client_id: client_id, client_secret: client_secret },
+        { base_url, client_id },
         true
       );
     }
 
     // Execute the server command
-    if (!(base_url?.length && client_id?.length && client_secret?.length)) {
+    if (!(base_url?.length && client_id?.length)) {
       vscode.window.showErrorMessage('Please enter all required credentials');
       return;
     }
 
     const result = await client.sendRequest<CommandResponse>('workspace/executeCommand', {
       command: 'looker.authenticate',
-      arguments: [base_url, client_id, client_secret],
+      arguments: [base_url, client_id],
     });
 
     if (result.success) {
@@ -103,7 +90,6 @@ let client: LanguageClient;
 const outputChannel = vscode.window.createOutputChannel("LookML");
 
 export function activate(context: ExtensionContext) {
-  console.log("activating");
   // The server is implemented in node
   const serverModule = context.asAbsolutePath(
     path.join("server", "out", "server.js")
@@ -271,8 +257,8 @@ export function activate(context: ExtensionContext) {
   // Start the client AFTER registering handlers
   context.subscriptions.push(client);
 
-  const { base_url, client_id, client_secret } = getCredentials();
-  if (base_url?.length && client_id?.length && client_secret?.length) {
+  const { base_url, client_id } = getCredentials();
+  if (base_url?.length && client_id?.length) {
     authLooker(false);
   }
 
