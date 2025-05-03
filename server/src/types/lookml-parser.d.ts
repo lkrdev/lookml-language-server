@@ -46,11 +46,11 @@ declare module "lookml-parser" {
     }
 
     export interface LookmlFileAttributes {
-        $file_name?: string;
-        $file_path?: string;
-        $file_rel?: string;
-        $file_type?: 'view' | 'model' | 'explore' | 'manifest' | 'dashboard';
-        $strings?: any;
+        $file_name: string;
+        $file_path: string;
+        $file_rel: string;
+        $file_type: 'view' | 'model' | 'explore' | 'manifest' | 'dashboard';
+        $strings: any;
     }
 
     export interface LookmlDimensionGroup {
@@ -69,7 +69,7 @@ declare module "lookml-parser" {
     }
 
     export interface LookmlDimension {
-        $name?: string;
+        $name: string;
         description?: string;
         drill_fields?: string[];
         group_label?: string;
@@ -84,7 +84,7 @@ declare module "lookml-parser" {
     }
 
     export interface LookmlMeasure {
-        $name?: string;
+        $name: string;
         description?: string;
         drill_fields?: string[];
         filters?: Record<string, string>;
@@ -139,48 +139,53 @@ declare module "lookml-parser" {
         sql?: Position;
     }
 
-    export interface DrillFieldsPosition extends Position {
+    export interface ArrayPosition extends Position {
         [index: string]: Position;
     }
 
-    export interface TimeframesPosition extends Position {
-        [index: string]: Position;
+    export interface SetPosition extends BaseFieldPosition {
+        fields?: ArrayPosition;
     }
 
     export interface DimensionPosition extends BaseFieldPosition {
         primary_key?: Position;
         map_layer_name?: Position;
-        drill_fields?: DrillFieldsPosition;
+        drill_fields?: ArrayPosition;
     }
 
     export interface DimensionGroupPosition extends BaseFieldPosition {
-        timeframes?: TimeframesPosition;
+        timeframes?: ArrayPosition;
     }
 
     export interface MeasurePosition extends BaseFieldPosition {
-        drill_fields?: DrillFieldsPosition;
+        drill_fields?: ArrayPosition;
     }
+
+    export interface LookMlViewPositions {
+        $type?: Position;
+        $name?: Position;
+        sql_table_name?: Position;
+        drill_fields?: ArrayPosition;
+        set?: Position & {
+            [fieldName: string]: SetPosition;
+        };
+        dimension?: Position & {
+            [fieldName: string]: DimensionPosition;
+        };
+        dimension_group?: Position & {
+            [fieldName: string]: DimensionGroupPosition;
+        };
+        measure?: Position & {
+            [fieldName: string]: MeasurePosition;
+        };
+        $p: [number, number, number, number];
+    };
 
     export interface LookmlViewWithFileInfo {
         file: LookmlFileAttributes;
         uri: string;
         view: LookmlView;
-        positions: {
-            $type?: Position;
-            $name?: Position;
-            sql_table_name?: Position;
-            drill_fields?: DrillFieldsPosition;
-            dimension?: Position & {
-                [fieldName: string]: DimensionPosition;
-            };
-            dimension_group?: Position & {
-                [fieldName: string]: DimensionGroupPosition;
-            };
-            measure?: Position & {
-                [fieldName: string]: MeasurePosition;
-            };
-            $p: [number, number, number, number];
-        };
+        positions: LookMlViewPositions;
     }
 
     export interface LookmlExploreWithFileInfo {
@@ -197,6 +202,7 @@ declare module "lookml-parser" {
     }
 
     export interface LookmlExplore {
+        $name: string;
         label?: string;
         description?: string;
         hidden?: boolean;

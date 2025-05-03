@@ -2,11 +2,24 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import {
   Diagnostic,
   DiagnosticSeverity,
-  Position,
   Range,
+  Position,
 } from "vscode-languageserver/node";
 import { WorkspaceModel } from "../models/workspace";
 import { ensureMinRangeLength } from '../utils/range';
+import {
+  DimensionPosition,
+  LookmlDimension,
+  LookmlExploreWithFileInfo,
+  LookmlModelWithFileInfo,
+  LookmlViewWithFileInfo,
+  Position as LookmlPosition,
+  MeasurePosition,
+  LookmlMeasure,
+  LookMlViewPositions,
+  LookmlExplore
+} from "lookml-parser";
+import { z, ZodError } from 'zod';
 
 export enum DiagnosticCode {
   // Syntax validation (10000-19999)
@@ -170,6 +183,12 @@ export class DiagnosticsProvider {
     "date_date"
   ];
 
+  private readonly dimensionGroupValidTypes = [
+    ...this.sharedValidTypes,
+    "time",
+    "duration"
+  ];
+
   constructor(workspaceModel: WorkspaceModel) {
     this.workspaceModel = workspaceModel;
   }
@@ -189,18 +208,18 @@ export class DiagnosticsProvider {
 
     const fileName = document.uri.split("/").pop() ?? "";
     const errors = this.workspaceModel.getErrorsByFileName(fileName);
-    
+
     for (const errorDetails of errors) {
       diagnostics.push({
         severity: DiagnosticSeverity.Error,
         message: errorDetails.error.exception.message,
         range: ensureMinRangeLength({
-          start: { line: errorDetails.error.exception.location.start.line - 1 , character: errorDetails.error.exception.location.start.column - 1 },
+          start: { line: errorDetails.error.exception.location.start.line - 1, character: errorDetails.error.exception.location.start.column - 1 },
           end: { line: errorDetails.error.exception.location.end.line - 1, character: errorDetails.error.exception.location.end.column - 1 },
         }),
       });
     }
-    
+
     return diagnostics;
   }
 
@@ -664,19 +683,16 @@ export class DiagnosticsProvider {
   }
 
   private validateViewReferences(document: TextDocument): Diagnostic[] {
-    const fileViewName = this.workspaceModel.getViewNameFromFile(document);
+    const viewFileName = this.workspaceModel.getViewNameFromFile(document);
 
-    if (!fileViewName) {
-      return [];
-    }
+    let currentViewName: string | undefined = viewFileName;
+    let currentContext: { type: string; name: string } | null = null;
+
+    let contextStack: Array<{ type: string; name: string; level: number }> = [];
 
     const diagnostics: Diagnostic[] = [];
     const text = document.getText();
     const lines = text.split("\n");
-
-    let currentContext: { type: string; name: string } | null = null;
-    let contextStack: Array<{ type: string; name: string; level: number }> = [];
-
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
@@ -685,6 +701,10 @@ export class DiagnosticsProvider {
       // Track context (same as first pass)
       const blockMatch = line.match(/^([a-zA-Z0-9_]+):\s+([a-zA-Z0-9_]+)\s*\{/);
       if (blockMatch) {
+        if (blockMatch[1] === "view") {
+          currentViewName = blockMatch[2];
+        }
+
         const blockType = blockMatch[1];
         const blockName = blockMatch[2];
 
@@ -726,492 +746,32 @@ export class DiagnosticsProvider {
 
       if (dimensionOrMeasureSqlMatch && ["dimension", "measure"].includes(currentContext?.type || "")) {
         const sqlContent = dimensionOrMeasureSqlMatch[1];
-        // Match any ${...} pattern that contains a dot
+        // Match any ${...} pattern
         const fieldRefPattern = /\$\{([^}]+)\}/g;
         let fieldMatch;
 
         while ((fieldMatch = fieldRefPattern.exec(sqlContent)) !== null) {
-          let viewName = fileViewName;
-          let fieldName = fieldMatch[1];
-
           const refStart = lines[i].indexOf(fieldMatch[0]);
           const range = {
             start: { line: i, character: refStart },
             end: { line: i, character: refStart + fieldMatch[0].length },
           };
 
-          if (fieldName === "TABLE") {
-            fieldName = fieldMatch.input.split(".")[1].trim();
-            range.start.character = range.start.character + 9;
-            range.end.character = range.start.character + fieldName.length - 1;
-          }
-
-          if (fieldName.includes(".")) {
-            const fieldNameSplit = fieldName.split(".");
-            viewName = fieldNameSplit[0];
-            fieldName = fieldNameSplit[1];
-          }
-
-          // Check if view exists in workspace and model
-          const viewDetails = this.workspaceModel.getView(viewName);
-          
-          if (
-              !viewDetails?.view?.dimension?.[fieldName] && 
-              !viewDetails?.view?.measure?.[fieldName] && 
-              !viewDetails?.view?.dimension_group?.[fieldName]
-            ) {
+          // Just verify the ${} syntax is present
+          if (!fieldMatch[0].startsWith("${") || !fieldMatch[0].endsWith("}")) {
             diagnostics.push({
               severity: DiagnosticSeverity.Error,
               range,
-              message: `Field "${fieldName}" not found in view "${viewName}"`,
+              message: "Invalid field reference syntax. Use ${view_name.field_name} format",
               source: "lookml-lsp",
-              code: DiagnosticCode.VIEW_REF_FIELD_NOT_FOUND
+              code: DiagnosticCode.VIEW_REF_FIELD_IN_SQL
             });
-          } 
+          }
         }
       }
     }
 
     return diagnostics;
-  }
-
-  /**
-   * Validate properties based on their context
-   */
-  protected validateProperties(document: TextDocument): Diagnostic[] {
-    try {
-      const viewName = this.workspaceModel.getViewNameFromFile(document);
-      const fileViewDetails = viewName ? this.workspaceModel.getView(viewName) : null;
-      
-      const diagnostics: Diagnostic[] = [];
-      const text = document.getText();
-      const lines = text.split("\n");
-      let contextStack: Array<{
-        type: string;
-        name: string;
-        level: number;
-        lineNumber: number;
-        parent?: {
-          type: string;
-          name: string;
-        }
-      }> = [];
-
-      // Define valid properties for different block types
-      type LookmlBlockType = "explore" | "join" | "dimension" | "measure";
-
-      const scalarProps: Record<LookmlBlockType, Set<string>> = {
-        explore: new Set([
-          "label", "description", "hidden", "from", "extends", "extension",
-          "sql_always_where", "sql_always_having", "access_filter", "group_label", "tags"
-        ]),
-        join: new Set([
-          "type", "relationship", "sql_on", "sql_where", "sql_having",
-          "required_joins", "fields", "from", "view_name", "outer_only", "required_access_grants"
-        ]),
-        dimension: new Set([
-          "type", "sql", "label", "group_label", "description", "hidden",
-          "view_label", "primary_key", "suggestable", "suggestions", "suggest_persist_for",
-          "tags", "required_fields", "drill_fields", "can_filter", "convert_tz", "datatype",
-          "html", "link", "order_by_field", "sql_distinct_key", "value_format", "value_format_name",
-          "bypass_suggest_restrictions", "full_suggestions", "alias", "map_layer_name"
-        ]),
-        measure: new Set([
-          "type", "sql", "label", "group_label", "description", "hidden",
-          "view_label", "filters", "drill_fields", "required_fields", "tags",
-          "value_format", "value_format_name", "html", "approximate", "approximate_threshold",
-          "can_filter", "convert_tz", "datatype", "direction", "link", "list_field",
-          "percentile", "precision", "sql_distinct_key", "required_access_grants", "alias"
-        ]),
-      };
-
-      const childBlocks: Record<LookmlBlockType, Set<string>> = {
-        explore: new Set(["join", "set", "always_filter", "conditionally_filter"]),
-        join: new Set([]),
-        dimension: new Set([]),
-        measure: new Set([]),
-      };
-
-      // Define valid parent blocks for each block type
-      const validParentBlocks: Record<LookmlBlockType, Set<string>> = {
-        explore: new Set(["model"]),  // explores must be in model files
-        join: new Set(["explore"]),
-        dimension: new Set(["view"]),
-        measure: new Set(["view"])
-      };
-
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (line === "" || line.startsWith("#")) continue;
-
-        // Track context
-        const blockMatch = line.match(/^([a-zA-Z0-9_]+):\s+([a-zA-Z0-9_]+)\s*\{/);
-        if (blockMatch) {
-          const blockType = blockMatch[1] as LookmlBlockType;
-          const blockName = blockMatch[2];
-          const indent = lines[i].length - lines[i].trimLeft().length;
-
-          while (
-            contextStack.length > 0 &&
-            contextStack[contextStack.length - 1].level >= indent
-          ) {
-            contextStack.pop();
-          }
-
-          const parent = contextStack.length > 0 ? { 
-            type: contextStack[contextStack.length - 1].type, 
-            name: contextStack[contextStack.length - 1].name 
-          } : { type: "model", name: "" }; // If no parent, assume we're in a model file
-
-          // Check if this block type is valid within its parent
-          if (validParentBlocks[blockType]) {
-            if (!validParentBlocks[blockType]?.has(parent.type)) {
-              const validParents = Array.from(validParentBlocks[blockType]).join(", ");
-              diagnostics.push({
-                severity: DiagnosticSeverity.Error,
-                range: this.getWordRange(lines[i], i, blockType),
-                message: `"${blockType}" blocks can only be defined inside ${validParents} files.`,
-                source: "lookml-lsp",
-                code: DiagnosticCode.PROP_INVALID_BLOCK_PARENT
-              });
-            }
-          }
-          // Also check if parent allows this child
-          else if (parent && childBlocks[parent.type as LookmlBlockType]) {
-            if (!childBlocks[parent.type as LookmlBlockType]?.has(blockType)) {
-              const validChildren = Array.from(childBlocks[parent.type as LookmlBlockType]).join(", ");
-              diagnostics.push({
-                severity: DiagnosticSeverity.Error,
-                range: this.getWordRange(lines[i], i, blockType),
-                message: `"${blockType}" blocks cannot be defined inside ${parent.type}s. Valid blocks include: ${validChildren}.`,
-                source: "lookml-lsp",
-                code: DiagnosticCode.PROP_INVALID_CHILD_BLOCK
-              });
-            }
-          }
-
-          contextStack.push({ 
-            type: blockType, 
-            name: blockName, 
-            level: indent,
-            lineNumber: i,
-            parent 
-          });
-        } else if (line === "}") {
-          if (contextStack.length > 0) {
-            const currentIndent = lines[i].length - lines[i].trimLeft().length;
-            while (
-              contextStack.length > 0 &&
-              contextStack[contextStack.length - 1].level >= currentIndent
-            ) {
-              contextStack.pop();
-            }
-          }
-        }
-
-        // Validate properties
-        else if (contextStack.length > 0) {
-          const currentContext = contextStack[contextStack.length - 1];
-          const blockType = currentContext.type as LookmlBlockType;
-
-          // Check for invalid properties in any block type that has defined scalar properties
-          if (scalarProps[blockType]) {
-            const propertyMatch = line.match(/^\s*([a-zA-Z0-9_]+):\s*(?:[^{]|$)/);
-            if (propertyMatch) {
-              const propertyName = propertyMatch[1];
-              // Check if property is in the whitelist for this block type
-              if (!scalarProps[blockType]?.has(propertyName) && !childBlocks[blockType]?.has(propertyName)) {
-                diagnostics.push({
-                  severity: DiagnosticSeverity.Error,
-                  range: this.getWordRange(lines[i], i, propertyName),
-                  message: `"${propertyName}" is not a valid property for ${blockType}s. Valid scalar properties include: ${Array.from(scalarProps[blockType]).join(", ")}. Valid block properties include: ${Array.from(childBlocks[blockType]).join(", ")}.`,
-                  source: "lookml-lsp",
-                  code: DiagnosticCode.PROP_INVALID_PROPERTY
-                });
-              }
-            }
-          }
-
-          // Check for required properties
-          if (
-            currentContext.type === "dimension" ||
-            currentContext.type === "measure"
-          ) {
-            // Dimensions and measures should have a type
-            const typeMatch = line.match(/^\s*type:/);
-            if (typeMatch) {
-              const typeValueMatch = line.match(/^\s*type:\s+([a-zA-Z0-9_]+)/);
-              if (typeValueMatch) {
-                const typeValue = typeValueMatch[1];
-                const validTypes = currentContext.type === "dimension"
-                  ? this.dimensionValidTypes
-                  : this.measureValidTypes;
-
-                if (!validTypes.includes(typeValue)) {
-                  diagnostics.push({
-                    severity: DiagnosticSeverity.Warning,
-                    range: this.getWordRange(lines[i], i, typeValue),
-                    message: `"${typeValue}" is not a valid type for ${currentContext.type}s. Valid types include: ${validTypes.join(
-                      ", "
-                    )}`,
-                    source: "lookml-lsp",
-                    code: DiagnosticCode.PROP_INVALID_TYPE
-                  });
-                }
-              }
-            }
-          }
-
-          // Check for invalid properties based on context
-          const propertyMatch = line.match(/^\s*([a-zA-Z0-9_]+):/);
-          if (propertyMatch) {
-            const propertyName = propertyMatch[1];
-
-            switch (propertyName) {
-              case "drill_fields": {
-                // First check if the line has proper array syntax
-                const lineContent = lines[i].trim();
-                const drillFieldsMatch = lineContent.match(/^\s*drill_fields:\s*(.+)$/);
-                
-                if (!drillFieldsMatch) {
-                  diagnostics.push({
-                    severity: DiagnosticSeverity.Error,
-                    range: {
-                      start: { line: i, character: line.indexOf("drill_fields:") },
-                      end: { line: i, character: line.length },
-                    },
-                    message: 'drill_fields must be a list. Use format: drill_fields: [field1, field2] or multi-line array format',
-                    source: "lookml-lsp",
-                    code: DiagnosticCode.DRILL_FIELDS_INVALID_FORMAT
-                  });
-                  break;
-                }
-
-                const content = drillFieldsMatch[1].trim();
-                
-                // Check for single line format
-                if (!content.startsWith('[')) {
-                  diagnostics.push({
-                    severity: DiagnosticSeverity.Error,
-                    range: {
-                      start: { line: i, character: line.indexOf("drill_fields:") },
-                      end: { line: i, character: line.length },
-                    },
-                    message: 'drill_fields must start with [',
-                    source: "lookml-lsp",
-                    code: DiagnosticCode.DRILL_FIELDS_MISSING_BRACKET
-                  });
-                  break;
-                }
-
-                // Handle multi-line format
-                if (!content.includes(']')) {
-                  // Look ahead for closing bracket
-                  let foundClosingBracket = false;
-                  let currentLine = i + 1;
-                  
-                  while (currentLine < lines.length) {
-                    const nextLine = lines[currentLine].trim();
-                    if (nextLine === ']' || nextLine.endsWith(']')) {
-                      foundClosingBracket = true;
-                      break;
-                    }
-                    // Stop if we hit another property or block end
-                    if (nextLine.match(/^[a-zA-Z0-9_]+:/) || nextLine === '}') {
-                      break;
-                    }
-                    currentLine++;
-                  }
-
-                  if (!foundClosingBracket) {
-                    diagnostics.push({
-                      severity: DiagnosticSeverity.Error,
-                      range: {
-                        start: { line: i, character: line.indexOf("drill_fields:") },
-                        end: { line: i, character: line.length },
-                      },
-                      message: 'drill_fields array must end with ]',
-                      source: "lookml-lsp",
-                      code: DiagnosticCode.DRILL_FIELDS_MISSING_CLOSING
-                    });
-                    break;
-                  }
-                }
-
-                // For single line format, check for proper comma separation
-                if (content.includes(']')) {
-                  const fields = content.substring(1, content.indexOf(']')).split(',');
-                  if (fields.length > 1) {
-                    const hasEmptyFields = fields.some(field => field.trim() === '');
-                    if (hasEmptyFields) {
-                      diagnostics.push({
-                        severity: DiagnosticSeverity.Error,
-                        range: {
-                          start: { line: i, character: line.indexOf("drill_fields:") },
-                          end: { line: i, character: line.length },
-                        },
-                        message: 'Fields in drill_fields must be separated by commas',
-                        source: "lookml-lsp",
-                        code: DiagnosticCode.DRILL_FIELDS_EMPTY_FIELD
-                      });
-                      break;
-                    }
-                  }
-                }
-
-                const parseResult = this.parseMultiLineProperty(lines, i, "drill_fields");
-                
-                if (parseResult.content.length === 0) {
-                  diagnostics.push({
-                    severity: DiagnosticSeverity.Error,
-                    range: {
-                      start: { line: i, character: line.indexOf("drill_fields:") },
-                      end: { line: i, character: line.length },
-                    },
-                    message: 'drill_fields must be a list. Use format: drill_fields: [field1, field2] or multi-line array format',
-                    source: "lookml-lsp",
-                    code: DiagnosticCode.DRILL_FIELDS_INVALID_FORMAT
-                  });
-                } else {
-                  for (let field of parseResult.content) {
-                    let viewName = this.workspaceModel.getViewNameFromFile(document);
-                    let originalField = field;
-
-                    let targetViewDetails = fileViewDetails;
-                    
-                    if (field.includes(".")) {
-                      const fieldSplit = field.split(".");
-                      viewName = fieldSplit[0];
-                      field = fieldSplit[1];
-                      targetViewDetails = this.workspaceModel.getView(viewName);
-
-                      if (!targetViewDetails) {
-                        const fieldPosition = this.findFieldPosition(
-                          lines,
-                          parseResult.startLineNumber,
-                          parseResult.endLineNumber,
-                          originalField
-                        );
-
-                        if (fieldPosition) {
-                          diagnostics.push({
-                            severity: DiagnosticSeverity.Error,
-                            range: {
-                              start: { line: fieldPosition.line, character: fieldPosition.character },
-                              end: { line: fieldPosition.line, character: fieldPosition.character + originalField.length },
-                            },
-                            message: `Referenced view "${viewName}" not found in workspace "${viewName}"`,
-                            source: "lookml-lsp",
-                            code: DiagnosticCode.SQL_REF_VIEW_NOT_FOUND
-                          });
-                        }
-                      }
-                    } 
-
-                    if (field.includes("*")) {
-                      const fieldWithoutAsterisk = field.replace("*", "");
-
-                      if (!targetViewDetails?.view?.set?.[fieldWithoutAsterisk]) {
-                        const fieldPosition = this.findFieldPosition(
-                          lines,
-                          parseResult.startLineNumber,
-                          parseResult.endLineNumber,
-                          originalField
-                        );
-
-                        if (fieldPosition) {
-                          diagnostics.push({
-                            severity: DiagnosticSeverity.Error,
-                            range: {
-                              start: { line: fieldPosition.line, character: fieldPosition.character },
-                              end: { line: fieldPosition.line, character: fieldPosition.character + originalField.length },
-                            },
-                            message: `Set "${fieldWithoutAsterisk}" not found in view "${viewName}"`,
-                            source: "lookml-lsp",
-                            code: DiagnosticCode.DRILL_FIELDS_SET_NOT_FOUND
-                          });
-                        }
-                      }
-                      continue;
-                    }
-
-                    if (!targetViewDetails?.view?.dimension?.[field] && !targetViewDetails?.view?.measure?.[field] && !targetViewDetails?.view?.dimension_group?.[field]) {
-                      const fieldPosition = this.findFieldPosition(
-                        lines,
-                        parseResult.startLineNumber,
-                        parseResult.endLineNumber,
-                        originalField
-                      );
-
-                      if (fieldPosition) {
-                        diagnostics.push({
-                          severity: DiagnosticSeverity.Error,
-                          range: {
-                            start: { line: fieldPosition.line, character: fieldPosition.character },
-                            end: { line: fieldPosition.line, character: fieldPosition.character + originalField.length },
-                          },
-                          message: `Field "${originalField}" not found in view "${viewName}"`,
-                          source: "lookml-lsp",
-                          code: DiagnosticCode.DRILL_FIELDS_FIELD_NOT_FOUND
-                        });
-                      }
-                    }
-                  }
-                }
-                break;
-              }
-
-              case "primary_key": {
-                if (currentContext.type !== "dimension") {
-                  diagnostics.push({
-                    severity: DiagnosticSeverity.Warning,
-                    range: this.getWordRange(lines[i], i, propertyName),
-                    message: `"primary_key" is only valid within dimension blocks`,
-                    source: "lookml-lsp",
-                    code: DiagnosticCode.PROP_PRIMARY_KEY_INVALID_CONTEXT
-                  });
-                }
-                break;
-              }
-
-              case "relationship": {
-                if (currentContext.type !== "join") {
-                  diagnostics.push({
-                    severity: DiagnosticSeverity.Warning,
-                    range: this.getWordRange(lines[i], i, propertyName),
-                    message: `"relationship" is only valid within join blocks`,
-                    source: "lookml-lsp",
-                    code: DiagnosticCode.PROP_RELATIONSHIP_INVALID_CONTEXT
-                  });
-                }
-                break;
-              }
-
-              case "hidden": {
-                const valueMatch = line.match(/^\s*hidden:\s+(true|false)/i);
-                if (valueMatch) {
-                  const invalidValue = valueMatch[1];
-                  const correctValue = invalidValue.toLowerCase() === "true" ? "yes" : "no";
-                  diagnostics.push({
-                    severity: DiagnosticSeverity.Warning,
-                    range: this.getWordRange(lines[i], i, invalidValue),
-                    message: `The "hidden" property should use "yes" or "no" instead of "${invalidValue}". Use "${correctValue}" instead.`,
-                    source: "lookml-lsp",
-                    code: DiagnosticCode.PROP_INVALID_HIDDEN_VALUE
-                  });
-                }
-                break;
-              }
-            }
-          }
-        }
-      }
-
-      return diagnostics;
-    } catch (error) {
-      console.error("ERROR in validateProperties", error);
-      return [];
-    }
   }
 
   /**
@@ -1256,7 +816,7 @@ export class DiagnosticsProvider {
   } {
     const firstLine = lines[startLine].trim();
     const propertyMatch = firstLine.match(new RegExp(`^\\s*${propertyName}:\\s*\\${openChar}(.*)$`));
-    
+
     if (!propertyMatch) {
       return {
         content: [],
@@ -1294,12 +854,12 @@ export class DiagnosticsProvider {
           arrayContent = nextLine;
         }
       }
-      
+
       if (arrayContent) {
         const lineContent = arrayContent.split(",").map(f => f.trim()).filter(f => f);
         content.push(...lineContent);
       }
-      
+
       currentLine++;
     }
 
@@ -1328,5 +888,573 @@ export class DiagnosticsProvider {
       }
     }
     return null;
+  }
+
+
+  // Base schemas for common properties
+  private recursiveStringArray: z.ZodType<unknown> = z.lazy(() =>
+    z.union([z.string(), z.array(this.recursiveStringArray)])
+  );
+
+  private baseProperties = z.object({
+    $name: z.string(),
+    $type: z.string(),
+    $strings: this.recursiveStringArray,
+    label: z.string().optional(),
+    description: z.string().optional(),
+    hidden: z.enum(['yes', 'no']).optional(),
+    view_label: z.string().optional(),
+    tags: z.array(z.string()).optional(),
+    value_format_name: z.string().optional(),
+  });
+
+  // Dimension schema
+  private dimensionSchema = this.baseProperties.extend({
+    type: z.enum(this.dimensionValidTypes as [string, ...string[]]),
+    sql: z.string().optional(),
+    sql_start: z.string().optional(),
+    sql_end: z.string().optional(),
+    primary_key: z.boolean().optional(),
+    map_layer_name: z.string().optional()
+    // ... other dimension properties
+  }).strict();
+
+  // Dimension group schema
+  private dimensionGroupSchema = this.baseProperties.extend({
+    type: z.literal('time'), // dimension_groups must have type: time
+    timeframes: z.array(
+      z.enum(['raw', 'time', 'date', 'week', 'month', 'quarter', 'year'])
+    ),
+    convert_tz: z.boolean().optional(),
+    datatype: z.enum(['date', 'datetime', 'unixtime']).optional(),
+    sql: z.string(),
+    sql_start: z.string().optional(),
+    sql_end: z.string().optional(),
+  }).strict();
+
+  // Measure schema
+  private measureSchema = this.baseProperties.extend({
+    type: z.enum(this.measureValidTypes as [string, ...string[]]),
+    sql: z.string().optional(),
+    drill_fields: z.array(z.string()).optional(),
+    // ... other measure properties
+  }).strict();
+
+  // Set schema
+  private setSchema = this.baseProperties.extend({
+    fields: z.array(z.string())
+  }).strict();
+
+  private joinSchema = this.baseProperties.extend({
+    type: z.enum(['left_outer', 'inner', 'full_outer', 'cross']).optional(),
+    relationship: z.enum(['one_to_one', 'one_to_many', 'many_to_one', 'many_to_many']).optional(),
+    sql_on: z.string().optional(),
+    sql_where: z.string().optional(),
+    sql_having: z.string().optional(),
+    from: z.string().optional(),
+    fields: z.array(z.string()).optional(),
+    required_joins: z.array(z.string()).optional(),
+    foreign_key: z.string().optional(),
+    view_label: z.string().optional(),
+    outer_only: z.boolean().optional(),
+  }).strict();
+
+  // Explore schema
+  private exploreSchema = this.baseProperties.extend({
+    view_name: z.string().optional(),
+    from: z.string().optional(),
+    extends: z.string().optional(),
+    join: z.record(z.string(), this.joinSchema).optional(),
+  }).strict();
+
+  // Property block schemas
+  private linkSchema = z.object({
+    label: z.string(),
+    icon_url: z.string().optional(),
+    url: z.string(),
+  }).strict();
+
+  private suggestionsSchema = z.array(
+    z.object({
+      label: z.string(),
+      value: z.string(),
+    })
+  );
+
+  private validateSet({ viewDetails, sets }: {
+    viewDetails: LookmlViewWithFileInfo,
+    sets: { [key: string]: { fields: string[] } }
+  }): Diagnostic[] {
+    const diagnostics: Diagnostic[] = [];
+    const positions = viewDetails.positions;
+
+    Object.entries(sets).forEach(([setName, set]) => {
+      try {
+        this.setSchema.parse(set);
+
+        for (const [index, field] of set.fields.entries()) {
+          let fieldName = field;
+          let targetedViewName: string | undefined = viewDetails.view.$name;
+          let targetedViewDetails: LookmlViewWithFileInfo | undefined = viewDetails;
+
+          const setFieldPosition = positions.set?.[setName]?.fields?.[index];
+          if (!setFieldPosition) {
+            throw new Error(`No position found for set field ${field}`);
+          }
+
+          if (field.includes(".")) {
+            const fieldParts = field.split(".");
+            targetedViewName = fieldParts[0];
+            fieldName = fieldParts[1];
+            targetedViewDetails = this.workspaceModel.getView(targetedViewName);
+          }
+
+          const fieldLength = fieldName.length;
+
+          if (!targetedViewDetails) {
+            const startCharacter = setFieldPosition.$p[1];
+            const endCharacter = targetedViewName ? startCharacter + targetedViewName.length : setFieldPosition.$p[3];
+
+            diagnostics.push({
+              severity: DiagnosticSeverity.Error,
+              message: `View ${targetedViewName} not found`,
+              range: {
+                start: { line: setFieldPosition.$p[0] - 1, character: startCharacter },
+                end: { line: setFieldPosition.$p[2] - 1, character: endCharacter }
+              },
+              source: "lookml-lsp",
+              code: DiagnosticCode.DRILL_FIELDS_VIEW_NOT_FOUND
+            });
+            continue;
+          }
+          const viewDimensions = targetedViewDetails.view.dimension;
+          const viewMeasures = targetedViewDetails.view.measure;
+          const viewDimensionGroups = targetedViewDetails.view.dimension_group;
+
+          if (!viewDimensions?.[fieldName] && !viewMeasures?.[fieldName] && !viewDimensionGroups?.[fieldName]) {
+            diagnostics.push({
+              severity: DiagnosticSeverity.Error,
+              message: `Field ${fieldName} not found in view ${targetedViewName}`,
+              range: {
+                start: { line: setFieldPosition.$p[0] - 1, character: setFieldPosition.$p[1] },
+                end: { line: setFieldPosition.$p[2] - 1, character: setFieldPosition.$p[1] + fieldLength }
+              },
+              source: "lookml-lsp",
+              code: DiagnosticCode.DRILL_FIELDS_FIELD_NOT_FOUND
+            });
+            continue;
+          }
+        }
+      } catch (error: ZodError | unknown) {
+        if (error instanceof ZodError) {
+          for (const issue of error.issues) {
+            const path = issue.path as string[];
+            const setPositions = positions.set?.[setName] as DimensionPosition | undefined;
+
+            let currentPosition: any = setPositions;
+            for (const pathPart of path) {
+              if (!currentPosition) break;
+              currentPosition = currentPosition[pathPart];
+            }
+            const position = currentPosition as LookmlPosition | undefined;
+
+            if (!position) {
+              throw new Error(`No position found for set ${setName}`);
+            }
+
+            const startLine = position.$p[0] - 1;
+            const startCharacter = position.$p[1];
+            const endLine = position.$p[2] - 1;
+            const endCharacter = position.$p[3];
+
+            diagnostics.push({
+              severity: DiagnosticSeverity.Error,
+              message: issue.message,
+              range: {
+                start: { line: startLine, character: startCharacter },
+                end: { line: endLine, character: endCharacter }
+              },
+              source: "lookml-lsp",
+              code: DiagnosticCode.PROP_INVALID_PROPERTY
+            });
+            return;
+          }
+
+          throw error;
+        }
+      }
+    });
+
+    return diagnostics;
+  }
+
+  private validateDimension(dimensions: { [key: string]: LookmlDimension }, positions: LookMlViewPositions): Diagnostic[] {
+    const diagnostics: Diagnostic[] = [];
+
+    Object.values(dimensions).forEach((dimension) => {
+      try {
+        this.dimensionSchema.parse(dimension);
+      } catch (error: ZodError | unknown) {
+        if (error instanceof ZodError) {
+          for (const issue of error.issues) {
+            const dimensionName = dimension.$name;
+            const path = issue.path[0] as string;
+            const fieldPositions = positions.dimension as Record<string, DimensionPosition> | undefined;
+            const dimensionPositions = fieldPositions?.[dimensionName] as DimensionPosition | undefined;
+            const position = dimensionPositions?.[path as keyof DimensionPosition] as LookmlPosition | undefined ?? dimensionPositions as LookmlPosition | undefined;
+
+            if (!position) {
+              throw new Error(`No position found for dimension ${dimensionName}`);
+            }
+
+            const startLine = position.$p[0] - 1;
+            const startCharacter = position.$p[1];
+            const endLine = position.$p[2] - 1;
+            const endCharacter = position.$p[3];
+
+            diagnostics.push(
+              {
+                severity: DiagnosticSeverity.Error,
+                message: issue.message,
+                range: {
+                  start: { line: startLine, character: startCharacter },
+                  end: { line: endLine, character: endCharacter }
+                },
+                source: "lookml-lsp",
+                code: DiagnosticCode.PROP_INVALID_PROPERTY
+              }
+            );
+            return
+          }
+
+          throw error;
+        }
+      }
+    });
+
+    return diagnostics;
+  }
+
+  private validateMeasure({ viewDetails, measures }: {
+    viewDetails: LookmlViewWithFileInfo,
+    measures: { [key: string]: LookmlMeasure },
+  }): Diagnostic[] {
+    const diagnostics: Diagnostic[] = [];
+    const positions = viewDetails.positions;
+
+    Object.values(measures).forEach((measure) => {
+      try {
+        this.measureSchema.parse(measure);
+
+        if (measure.drill_fields) {
+          for (const [index, drillField] of measure.drill_fields.entries()) {
+            let fieldName = drillField;
+            let targetedViewName: string | undefined = viewDetails.view.$name;
+            let targetedViewDetails: LookmlViewWithFileInfo | undefined = viewDetails;
+
+            const drillFieldPosition = positions.measure?.[measure.$name]?.drill_fields?.[index];
+            if (!drillFieldPosition) {
+              throw new Error(`No position found for drill field ${drillField}`);
+            }
+
+            if (drillField.includes("*")) {
+              const fieldWithoutAsterisk = drillField.replace("*", "");
+
+              if (!targetedViewDetails?.view?.set?.[fieldWithoutAsterisk]) {
+                const startCharater = drillFieldPosition.$p[1];
+                const endCharater = targetedViewName ? startCharater + fieldWithoutAsterisk.length : drillFieldPosition.$p[3];
+                diagnostics.push({
+                  severity: DiagnosticSeverity.Error,
+                  range: {
+                    start: { line: drillFieldPosition.$p[0] - 1, character: startCharater },
+                    end: { line: drillFieldPosition.$p[2] - 1, character: endCharater }
+                  },
+                  message: `Set "${fieldWithoutAsterisk}" not found in view "${targetedViewName}"`,
+                  source: "lookml-lsp",
+                  code: DiagnosticCode.DRILL_FIELDS_SET_NOT_FOUND
+                });
+
+              }
+              continue;
+            }
+
+            if (drillField.includes(".")) {
+              const drillFieldParts = drillField.split(".");
+              targetedViewName = drillFieldParts[0];
+              fieldName = drillFieldParts[1];
+              targetedViewDetails = this.workspaceModel.getView(targetedViewName);
+            }
+
+            const fieldLength = fieldName.length;
+
+            if (!targetedViewDetails) {
+              const startCharater = drillFieldPosition.$p[1];
+              const endCharater = targetedViewName ? startCharater + targetedViewName.length : drillFieldPosition.$p[3];
+
+              diagnostics.push({
+                severity: DiagnosticSeverity.Error,
+                message: `View ${targetedViewName} not found`,
+                range: {
+                  start: { line: drillFieldPosition.$p[0] - 1, character: startCharater },
+                  end: { line: drillFieldPosition.$p[2] - 1, character: endCharater }
+                },
+                source: "lookml-lsp",
+                code: DiagnosticCode.DRILL_FIELDS_VIEW_NOT_FOUND
+              });
+              continue;
+            }
+
+            const viewDimensions = targetedViewDetails.view.dimension;
+            const viewMeasures = targetedViewDetails.view.measure;
+            const viewDimensionGroups = targetedViewDetails.view.dimension_group;
+
+            if (!viewDimensions?.[fieldName] && !viewMeasures?.[fieldName] && !viewDimensionGroups?.[fieldName]) {
+              diagnostics.push({
+                severity: DiagnosticSeverity.Error,
+                message: `Field ${fieldName} not found in view ${viewDetails.view.$name}`,
+                range: {
+                  start: { line: drillFieldPosition.$p[0] - 1, character: drillFieldPosition.$p[1] },
+                  end: { line: drillFieldPosition.$p[2] - 1, character: drillFieldPosition.$p[1] + fieldLength }
+                },
+                source: "lookml-lsp",
+                code: DiagnosticCode.DRILL_FIELDS_FIELD_NOT_FOUND
+              });
+              continue;
+            }
+          }
+        }
+      } catch (error: ZodError | unknown) {
+        if (error instanceof ZodError) {
+          for (const issue of error.issues) {
+            const measureName = measure.$name;
+            const path = issue.path as string[];
+            const fieldPositions = positions.measure as Record<string, DimensionPosition> | undefined;
+            const measurePositions = fieldPositions?.[measureName] as DimensionPosition | undefined;
+
+            let currentPosition: any = measurePositions;
+            for (const pathPart of path) {
+              if (!currentPosition) break;
+              currentPosition = currentPosition[pathPart];
+            }
+            const position = currentPosition as LookmlPosition | undefined;
+
+            if (!position) {
+              throw new Error(`No position found for measure ${measureName}`);
+            }
+
+            const startLine = position.$p[0] - 1;
+            const startCharacter = position.$p[1];
+            const endLine = position.$p[2] - 1;
+            const endCharacter = position.$p[3];
+
+            diagnostics.push(
+              {
+                severity: DiagnosticSeverity.Error,
+                message: issue.message,
+                range: {
+                  start: { line: startLine, character: startCharacter },
+                  end: { line: endLine, character: endCharacter }
+                },
+                source: "lookml-lsp",
+                code: DiagnosticCode.PROP_INVALID_PROPERTY
+              }
+            );
+            return
+          }
+
+          throw error;
+        }
+      }
+    });
+    return diagnostics;
+  }
+
+  private validateDimensionGroup(dimensionGroups: { [key: string]: LookmlDimension }, positions: LookMlViewPositions): Diagnostic[] {
+    const diagnostics: Diagnostic[] = [];
+
+    Object.values(dimensionGroups).forEach((dimensionGroup) => {
+      try {
+        this.dimensionGroupSchema.parse(dimensionGroup);
+      } catch (error: ZodError | unknown) {
+        if (error instanceof ZodError) {
+          for (const issue of error.issues) {
+            const dimensionGroupName = dimensionGroup.$name;
+            const path = issue.path as string[];
+            const fieldPositions = positions.dimension_group as Record<string, DimensionPosition> | undefined;
+            const dimensionGroupPositions = fieldPositions?.[dimensionGroupName] as DimensionPosition | undefined;
+
+            let currentPosition: any = dimensionGroupPositions;
+            for (const pathPart of path) {
+              if (!currentPosition) break;
+              currentPosition = currentPosition[pathPart];
+            }
+            const position = currentPosition as LookmlPosition | undefined;
+
+            if (!position) {
+              throw new Error(`No position found for dimension group ${dimensionGroupName}`);
+            }
+
+            const startLine = position.$p[0] - 1;
+            const startCharacter = position.$p[1];
+            const endLine = position.$p[2] - 1;
+            const endCharacter = position.$p[3];
+
+            diagnostics.push(
+              {
+                severity: DiagnosticSeverity.Error,
+                message: issue.message,
+                range: {
+                  start: { line: startLine, character: startCharacter },
+                  end: { line: endLine, character: endCharacter }
+                },
+                source: "lookml-lsp",
+                code: DiagnosticCode.PROP_INVALID_PROPERTY
+              }
+            );
+            return
+          }
+
+          throw error;
+        }
+      }
+    });
+
+    return diagnostics;
+  }
+
+  private validateModel(modelDetails: LookmlModelWithFileInfo): Diagnostic[] {
+    const diagnostics: Diagnostic[] = [];
+
+    Object.entries(modelDetails.model).forEach(([key, value]) => {
+      switch (key) {
+        case "explore":
+          const positions = modelDetails.positions;
+
+          const models: {
+            [key: string]: LookmlExplore
+          } = value;
+
+          Object.values(models).forEach((explore) => {
+            try {
+              this.exploreSchema.parse(explore);
+            } catch (error: ZodError | unknown) {
+              if (error instanceof ZodError) {
+                for (const issue of error.issues) {
+                  const exploreName = explore.$name;
+                  const path = issue.path as string[];
+                  const fieldPositions = positions.explore as Record<string, DimensionPosition> | undefined;
+                  const explorePositions = fieldPositions?.[exploreName] as DimensionPosition | undefined;
+
+                  // Traverse the path to get the position
+                  let currentPosition: any = explorePositions;
+                  for (const pathPart of path) {
+                    if (!currentPosition) break;
+                    currentPosition = currentPosition[pathPart];
+                  }
+                  const position = currentPosition as LookmlPosition | undefined;
+
+                  if (!position) {
+                    throw new Error(`No position found for explore ${exploreName}`);
+                  }
+
+                  const startLine = position.$p[0] - 1;
+                  const startCharacter = position.$p[1];
+                  const endLine = position.$p[2] - 1;
+                  const endCharacter = position.$p[3];
+
+                  diagnostics.push(
+                    {
+                      severity: DiagnosticSeverity.Error,
+                      message: issue.message,
+                      range: {
+                        start: { line: startLine, character: startCharacter },
+                        end: { line: endLine, character: endCharacter }
+                      },
+                      source: "lookml-lsp",
+                      code: DiagnosticCode.PROP_INVALID_PROPERTY
+                    }
+                  );
+                  return
+                }
+
+                throw error;
+              }
+            }
+          });
+      }
+    });
+
+    return diagnostics;
+  }
+
+  // Then in the validation method:
+  protected validateProperties(document: TextDocument): Diagnostic[] {
+    let diagnostics: Diagnostic[] = [];
+
+    // Parse the document into a structure
+    const parsedStructure = this.getFileStructure(document);
+
+    if (parsedStructure.views.length) {
+      for (const viewDetails of parsedStructure.views) {
+        const positions = viewDetails.positions;
+
+        Object.entries(viewDetails.view).forEach(([key, value]) => {
+          switch (key) {
+            case "dimension":
+              const dimensionDiagnostics = this.validateDimension(value, positions);
+              diagnostics = [...diagnostics, ...dimensionDiagnostics];
+              break;
+            case "dimension_group":
+              const dimensionGroupDiagnostics = this.validateDimensionGroup(value, positions);
+              diagnostics = [...diagnostics, ...dimensionGroupDiagnostics];
+              break;
+            case "measure":
+              const measureDiagnostics = this.validateMeasure({
+                measures: value,
+                viewDetails
+              });
+              diagnostics = [...diagnostics, ...measureDiagnostics];
+              break;
+            case "set":
+              const setDiagnostics = this.validateSet({
+                sets: value,
+                viewDetails
+              });
+              diagnostics = [...diagnostics, ...setDiagnostics];
+              break;
+          }
+        });
+      }
+    }
+
+    if (parsedStructure.models.length) {
+      for (const modelDetails of parsedStructure.models) {
+        const modelDiagnostics = this.validateModel(modelDetails);
+        diagnostics = [...diagnostics, ...modelDiagnostics];
+      }
+    }
+
+    return diagnostics;
+  }
+
+  public getFileStructure(document: TextDocument): {
+    views: LookmlViewWithFileInfo[];
+    explores: LookmlExploreWithFileInfo[];
+    models: LookmlModelWithFileInfo[];
+  } {
+    const uri = document.uri.replace("file://", "");
+    const views = (this.workspaceModel.getViewsByFile(uri) || [])
+      .map(viewName => this.workspaceModel.getView(viewName))
+      .filter((v): v is LookmlViewWithFileInfo => v !== undefined);
+
+    const explores = (this.workspaceModel.getExploresByFile(uri) || [])
+      .map(exploreName => this.workspaceModel.getExplore(exploreName))
+      .filter((e): e is LookmlExploreWithFileInfo => e !== undefined);
+
+    const models = (this.workspaceModel.getModelsByFile(uri) || [])
+      .map(modelName => this.workspaceModel.getModel(modelName))
+      .filter((m): m is LookmlModelWithFileInfo => m !== undefined);
+
+    return { views, explores, models };
   }
 }

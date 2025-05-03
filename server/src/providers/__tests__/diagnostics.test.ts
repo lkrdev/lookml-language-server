@@ -26,6 +26,8 @@ const createMockDimension = (name: string): LookmlDimension => ({
       $file_name: 'test.view.lkml',
       $file_path: '/test/test.view.lkml',
       $file_type: 'view',
+      $file_rel: '',
+      $strings: undefined
     },
     uri: 'file:///test/test.view.lkml',
     view,
