@@ -897,16 +897,43 @@ export class DiagnosticsProvider {
     z.union([z.string(), z.array(this.recursiveStringArray)])
   );
 
+
   private baseProperties = z.object({
     $name: z.string(),
     $type: z.string(),
     $strings: this.recursiveStringArray,
     label: z.string().optional(),
     description: z.string().optional(),
-    hidden: z.enum(['yes', 'no']).optional(),
+    hidden: z.boolean().optional(),
     view_label: z.string().optional(),
+    group_label: z.string().optional(),
     tags: z.array(z.string()).optional(),
     value_format_name: z.string().optional(),
+  });
+
+  private linkSchema = z.object({
+    label: z.string(),
+    $name: z.string().optional(),
+    $type: z.string(),
+    $strings: this.recursiveStringArray,
+    icon_url: z.string().optional(),
+    url: z.string(),
+  }).strict();
+
+  private actionParamSchema = z.object({
+    name: z.string(),
+    value: z.string().optional(),
+    required: z.boolean().optional(),
+    default: z.string().optional(),
+    type: z.enum(['textarea']).optional(),
+  });
+  
+  private actionSchema = z.object({
+    label: z.string(),
+    url: z.string(),
+    icon_url: z.string().optional(),
+    param: this.actionParamSchema.optional(),
+    form_param: z.union([this.actionParamSchema, z.array(this.actionParamSchema)]).optional(),
   });
 
   // Dimension schema
@@ -916,9 +943,12 @@ export class DiagnosticsProvider {
     sql_end: z.string().optional(),
     sql_start: z.string().optional(),
     sql: z.string().optional(),
-    type: z.enum(this.dimensionValidTypes as [string, ...string[]]),
+    type: z.enum(this.dimensionValidTypes as [string, ...string[]]).optional(),
     value_format: z.string().optional(),
-    // ... other dimension properties
+    link: this.linkSchema.optional(),
+    style: z.enum(['integer', 'float', 'ordinal']).optional(),
+    tiers: z.array(z.string()).optional(),
+    action: this.actionSchema.optional(), // ✅ added
   }).strict();
 
   // Dimension group schema
@@ -928,9 +958,34 @@ export class DiagnosticsProvider {
     sql_end: z.string().optional(),
     sql_start: z.string().optional(),
     sql: z.string(),
-
     timeframes: z.array(
-      z.enum(['raw', 'time', 'date', 'week', 'month', 'quarter', 'year'])
+      z.enum([
+        'raw',
+        'time',
+        'date',
+        'week',
+        'month',
+        'quarter',
+        'year',
+        'day_of_week',
+        'day_of_month',
+        'day_of_year',
+        'week_of_year',
+        'month_of_year',
+        'quarter_of_year',
+        'hour',
+        'minute',
+        'second',
+        'hour_of_day',
+        'minute_of_hour',
+        'second_of_minute',
+        'time_of_day',
+        'day_of_week_index',
+        'week_start_date',
+        'month_name',
+        'quarter_name',
+        'day_name',
+      ])
     ),
     type: z.literal('time'),
   }).strict();
@@ -946,10 +1001,12 @@ export class DiagnosticsProvider {
   
   private measureSchema = this.baseProperties.extend({
     drill_fields: z.array(z.string()).optional(),
+    filters: this.measureFiltersSchema.optional(),
+    link: this.linkSchema.optional(),
+    percentile: z.string().min(0).max(100).optional(),
     sql: z.string().optional(),
     type: z.enum(this.measureValidTypes as [string, ...string[]]),
     value_format: z.string().optional(),
-    filters: this.measureFiltersSchema.optional(),
   }).strict();
 
   // Set schema
@@ -977,13 +1034,6 @@ export class DiagnosticsProvider {
     from: z.string().optional(),
     extends: z.string().optional(),
     join: z.record(z.string(), this.joinSchema).optional(),
-  }).strict();
-
-  // Property block schemas
-  private linkSchema = z.object({
-    label: z.string(),
-    icon_url: z.string().optional(),
-    url: z.string(),
   }).strict();
 
   private suggestionsSchema = z.array(
