@@ -15,6 +15,18 @@ import {
 } from "./lookml-parser";
 import { parseFiles, LookmlProject, LookmlViewWithFileInfo, LookmlExploreWithFileInfo, transformations, LookmlModelWithFileInfo, LookmlError, } from "lookml-parser";
 
+// Define types for LookML file entries
+interface LookmlFileEntry {
+  $file_type: 'view' | 'explore' | 'model';
+  $file_path: string;
+  $file_name: string;
+  $file_rel?: string;
+  view?: Record<string, any>;
+  explore?: Record<string, any>;
+  include?: string | string[];
+  [key: string]: any;
+}
+
 export class WorkspaceModel {
   public connection: Connection;
   private lookmlParser: LookMLParser;
@@ -48,6 +60,10 @@ export class WorkspaceModel {
 
   public getErrorsByFileName(fileName: string): LookmlError[] {
     return this.errors.get(fileName) ?? [];
+  }
+
+  public getErrors(): Map<string, LookmlError[]> {
+    return this.errors;
   }
 
   public getExploresByFile(uri: DocumentUri): string[] | undefined {
@@ -134,6 +150,7 @@ export class WorkspaceModel {
   }): Promise<void> {
     source = source ?? "**/*.{view,model,explore}.lkml";
 
+    console.log("parseFiles", parseFiles);
     const project = await parseFiles({
       source,
       fileOutput: 'by-name',
@@ -141,7 +158,9 @@ export class WorkspaceModel {
       readFileConcurrency: 4,
     });
 
-    transformations.addPositions(project)
+    transformations.addPositions(project);
+
+    console.log("project", source, project);
 
     if (reset) {
       this.errors = new Map<string, LookmlError[]>();
@@ -164,19 +183,20 @@ export class WorkspaceModel {
     }
 
     // process files in order of view, explore, model
-    const entires = Object.entries(project.file).sort(([, valueA], [, valueB]) => {
+    const entries = Object.entries(project.file).sort(([, valueA], [, valueB]) => {
       // Define the desired order
       const order: Record<string, number> = { 'view': 0, 'explore': 1, 'model': 2 };
-      return (order[valueA.$file_type] ?? 3) - (order[valueB.$file_type] ?? 3);
+      return (order[(valueA as LookmlFileEntry).$file_type] ?? 3) - (order[(valueB as LookmlFileEntry).$file_type] ?? 3);
     });
 
-    for (const [key, value] of entires) {
-      switch (value.$file_type) {
+    for (const [key, value] of entries) {
+      const fileEntry = value as LookmlFileEntry;
+      switch (fileEntry.$file_type) {
         case "view": {
           const viewName = key;
-          const { view, ...rest } = value;;
-          const filePath = value.$file_path;
-          const fileName = value.$file_name;
+          const { view, ...rest } = fileEntry;
+          const filePath = fileEntry.$file_path;
+          const fileName = fileEntry.$file_name;
 
           const uri = `${process.cwd()}/${filePath}`;
           const filePositions = project.positions.file[viewName];
@@ -197,9 +217,9 @@ export class WorkspaceModel {
 
         case "explore": {
           const exploreName = key;
-          const { explore, ...rest } = value;;
-          const filePath = value.$file_path;
-          const fileName = value.$file_name;
+          const { explore, ...rest } = fileEntry;
+          const filePath = fileEntry.$file_path;
+          const fileName = fileEntry.$file_name;
 
           const uri = `${process.cwd()}/${filePath}`;
           const filePositions = project.positions.file[exploreName];
@@ -218,12 +238,12 @@ export class WorkspaceModel {
         }
 
         case "model": {
-          const model = value;
+          const model = fileEntry;
           const filePath = model.$file_path;
           const fileRel = model.$file_rel;
-          const fileName = value.$file_name;
+          const fileName = fileEntry.$file_name;
 
-          this.includedViews.set(fileName, new Set<string>)
+          this.includedViews.set(fileName, new Set<string>());
 
           const uri = `${process.cwd()}/${filePath}`;
           const filePositions = project.positions.file[`${fileRel}.model`];
@@ -246,6 +266,7 @@ export class WorkspaceModel {
           for (const include of includes) {
             await this.resolveInclude(uri, include, fileName);
           }
+          break;
         }
       }
     }
@@ -405,12 +426,10 @@ export class WorkspaceModel {
         cleanPattern
       );
 
-
       for (const filePath of matchedFiles) {
         if (this.loadedFiles.has(filePath)) continue;
 
         try {
-
           // Request file content via LSP
           const viewsFromThisFile =
             this.viewsByFile.get(filePath) || [];

@@ -145,6 +145,7 @@ export class DefinitionProvider {
         position: Position
     ): Definition | undefined {
         const word = this.getWordAtPosition(document, position);
+        console.log("word", word);
         if (!word) return;
 
         const text = document.getText();

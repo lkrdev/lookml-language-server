@@ -1,0 +1,8745 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`LookML Test Projects Project 000-empty diagnostics: diagnostics-000-empty 1`] = `""`;
+
+exports[`LookML Test Projects Project 000-empty diagnostics: getErrors 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 000-empty diagnostics: getExplores 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 000-empty diagnostics: getModels 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 000-empty diagnostics: getViews 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 001-simple-model diagnostics: diagnostics-001-simple-model 1`] = `
+"File: facts.view.lkml
+
+
+File: simple.model.lkml
+
+"
+`;
+
+exports[`LookML Test Projects Project 001-simple-model diagnostics: getErrors 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 001-simple-model diagnostics: getExplores 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 001-simple-model diagnostics: getModels 1`] = `
+Map {
+  "simple" => {
+    "model": {
+      "$file_name": "simple",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/001-simple-model/simple.model.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/001-simple-model/simple",
+      "$file_type": "model",
+      "$strings": [
+        [
+          "include.0",
+          "include",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+",
+        [
+          "include.1",
+          "include",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+
+",
+        "@explore.facts",
+      ],
+      "explore": {
+        "facts": {
+          "$name": "facts",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "}",
+          ],
+          "$type": "explore",
+        },
+      },
+      "include": [
+        "*.view.lkml",
+        "*.dashboard.lkml",
+      ],
+    },
+    "positions": {
+      "$p": [
+        1,
+        1,
+        4,
+        17,
+      ],
+      "explore": {
+        "facts": {
+          "$name": {
+            "$p": [
+              4,
+              9,
+              4,
+              14,
+            ],
+          },
+          "$p": [
+            4,
+            0,
+            4,
+            17,
+          ],
+          "$type": {
+            "$p": [
+              4,
+              0,
+              4,
+              7,
+            ],
+          },
+        },
+      },
+      "include": {
+        "0": {
+          "$p": [
+            1,
+            1,
+            1,
+            23,
+          ],
+        },
+        "1": {
+          "$p": [
+            2,
+            0,
+            2,
+            27,
+          ],
+        },
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/001-simple-model/simple.model.lkml",
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 001-simple-model diagnostics: getViews 1`] = `
+Map {
+  "facts" => {
+    "file": {
+      "$file_name": "facts",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/001-simple-model/facts.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/001-simple-model/facts",
+      "$file_type": "view",
+      "$strings": [
+        "@view.facts",
+      ],
+    },
+    "positions": {
+      "$name": {
+        "$p": [
+          1,
+          7,
+          1,
+          12,
+        ],
+      },
+      "$p": [
+        1,
+        1,
+        3,
+        1,
+      ],
+      "$type": {
+        "$p": [
+          1,
+          1,
+          1,
+          5,
+        ],
+      },
+      "sql_table_name": {
+        "$p": [
+          2,
+          1,
+          2,
+          35,
+        ],
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/001-simple-model/facts.view.lkml",
+    "view": {
+      "$name": "facts",
+      "$strings": [
+        "@$type",
+        ":",
+        " ",
+        "@$name",
+        " ",
+        "{",
+        "
+	",
+        [
+          "sql_table_name",
+          "sql_table_name",
+          ":",
+          "@",
+          ";;",
+        ],
+        "
+",
+        "}",
+      ],
+      "$type": "view",
+      "sql_table_name": " my_schema.facts ",
+    },
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 002-ndt diagnostics: diagnostics-002-ndt 1`] = `
+"File: ndt.view.lkml
+
+"
+`;
+
+exports[`LookML Test Projects Project 002-ndt diagnostics: getErrors 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 002-ndt diagnostics: getExplores 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 002-ndt diagnostics: getModels 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 002-ndt diagnostics: getViews 1`] = `
+Map {
+  "ndt" => {
+    "file": {
+      "$file_name": "ndt",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/002-ndt/ndt.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/002-ndt/ndt",
+      "$file_type": "view",
+      "$strings": [
+        "# Example from https://docs.looker.com/reference/view-params/explore_source
+",
+        "
+",
+        "@view.user_90_day_facts",
+      ],
+    },
+    "positions": undefined,
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/002-ndt/ndt.view.lkml",
+    "view": undefined,
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 003-fully-commented diagnostics: diagnostics-003-fully-commented 1`] = `
+"File: user_order_fact.view.lkml
+
+"
+`;
+
+exports[`LookML Test Projects Project 003-fully-commented diagnostics: getErrors 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 003-fully-commented diagnostics: getExplores 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 003-fully-commented diagnostics: getModels 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 003-fully-commented diagnostics: getViews 1`] = `
+Map {
+  "user_order_fact" => {
+    "file": {
+      "$file_name": "user_order_fact",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/003-fully-commented/user_order_fact.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/003-fully-commented/user_order_fact",
+      "$file_type": "view",
+      "$strings": [
+        "# view: user_order_facts {
+",
+        "#   derived_table: {
+",
+        "#     sql:
+",
+        "#       SELECT
+",
+        "#         user_id as 1pk_user_id,
+",
+        "#         ---
+",
+        "#         MIN(DATE(created_at)) AS first_order_date
+",
+        "#       FROM
+",
+        "#         orders
+",
+        "#       GROUP BY
+",
+        "#         user_id ;;
+",
+        "#   }
+",
+        "
+",
+        "#   dimension: 1pk_user_id {
+",
+        "#     type: number
+",
+        "#     primary_key: yes
+",
+        "#     hidden: yes
+",
+        "#   }
+",
+        "
+",
+        "#   dimension: first_order_date {
+",
+        "#     description: "Date of first order"
+",
+        "#     type: date
+",
+        "#     sql: \${TABLE}.first_order_date ;;
+",
+        "#   }
+",
+        "# }",
+      ],
+    },
+    "positions": undefined,
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/003-fully-commented/user_order_fact.view.lkml",
+    "view": undefined,
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 004-file-output-by-type diagnostics: diagnostics-004-file-output-by-type 1`] = `
+"File: bar.explore.lkml
+
+
+File: foo.view.lkml
+
+
+File: foobar.model.lkml
+
+
+File: manifest.lkml
+
+"
+`;
+
+exports[`LookML Test Projects Project 004-file-output-by-type diagnostics: getErrors 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 004-file-output-by-type diagnostics: getExplores 1`] = `
+Map {
+  "bar" => {
+    "explore": {
+      "$name": "bar",
+      "$strings": [
+        "@$type",
+        ":",
+        " ",
+        "@$name",
+        " ",
+        "{",
+        "}",
+      ],
+      "$type": "explore",
+    },
+    "file": {
+      "$file_name": "bar",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/004-file-output-by-type/bar.explore.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/004-file-output-by-type/bar",
+      "$file_type": "explore",
+      "$strings": [
+        "@explore.bar",
+        "
+
+",
+        "@view.bar",
+      ],
+      "view": {
+        "bar": {
+          "$name": "bar",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "}",
+          ],
+          "$type": "view",
+        },
+      },
+    },
+    "positions": {
+      "$name": {
+        "$p": [
+          1,
+          10,
+          1,
+          13,
+        ],
+      },
+      "$p": [
+        1,
+        1,
+        1,
+        16,
+      ],
+      "$type": {
+        "$p": [
+          1,
+          1,
+          1,
+          8,
+        ],
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/004-file-output-by-type/bar.explore.lkml",
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 004-file-output-by-type diagnostics: getModels 1`] = `
+Map {
+  "foobar" => {
+    "model": {
+      "$file_name": "foobar",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/004-file-output-by-type/foobar.model.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/004-file-output-by-type/foobar",
+      "$file_type": "model",
+      "$strings": [
+        "
+",
+        [
+          "connection",
+          "connection",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+
+",
+        [
+          "include.0",
+          "include",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+",
+        [
+          "include.1",
+          "include",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+
+",
+        "@explore.foo_view",
+      ],
+      "connection": "conn",
+      "explore": {
+        "foo_view": {
+          "$name": "foo_view",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "}",
+          ],
+          "$type": "explore",
+        },
+      },
+      "include": [
+        "/**/*.view.lkml",
+        "bar.explore.lkml",
+      ],
+    },
+    "positions": {
+      "$p": [
+        1,
+        1,
+        7,
+        20,
+      ],
+      "connection": {
+        "$p": [
+          2,
+          0,
+          2,
+          18,
+        ],
+      },
+      "explore": {
+        "foo_view": {
+          "$name": {
+            "$p": [
+              7,
+              9,
+              7,
+              17,
+            ],
+          },
+          "$p": [
+            7,
+            0,
+            7,
+            20,
+          ],
+          "$type": {
+            "$p": [
+              7,
+              0,
+              7,
+              7,
+            ],
+          },
+        },
+      },
+      "include": {
+        "0": {
+          "$p": [
+            4,
+            0,
+            4,
+            26,
+          ],
+        },
+        "1": {
+          "$p": [
+            5,
+            0,
+            5,
+            27,
+          ],
+        },
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/004-file-output-by-type/foobar.model.lkml",
+  },
+  "in_folder" => {
+    "model": {
+      "$file_name": "in_folder",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/004-file-output-by-type/sub1/in_folder.model.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/004-file-output-by-type/sub1/in_folder",
+      "$file_type": "model",
+      "$strings": [
+        [
+          "include",
+          "include",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+
+",
+        "@explore.baz",
+      ],
+      "explore": {
+        "baz": {
+          "$name": "baz",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "}",
+          ],
+          "$type": "explore",
+        },
+      },
+      "include": "sub2/baz.view.lkml",
+    },
+    "positions": {
+      "$p": [
+        1,
+        1,
+        3,
+        15,
+      ],
+      "explore": {
+        "baz": {
+          "$name": {
+            "$p": [
+              3,
+              9,
+              3,
+              12,
+            ],
+          },
+          "$p": [
+            3,
+            0,
+            3,
+            15,
+          ],
+          "$type": {
+            "$p": [
+              3,
+              0,
+              3,
+              7,
+            ],
+          },
+        },
+      },
+      "include": {
+        "$p": [
+          1,
+          1,
+          1,
+          30,
+        ],
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/004-file-output-by-type/sub1/in_folder.model.lkml",
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 004-file-output-by-type diagnostics: getViews 1`] = `
+Map {
+  "foo" => {
+    "file": {
+      "$file_name": "foo",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/004-file-output-by-type/foo.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/004-file-output-by-type/foo",
+      "$file_type": "view",
+      "$strings": [
+        "@view.foo_view",
+      ],
+    },
+    "positions": undefined,
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/004-file-output-by-type/foo.view.lkml",
+    "view": undefined,
+  },
+  "baz" => {
+    "file": {
+      "$file_name": "baz",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/004-file-output-by-type/sub1/sub2/baz.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/004-file-output-by-type/sub1/sub2/baz",
+      "$file_type": "view",
+      "$strings": [
+        "@view.baz",
+      ],
+    },
+    "positions": {
+      "$name": {
+        "$p": [
+          1,
+          7,
+          1,
+          10,
+        ],
+      },
+      "$p": [
+        1,
+        1,
+        1,
+        13,
+      ],
+      "$type": {
+        "$p": [
+          1,
+          1,
+          1,
+          5,
+        ],
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/004-file-output-by-type/sub1/sub2/baz.view.lkml",
+    "view": {
+      "$name": "baz",
+      "$strings": [
+        "@$type",
+        ":",
+        " ",
+        "@$name",
+        " ",
+        "{",
+        "}",
+      ],
+      "$type": "view",
+    },
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 005-file-output-array diagnostics: diagnostics-005-file-output-array 1`] = `
+"File: bar.explore.lkml
+
+
+File: foo.view.lkml
+
+
+File: foobar.model.lkml
+
+
+File: manifest.lkml
+
+"
+`;
+
+exports[`LookML Test Projects Project 005-file-output-array diagnostics: getErrors 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 005-file-output-array diagnostics: getExplores 1`] = `
+Map {
+  "bar" => {
+    "explore": {
+      "$name": "bar",
+      "$strings": [
+        "@$type",
+        ":",
+        " ",
+        "@$name",
+        " ",
+        "{",
+        "}",
+      ],
+      "$type": "explore",
+    },
+    "file": {
+      "$file_name": "bar",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/005-file-output-array/bar.explore.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/005-file-output-array/bar",
+      "$file_type": "explore",
+      "$strings": [
+        "@explore.bar",
+        "
+
+",
+        "@view.bar",
+      ],
+      "view": {
+        "bar": {
+          "$name": "bar",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "}",
+          ],
+          "$type": "view",
+        },
+      },
+    },
+    "positions": {
+      "$name": {
+        "$p": [
+          1,
+          10,
+          1,
+          13,
+        ],
+      },
+      "$p": [
+        1,
+        1,
+        1,
+        16,
+      ],
+      "$type": {
+        "$p": [
+          1,
+          1,
+          1,
+          8,
+        ],
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/005-file-output-array/bar.explore.lkml",
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 005-file-output-array diagnostics: getModels 1`] = `
+Map {
+  "foobar" => {
+    "model": {
+      "$file_name": "foobar",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/005-file-output-array/foobar.model.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/005-file-output-array/foobar",
+      "$file_type": "model",
+      "$strings": [
+        "
+",
+        [
+          "connection",
+          "connection",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+
+",
+        [
+          "include.0",
+          "include",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+",
+        [
+          "include.1",
+          "include",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+
+",
+        "@explore.foo_view",
+      ],
+      "connection": "conn",
+      "explore": {
+        "foo_view": {
+          "$name": "foo_view",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "}",
+          ],
+          "$type": "explore",
+        },
+      },
+      "include": [
+        "*.view.lkml",
+        "bar.explore.lkml",
+      ],
+    },
+    "positions": {
+      "$p": [
+        1,
+        1,
+        7,
+        20,
+      ],
+      "connection": {
+        "$p": [
+          2,
+          0,
+          2,
+          18,
+        ],
+      },
+      "explore": {
+        "foo_view": {
+          "$name": {
+            "$p": [
+              7,
+              9,
+              7,
+              17,
+            ],
+          },
+          "$p": [
+            7,
+            0,
+            7,
+            20,
+          ],
+          "$type": {
+            "$p": [
+              7,
+              0,
+              7,
+              7,
+            ],
+          },
+        },
+      },
+      "include": {
+        "0": {
+          "$p": [
+            4,
+            0,
+            4,
+            22,
+          ],
+        },
+        "1": {
+          "$p": [
+            5,
+            0,
+            5,
+            27,
+          ],
+        },
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/005-file-output-array/foobar.model.lkml",
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 005-file-output-array diagnostics: getViews 1`] = `
+Map {
+  "foo" => {
+    "file": {
+      "$file_name": "foo",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/005-file-output-array/foo.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/005-file-output-array/foo",
+      "$file_type": "view",
+      "$strings": [
+        "@view.foo_view",
+      ],
+    },
+    "positions": undefined,
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/005-file-output-array/foo.view.lkml",
+    "view": undefined,
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 006-file-output-by-name diagnostics: diagnostics-006-file-output-by-name 1`] = `
+"File: bar.explore.lkml
+
+
+File: foo.view.lkml
+
+
+File: foobar.model.lkml
+
+
+File: manifest.lkml
+
+"
+`;
+
+exports[`LookML Test Projects Project 006-file-output-by-name diagnostics: getErrors 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 006-file-output-by-name diagnostics: getExplores 1`] = `
+Map {
+  "bar" => {
+    "explore": {
+      "$name": "bar",
+      "$strings": [
+        "@$type",
+        ":",
+        " ",
+        "@$name",
+        " ",
+        "{",
+        "}",
+      ],
+      "$type": "explore",
+    },
+    "file": {
+      "$file_name": "bar",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/006-file-output-by-name/bar.explore.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/006-file-output-by-name/bar",
+      "$file_type": "explore",
+      "$strings": [
+        "@explore.bar",
+        "
+
+",
+        "@view.bar",
+      ],
+      "view": {
+        "bar": {
+          "$name": "bar",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "}",
+          ],
+          "$type": "view",
+        },
+      },
+    },
+    "positions": {
+      "$name": {
+        "$p": [
+          1,
+          10,
+          1,
+          13,
+        ],
+      },
+      "$p": [
+        1,
+        1,
+        1,
+        16,
+      ],
+      "$type": {
+        "$p": [
+          1,
+          1,
+          1,
+          8,
+        ],
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/006-file-output-by-name/bar.explore.lkml",
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 006-file-output-by-name diagnostics: getModels 1`] = `
+Map {
+  "foobar" => {
+    "model": {
+      "$file_name": "foobar",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/006-file-output-by-name/foobar.model.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/006-file-output-by-name/foobar",
+      "$file_type": "model",
+      "$strings": [
+        "
+",
+        [
+          "connection",
+          "connection",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+
+",
+        [
+          "include.0",
+          "include",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+",
+        [
+          "include.1",
+          "include",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+
+",
+        "@explore.foo_view",
+      ],
+      "connection": "conn",
+      "explore": {
+        "foo_view": {
+          "$name": "foo_view",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "}",
+          ],
+          "$type": "explore",
+        },
+      },
+      "include": [
+        "*.view.lkml",
+        "bar.explore.lkml",
+      ],
+    },
+    "positions": {
+      "$p": [
+        1,
+        1,
+        7,
+        20,
+      ],
+      "connection": {
+        "$p": [
+          2,
+          0,
+          2,
+          18,
+        ],
+      },
+      "explore": {
+        "foo_view": {
+          "$name": {
+            "$p": [
+              7,
+              9,
+              7,
+              17,
+            ],
+          },
+          "$p": [
+            7,
+            0,
+            7,
+            20,
+          ],
+          "$type": {
+            "$p": [
+              7,
+              0,
+              7,
+              7,
+            ],
+          },
+        },
+      },
+      "include": {
+        "0": {
+          "$p": [
+            4,
+            0,
+            4,
+            22,
+          ],
+        },
+        "1": {
+          "$p": [
+            5,
+            0,
+            5,
+            27,
+          ],
+        },
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/006-file-output-by-name/foobar.model.lkml",
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 006-file-output-by-name diagnostics: getViews 1`] = `
+Map {
+  "foo" => {
+    "file": {
+      "$file_name": "foo",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/006-file-output-by-name/foo.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/006-file-output-by-name/foo",
+      "$file_type": "view",
+      "$strings": [
+        "@view.foo_view",
+      ],
+    },
+    "positions": undefined,
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/006-file-output-by-name/foo.view.lkml",
+    "view": undefined,
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 007-lookml-maps diagnostics: diagnostics-007-lookml-maps 1`] = `
+"File: facts.view.lkml
+
+"
+`;
+
+exports[`LookML Test Projects Project 007-lookml-maps diagnostics: getErrors 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 007-lookml-maps diagnostics: getExplores 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 007-lookml-maps diagnostics: getModels 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 007-lookml-maps diagnostics: getViews 1`] = `
+Map {
+  "facts" => {
+    "file": {
+      "$file_name": "facts",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/007-lookml-maps/facts.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/007-lookml-maps/facts",
+      "$file_type": "view",
+      "$strings": [
+        "@view.facts",
+      ],
+    },
+    "positions": {
+      "$name": {
+        "$p": [
+          1,
+          7,
+          1,
+          12,
+        ],
+      },
+      "$p": [
+        1,
+        1,
+        8,
+        1,
+      ],
+      "$type": {
+        "$p": [
+          1,
+          1,
+          1,
+          5,
+        ],
+      },
+      "measure": {
+        "my_measure": {
+          "$name": {
+            "$p": [
+              2,
+              10,
+              2,
+              20,
+            ],
+          },
+          "$p": [
+            2,
+            1,
+            7,
+            2,
+          ],
+          "$type": {
+            "$p": [
+              2,
+              1,
+              2,
+              8,
+            ],
+          },
+          "filters": {
+            "$p": [
+              3,
+              2,
+              6,
+              3,
+            ],
+            "dimension_1": {
+              "$p": [
+                3,
+                12,
+                4,
+                38,
+              ],
+            },
+            "dimension_2": {
+              "$p": [
+                4,
+                38,
+                6,
+                2,
+              ],
+            },
+          },
+        },
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/007-lookml-maps/facts.view.lkml",
+    "view": {
+      "$name": "facts",
+      "$strings": [
+        "@$type",
+        ":",
+        " ",
+        "@$name",
+        " ",
+        "{",
+        "
+	",
+        "@measure.my_measure",
+        "
+",
+        "}",
+      ],
+      "$type": "view",
+      "measure": {
+        "my_measure": {
+          "$name": "my_measure",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "
+		",
+            "@filters",
+            "
+	",
+            "}",
+          ],
+          "$type": "measure",
+          "filters": {
+            "$name": undefined,
+            "$strings": [
+              "filters",
+              ":",
+              " ",
+              "[",
+              [
+                "dimension_1",
+                "
+			",
+                "dimension_1",
+                ":",
+                " ",
+                """,
+                "@",
+                """,
+                ",",
+              ],
+              [
+                "dimension_2",
+                "
+			",
+                "dimension_2",
+                ":",
+                " ",
+                """,
+                "@",
+                """,
+                "
+		",
+              ],
+              "]",
+            ],
+            "$type": "filters",
+            "dimension_1": "filter expression 1",
+            "dimension_2": "filter expression 2",
+          },
+        },
+      },
+    },
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 008-refinements diagnostics: diagnostics-008-refinements 1`] = `
+"File: facts.view.lkml
+
+"
+`;
+
+exports[`LookML Test Projects Project 008-refinements diagnostics: getErrors 1`] = `
+Map {
+  "facts.view" => [
+    {
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/008-refinements/facts.view",
+      "message": "addPositions is unable to add positions for object without $strings at $.file['/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/008-refinements/facts.view'].view.+facts",
+    },
+  ],
+}
+`;
+
+exports[`LookML Test Projects Project 008-refinements diagnostics: getExplores 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 008-refinements diagnostics: getModels 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 008-refinements diagnostics: getViews 1`] = `
+Map {
+  "facts" => {
+    "file": {
+      "$file_name": "facts",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/008-refinements/facts.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/008-refinements/facts",
+      "$file_type": "view",
+      "$strings": [
+        "@view.facts",
+        "
+
+",
+        "@view.+facts",
+        "
+
+",
+        "@view.+facts",
+      ],
+    },
+    "positions": {
+      "$name": {
+        "$p": [
+          1,
+          7,
+          1,
+          12,
+        ],
+      },
+      "$p": [
+        1,
+        1,
+        3,
+        1,
+      ],
+      "$type": {
+        "$p": [
+          1,
+          1,
+          1,
+          5,
+        ],
+      },
+      "label": {
+        "$p": [
+          2,
+          1,
+          2,
+          13,
+        ],
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/008-refinements/facts.view.lkml",
+    "view": {
+      "$name": "facts",
+      "$strings": [
+        "@$type",
+        ":",
+        " ",
+        "@$name",
+        " ",
+        "{",
+        "
+	",
+        [
+          "label",
+          "label",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+",
+        "}",
+      ],
+      "$type": "view",
+      "label": "Foo",
+    },
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 009-unnamed-objects diagnostics: diagnostics-009-unnamed-objects 1`] = `
+"File: multi.view.lkml
+
+
+File: single.view.lkml
+
+"
+`;
+
+exports[`LookML Test Projects Project 009-unnamed-objects diagnostics: getErrors 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 009-unnamed-objects diagnostics: getExplores 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 009-unnamed-objects diagnostics: getModels 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 009-unnamed-objects diagnostics: getViews 1`] = `
+Map {
+  "multi" => {
+    "file": {
+      "$file_name": "multi",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/009-unnamed-objects/multi.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/009-unnamed-objects/multi",
+      "$file_type": "view",
+      "$strings": [
+        "@view.multi",
+      ],
+    },
+    "positions": {
+      "$name": {
+        "$p": [
+          1,
+          7,
+          1,
+          12,
+        ],
+      },
+      "$p": [
+        1,
+        1,
+        12,
+        1,
+      ],
+      "$type": {
+        "$p": [
+          1,
+          1,
+          1,
+          5,
+        ],
+      },
+      "dimension": {
+        "id": {
+          "$name": {
+            "$p": [
+              2,
+              12,
+              2,
+              14,
+            ],
+          },
+          "$p": [
+            2,
+            1,
+            11,
+            2,
+          ],
+          "$type": {
+            "$p": [
+              2,
+              1,
+              2,
+              10,
+            ],
+          },
+          "link": {
+            "0": {
+              "$p": [
+                3,
+                2,
+                6,
+                3,
+              ],
+              "$type": {
+                "$p": [
+                  3,
+                  2,
+                  3,
+                  6,
+                ],
+              },
+              "label": {
+                "$p": [
+                  4,
+                  3,
+                  4,
+                  19,
+                ],
+              },
+              "url": {
+                "$p": [
+                  5,
+                  3,
+                  5,
+                  54,
+                ],
+              },
+            },
+            "1": {
+              "$p": [
+                7,
+                2,
+                10,
+                3,
+              ],
+              "$type": {
+                "$p": [
+                  7,
+                  2,
+                  7,
+                  6,
+                ],
+              },
+              "label": {
+                "$p": [
+                  8,
+                  3,
+                  8,
+                  19,
+                ],
+              },
+              "url": {
+                "$p": [
+                  9,
+                  3,
+                  9,
+                  54,
+                ],
+              },
+            },
+          },
+        },
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/009-unnamed-objects/multi.view.lkml",
+    "view": {
+      "$name": "multi",
+      "$strings": [
+        "@$type",
+        ":",
+        " ",
+        "@$name",
+        " ",
+        "{",
+        "
+	",
+        "@dimension.id",
+        "
+",
+        "}",
+      ],
+      "$type": "view",
+      "dimension": {
+        "id": {
+          "$name": "id",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "
+		",
+            "@link.0",
+            "
+		",
+            "@link.1",
+            "
+	",
+            "}",
+          ],
+          "$type": "dimension",
+          "link": [
+            {
+              "$name": undefined,
+              "$strings": [
+                "@$type",
+                ":",
+                " ",
+                "{",
+                "
+			",
+                [
+                  "label",
+                  "label",
+                  ":",
+                  " ",
+                  """,
+                  "@",
+                  """,
+                ],
+                "
+			",
+                [
+                  "url",
+                  "url",
+                  ":",
+                  " ",
+                  """,
+                  "@",
+                  """,
+                ],
+                "
+		",
+                "}",
+              ],
+              "$type": "link",
+              "label": "Thing 1",
+              "url": "https://thing1.example.com/thing/{{ value }}",
+            },
+            {
+              "$name": undefined,
+              "$strings": [
+                "@$type",
+                ":",
+                " ",
+                "{",
+                "
+			",
+                [
+                  "label",
+                  "label",
+                  ":",
+                  " ",
+                  """,
+                  "@",
+                  """,
+                ],
+                "
+			",
+                [
+                  "url",
+                  "url",
+                  ":",
+                  " ",
+                  """,
+                  "@",
+                  """,
+                ],
+                "
+		",
+                "}",
+              ],
+              "$type": "link",
+              "label": "Thing 2",
+              "url": "https://thing2.exampke.com/thing/{{ value }}",
+            },
+          ],
+        },
+      },
+    },
+  },
+  "single" => {
+    "file": {
+      "$file_name": "single",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/009-unnamed-objects/single.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/009-unnamed-objects/single",
+      "$file_type": "view",
+      "$strings": [
+        "@view.single",
+      ],
+    },
+    "positions": {
+      "$name": {
+        "$p": [
+          1,
+          7,
+          1,
+          13,
+        ],
+      },
+      "$p": [
+        1,
+        1,
+        9,
+        1,
+      ],
+      "$type": {
+        "$p": [
+          1,
+          1,
+          1,
+          5,
+        ],
+      },
+      "dimension": {
+        "id": {
+          "$name": {
+            "$p": [
+              2,
+              12,
+              2,
+              14,
+            ],
+          },
+          "$p": [
+            2,
+            1,
+            8,
+            2,
+          ],
+          "$type": {
+            "$p": [
+              2,
+              1,
+              2,
+              10,
+            ],
+          },
+          "link": {
+            "$p": [
+              3,
+              2,
+              7,
+              3,
+            ],
+            "$type": {
+              "$p": [
+                3,
+                2,
+                3,
+                6,
+              ],
+            },
+            "icon_url": {
+              "$p": [
+                6,
+                3,
+                6,
+                52,
+              ],
+            },
+            "label": {
+              "$p": [
+                4,
+                3,
+                4,
+                23,
+              ],
+            },
+            "url": {
+              "$p": [
+                5,
+                3,
+                5,
+                53,
+              ],
+            },
+          },
+        },
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/009-unnamed-objects/single.view.lkml",
+    "view": {
+      "$name": "single",
+      "$strings": [
+        "@$type",
+        ":",
+        " ",
+        "@$name",
+        " ",
+        "{",
+        "
+	",
+        "@dimension.id",
+        "
+",
+        "}",
+      ],
+      "$type": "view",
+      "dimension": {
+        "id": {
+          "$name": "id",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "
+		",
+            "@link",
+            "
+	",
+            "}",
+          ],
+          "$type": "dimension",
+          "link": {
+            "$name": undefined,
+            "$strings": [
+              "@$type",
+              ":",
+              " ",
+              "{",
+              "
+			",
+              [
+                "label",
+                "label",
+                ":",
+                " ",
+                """,
+                "@",
+                """,
+              ],
+              "
+			",
+              [
+                "url",
+                "url",
+                ":",
+                " ",
+                """,
+                "@",
+                """,
+              ],
+              "
+			",
+              [
+                "icon_url",
+                "icon_url",
+                ":",
+                " ",
+                """,
+                "@",
+                """,
+              ],
+              "
+		",
+              "}",
+            ],
+            "$type": "link",
+            "icon_url": "https://myapp.example.com/favicon.ico",
+            "label": "View in app",
+            "url": "https://myapp.example.com/thing/{{ value }}",
+          },
+        },
+      },
+    },
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 010-list-commas diagnostics: diagnostics-010-list-commas 1`] = `
+"File: ok.view.lkml
+
+
+File: performance.view.lkml
+
+
+File: x-no-empty-middle.view.lkml
+
+"
+`;
+
+exports[`LookML Test Projects Project 010-list-commas diagnostics: getErrors 1`] = `
+Map {
+  "x-no-empty-middle.view.lkml" => [
+    {
+      "$file_name": "x-no-empty-middle",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/010-list-commas/x-no-empty-middle.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/010-list-commas/x-no-empty-middle",
+      "$file_type": "view",
+      "error": ""Parse error@2,36 Expected \\"#\\", \\"\\\\\\"\\", \\"]\\", [ \\\\t\\\\n\\\\r], [ \\\\t], or [\\\\-+_a-zA-Z0-9.] but \\",\\" found."",
+    },
+  ],
+}
+`;
+
+exports[`LookML Test Projects Project 010-list-commas diagnostics: getExplores 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 010-list-commas diagnostics: getModels 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 010-list-commas diagnostics: getViews 1`] = `
+Map {
+  "ok" => {
+    "file": {
+      "$file_name": "ok",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/010-list-commas/ok.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/010-list-commas/ok",
+      "$file_type": "view",
+      "$strings": [
+        "@view.ok",
+        "
+",
+      ],
+    },
+    "positions": {
+      "$name": {
+        "$p": [
+          1,
+          7,
+          1,
+          9,
+        ],
+      },
+      "$p": [
+        1,
+        1,
+        157,
+        1,
+      ],
+      "$type": {
+        "$p": [
+          1,
+          1,
+          1,
+          5,
+        ],
+      },
+      "measure": {
+        "endofline_both": {
+          "$name": {
+            "$p": [
+              113,
+              10,
+              113,
+              24,
+            ],
+          },
+          "$p": [
+            113,
+            1,
+            118,
+            2,
+          ],
+          "$type": {
+            "$p": [
+              113,
+              1,
+              113,
+              8,
+            ],
+          },
+          "filters": {
+            "$p": [
+              114,
+              2,
+              117,
+              4,
+            ],
+            "duration": {
+              "$p": [
+                115,
+                17,
+                116,
+                18,
+              ],
+            },
+            "state": {
+              "$p": [
+                114,
+                13,
+                115,
+                17,
+              ],
+            },
+          },
+        },
+        "endofline_leading": {
+          "$name": {
+            "$p": [
+              99,
+              10,
+              99,
+              27,
+            ],
+          },
+          "$p": [
+            99,
+            1,
+            104,
+            2,
+          ],
+          "$type": {
+            "$p": [
+              99,
+              1,
+              99,
+              8,
+            ],
+          },
+          "filters": {
+            "$p": [
+              100,
+              2,
+              103,
+              4,
+            ],
+            "duration": {
+              "$p": [
+                101,
+                17,
+                103,
+                3,
+              ],
+            },
+            "state": {
+              "$p": [
+                100,
+                13,
+                101,
+                17,
+              ],
+            },
+          },
+        },
+        "endofline_none": {
+          "$name": {
+            "$p": [
+              92,
+              10,
+              92,
+              24,
+            ],
+          },
+          "$p": [
+            92,
+            1,
+            97,
+            2,
+          ],
+          "$type": {
+            "$p": [
+              92,
+              1,
+              92,
+              8,
+            ],
+          },
+          "filters": {
+            "$p": [
+              93,
+              2,
+              96,
+              4,
+            ],
+            "duration": {
+              "$p": [
+                94,
+                17,
+                96,
+                3,
+              ],
+            },
+            "state": {
+              "$p": [
+                93,
+                12,
+                94,
+                17,
+              ],
+            },
+          },
+        },
+        "endofline_trailing": {
+          "$name": {
+            "$p": [
+              106,
+              10,
+              106,
+              28,
+            ],
+          },
+          "$p": [
+            106,
+            1,
+            111,
+            2,
+          ],
+          "$type": {
+            "$p": [
+              106,
+              1,
+              106,
+              8,
+            ],
+          },
+          "filters": {
+            "$p": [
+              107,
+              2,
+              110,
+              4,
+            ],
+            "duration": {
+              "$p": [
+                108,
+                17,
+                109,
+                18,
+              ],
+            },
+            "state": {
+              "$p": [
+                107,
+                12,
+                108,
+                17,
+              ],
+            },
+          },
+        },
+        "short_both": {
+          "$name": {
+            "$p": [
+              90,
+              10,
+              90,
+              20,
+            ],
+          },
+          "$p": [
+            90,
+            1,
+            90,
+            47,
+          ],
+          "$type": {
+            "$p": [
+              90,
+              1,
+              90,
+              8,
+            ],
+          },
+          "filters": {
+            "$p": [
+              90,
+              22,
+              90,
+              46,
+            ],
+            "state": {
+              "$p": [
+                90,
+                32,
+                90,
+                45,
+              ],
+            },
+          },
+        },
+        "short_leading": {
+          "$name": {
+            "$p": [
+              88,
+              10,
+              88,
+              23,
+            ],
+          },
+          "$p": [
+            88,
+            1,
+            88,
+            50,
+          ],
+          "$type": {
+            "$p": [
+              88,
+              1,
+              88,
+              8,
+            ],
+          },
+          "filters": {
+            "$p": [
+              88,
+              26,
+              88,
+              49,
+            ],
+            "state": {
+              "$p": [
+                88,
+                36,
+                88,
+                48,
+              ],
+            },
+          },
+        },
+        "short_none": {
+          "$name": {
+            "$p": [
+              87,
+              10,
+              87,
+              20,
+            ],
+          },
+          "$p": [
+            87,
+            1,
+            87,
+            49,
+          ],
+          "$type": {
+            "$p": [
+              87,
+              1,
+              87,
+              8,
+            ],
+          },
+          "filters": {
+            "$p": [
+              87,
+              26,
+              87,
+              48,
+            ],
+            "state": {
+              "$p": [
+                87,
+                35,
+                87,
+                47,
+              ],
+            },
+          },
+        },
+        "short_trailing": {
+          "$name": {
+            "$p": [
+              89,
+              10,
+              89,
+              24,
+            ],
+          },
+          "$p": [
+            89,
+            1,
+            89,
+            50,
+          ],
+          "$type": {
+            "$p": [
+              89,
+              1,
+              89,
+              8,
+            ],
+          },
+          "filters": {
+            "$p": [
+              89,
+              26,
+              89,
+              49,
+            ],
+            "state": {
+              "$p": [
+                89,
+                35,
+                89,
+                48,
+              ],
+            },
+          },
+        },
+        "startofline_both": {
+          "$name": {
+            "$p": [
+              149,
+              10,
+              149,
+              26,
+            ],
+          },
+          "$p": [
+            149,
+            1,
+            155,
+            2,
+          ],
+          "$type": {
+            "$p": [
+              149,
+              1,
+              149,
+              8,
+            ],
+          },
+          "filters": {
+            "$p": [
+              150,
+              2,
+              154,
+              7,
+            ],
+            "duration": {
+              "$p": [
+                152,
+                4,
+                153,
+                4,
+              ],
+            },
+            "state": {
+              "$p": [
+                151,
+                4,
+                152,
+                4,
+              ],
+            },
+          },
+        },
+        "startofline_leading": {
+          "$name": {
+            "$p": [
+              127,
+              10,
+              127,
+              29,
+            ],
+          },
+          "$p": [
+            127,
+            1,
+            132,
+            2,
+          ],
+          "$type": {
+            "$p": [
+              127,
+              1,
+              127,
+              8,
+            ],
+          },
+          "filters": {
+            "$p": [
+              128,
+              2,
+              131,
+              4,
+            ],
+            "duration": {
+              "$p": [
+                130,
+                4,
+                131,
+                3,
+              ],
+            },
+            "state": {
+              "$p": [
+                129,
+                4,
+                130,
+                4,
+              ],
+            },
+          },
+        },
+        "startofline_none": {
+          "$name": {
+            "$p": [
+              120,
+              10,
+              120,
+              26,
+            ],
+          },
+          "$p": [
+            120,
+            1,
+            125,
+            2,
+          ],
+          "$type": {
+            "$p": [
+              120,
+              1,
+              120,
+              8,
+            ],
+          },
+          "filters": {
+            "$p": [
+              121,
+              2,
+              124,
+              4,
+            ],
+            "duration": {
+              "$p": [
+                123,
+                4,
+                124,
+                3,
+              ],
+            },
+            "state": {
+              "$p": [
+                121,
+                12,
+                123,
+                4,
+              ],
+            },
+          },
+        },
+        "startofline_trailing": {
+          "$name": {
+            "$p": [
+              134,
+              10,
+              134,
+              30,
+            ],
+          },
+          "$p": [
+            134,
+            1,
+            140,
+            2,
+          ],
+          "$type": {
+            "$p": [
+              134,
+              1,
+              134,
+              8,
+            ],
+          },
+          "filters": {
+            "$p": [
+              135,
+              2,
+              139,
+              7,
+            ],
+            "duration": {
+              "$p": [
+                137,
+                4,
+                138,
+                4,
+              ],
+            },
+            "state": {
+              "$p": [
+                136,
+                4,
+                137,
+                4,
+              ],
+            },
+          },
+        },
+        "startofline_trailing_nopadding": {
+          "$name": {
+            "$p": [
+              142,
+              10,
+              142,
+              40,
+            ],
+          },
+          "$p": [
+            142,
+            1,
+            147,
+            2,
+          ],
+          "$type": {
+            "$p": [
+              142,
+              1,
+              142,
+              8,
+            ],
+          },
+          "filters": {
+            "$p": [
+              143,
+              2,
+              146,
+              5,
+            ],
+            "duration": {
+              "$p": [
+                145,
+                4,
+                146,
+                4,
+              ],
+            },
+            "state": {
+              "$p": [
+                143,
+                12,
+                145,
+                4,
+              ],
+            },
+          },
+        },
+      },
+      "set": {
+        "endofline_both": {
+          "$name": {
+            "$p": [
+              40,
+              6,
+              40,
+              20,
+            ],
+          },
+          "$p": [
+            40,
+            1,
+            45,
+            2,
+          ],
+          "$type": {
+            "$p": [
+              40,
+              1,
+              40,
+              4,
+            ],
+          },
+          "fields": {
+            "$p": [
+              41,
+              2,
+              44,
+              3,
+            ],
+            "0": {
+              "$p": [
+                41,
+                12,
+                42,
+                6,
+              ],
+            },
+            "1": {
+              "$p": [
+                42,
+                6,
+                43,
+                11,
+              ],
+            },
+          },
+        },
+        "endofline_leading": {
+          "$name": {
+            "$p": [
+              21,
+              6,
+              21,
+              23,
+            ],
+          },
+          "$p": [
+            21,
+            1,
+            26,
+            2,
+          ],
+          "$type": {
+            "$p": [
+              21,
+              1,
+              21,
+              4,
+            ],
+          },
+          "fields": {
+            "$p": [
+              22,
+              2,
+              25,
+              3,
+            ],
+            "0": {
+              "$p": [
+                22,
+                12,
+                23,
+                6,
+              ],
+            },
+            "1": {
+              "$p": [
+                23,
+                6,
+                25,
+                2,
+              ],
+            },
+          },
+        },
+        "endofline_none": {
+          "$name": {
+            "$p": [
+              14,
+              6,
+              14,
+              20,
+            ],
+          },
+          "$p": [
+            14,
+            1,
+            19,
+            2,
+          ],
+          "$type": {
+            "$p": [
+              14,
+              1,
+              14,
+              4,
+            ],
+          },
+          "fields": {
+            "$p": [
+              15,
+              2,
+              18,
+              3,
+            ],
+            "0": {
+              "$p": [
+                15,
+                11,
+                16,
+                6,
+              ],
+            },
+            "1": {
+              "$p": [
+                16,
+                6,
+                18,
+                2,
+              ],
+            },
+          },
+        },
+        "endofline_trailing": {
+          "$name": {
+            "$p": [
+              28,
+              6,
+              28,
+              24,
+            ],
+          },
+          "$p": [
+            28,
+            1,
+            33,
+            2,
+          ],
+          "$type": {
+            "$p": [
+              28,
+              1,
+              28,
+              4,
+            ],
+          },
+          "fields": {
+            "$p": [
+              29,
+              2,
+              32,
+              3,
+            ],
+            "0": {
+              "$p": [
+                29,
+                11,
+                30,
+                6,
+              ],
+            },
+            "1": {
+              "$p": [
+                30,
+                6,
+                31,
+                11,
+              ],
+            },
+          },
+        },
+        "endofline_trailing_nopadding": {
+          "$name": {
+            "$p": [
+              35,
+              6,
+              35,
+              34,
+            ],
+          },
+          "$p": [
+            35,
+            1,
+            38,
+            2,
+          ],
+          "$type": {
+            "$p": [
+              35,
+              1,
+              35,
+              4,
+            ],
+          },
+          "fields": {
+            "$p": [
+              36,
+              2,
+              37,
+              12,
+            ],
+            "0": {
+              "$p": [
+                36,
+                11,
+                36,
+                14,
+              ],
+            },
+            "1": {
+              "$p": [
+                36,
+                14,
+                37,
+                11,
+              ],
+            },
+          },
+        },
+        "short_both": {
+          "$name": {
+            "$p": [
+              10,
+              6,
+              10,
+              16,
+            ],
+          },
+          "$p": [
+            10,
+            1,
+            10,
+            39,
+          ],
+          "$type": {
+            "$p": [
+              10,
+              1,
+              10,
+              4,
+            ],
+          },
+          "fields": {
+            "$p": [
+              10,
+              23,
+              10,
+              37,
+            ],
+            "0": {
+              "$p": [
+                10,
+                33,
+                10,
+                36,
+              ],
+            },
+          },
+        },
+        "short_leading": {
+          "$name": {
+            "$p": [
+              8,
+              6,
+              8,
+              19,
+            ],
+          },
+          "$p": [
+            8,
+            1,
+            8,
+            38,
+          ],
+          "$type": {
+            "$p": [
+              8,
+              1,
+              8,
+              4,
+            ],
+          },
+          "fields": {
+            "$p": [
+              8,
+              23,
+              8,
+              36,
+            ],
+            "0": {
+              "$p": [
+                8,
+                33,
+                8,
+                35,
+              ],
+            },
+          },
+        },
+        "short_none": {
+          "$name": {
+            "$p": [
+              7,
+              6,
+              7,
+              16,
+            ],
+          },
+          "$p": [
+            7,
+            1,
+            7,
+            37,
+          ],
+          "$type": {
+            "$p": [
+              7,
+              1,
+              7,
+              4,
+            ],
+          },
+          "fields": {
+            "$p": [
+              7,
+              23,
+              7,
+              35,
+            ],
+            "0": {
+              "$p": [
+                7,
+                32,
+                7,
+                34,
+              ],
+            },
+          },
+        },
+        "short_trailing": {
+          "$name": {
+            "$p": [
+              9,
+              6,
+              9,
+              20,
+            ],
+          },
+          "$p": [
+            9,
+            1,
+            9,
+            38,
+          ],
+          "$type": {
+            "$p": [
+              9,
+              1,
+              9,
+              4,
+            ],
+          },
+          "fields": {
+            "$p": [
+              9,
+              23,
+              9,
+              36,
+            ],
+            "0": {
+              "$p": [
+                9,
+                32,
+                9,
+                35,
+              ],
+            },
+          },
+        },
+        "startofline_both": {
+          "$name": {
+            "$p": [
+              77,
+              6,
+              77,
+              22,
+            ],
+          },
+          "$p": [
+            77,
+            1,
+            83,
+            2,
+          ],
+          "$type": {
+            "$p": [
+              77,
+              1,
+              77,
+              4,
+            ],
+          },
+          "fields": {
+            "$p": [
+              78,
+              2,
+              82,
+              3,
+            ],
+            "0": {
+              "$p": [
+                79,
+                4,
+                80,
+                4,
+              ],
+            },
+            "1": {
+              "$p": [
+                80,
+                4,
+                81,
+                4,
+              ],
+            },
+          },
+        },
+        "startofline_leading": {
+          "$name": {
+            "$p": [
+              56,
+              6,
+              56,
+              25,
+            ],
+          },
+          "$p": [
+            56,
+            1,
+            61,
+            2,
+          ],
+          "$type": {
+            "$p": [
+              56,
+              1,
+              56,
+              4,
+            ],
+          },
+          "fields": {
+            "$p": [
+              57,
+              2,
+              60,
+              3,
+            ],
+            "0": {
+              "$p": [
+                58,
+                4,
+                59,
+                4,
+              ],
+            },
+            "1": {
+              "$p": [
+                59,
+                4,
+                60,
+                2,
+              ],
+            },
+          },
+        },
+        "startofline_none": {
+          "$name": {
+            "$p": [
+              49,
+              6,
+              49,
+              22,
+            ],
+          },
+          "$p": [
+            49,
+            1,
+            54,
+            2,
+          ],
+          "$type": {
+            "$p": [
+              49,
+              1,
+              49,
+              4,
+            ],
+          },
+          "fields": {
+            "$p": [
+              50,
+              2,
+              53,
+              3,
+            ],
+            "0": {
+              "$p": [
+                50,
+                11,
+                52,
+                4,
+              ],
+            },
+            "1": {
+              "$p": [
+                52,
+                4,
+                53,
+                2,
+              ],
+            },
+          },
+        },
+        "startofline_trailing": {
+          "$name": {
+            "$p": [
+              63,
+              6,
+              63,
+              26,
+            ],
+          },
+          "$p": [
+            63,
+            1,
+            69,
+            2,
+          ],
+          "$type": {
+            "$p": [
+              63,
+              1,
+              63,
+              4,
+            ],
+          },
+          "fields": {
+            "$p": [
+              64,
+              2,
+              68,
+              3,
+            ],
+            "0": {
+              "$p": [
+                64,
+                11,
+                66,
+                4,
+              ],
+            },
+            "1": {
+              "$p": [
+                66,
+                4,
+                67,
+                4,
+              ],
+            },
+          },
+        },
+        "startofline_trailing_nopadding": {
+          "$name": {
+            "$p": [
+              71,
+              6,
+              71,
+              36,
+            ],
+          },
+          "$p": [
+            71,
+            1,
+            75,
+            2,
+          ],
+          "$type": {
+            "$p": [
+              71,
+              1,
+              71,
+              4,
+            ],
+          },
+          "fields": {
+            "$p": [
+              72,
+              2,
+              74,
+              5,
+            ],
+            "0": {
+              "$p": [
+                72,
+                11,
+                73,
+                4,
+              ],
+            },
+            "1": {
+              "$p": [
+                73,
+                4,
+                74,
+                4,
+              ],
+            },
+          },
+        },
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/010-list-commas/ok.view.lkml",
+    "view": {
+      "$name": "ok",
+      "$strings": [
+        "@$type",
+        ":",
+        " ",
+        "@$name",
+        " ",
+        "{",
+        "
+
+	",
+        "### Atom lists
+",
+        "
+  ",
+        "# Short
+",
+        "
+	",
+        "@set.short_none",
+        "
+	",
+        "@set.short_leading",
+        "
+	",
+        "@set.short_trailing",
+        "
+	",
+        "@set.short_both",
+        "
+
+  ",
+        "# End of line
+",
+        "
+	",
+        "@set.endofline_none",
+        "
+
+	",
+        "@set.endofline_leading",
+        "
+
+	",
+        "@set.endofline_trailing",
+        "
+
+	",
+        "@set.endofline_trailing_nopadding",
+        "
+
+	",
+        "@set.endofline_both",
+        "
+
+  ",
+        "# Start of line
+",
+        "
+	",
+        "@set.startofline_none",
+        "
+
+	",
+        "@set.startofline_leading",
+        "
+
+	",
+        "@set.startofline_trailing",
+        "
+
+	",
+        "@set.startofline_trailing_nopadding",
+        "
+
+	",
+        "@set.startofline_both",
+        "
+
+	",
+        "# Map lists
+",
+        "
+	",
+        "@measure.short_none",
+        "
+	",
+        "@measure.short_leading",
+        "
+	",
+        "@measure.short_trailing",
+        "
+	",
+        "@measure.short_both",
+        "
+
+	",
+        "@measure.endofline_none",
+        "
+
+	",
+        "@measure.endofline_leading",
+        "
+
+	",
+        "@measure.endofline_trailing",
+        "
+
+	",
+        "@measure.endofline_both",
+        "
+
+	",
+        "@measure.startofline_none",
+        "
+
+	",
+        "@measure.startofline_leading",
+        "
+
+	",
+        "@measure.startofline_trailing",
+        "
+
+	",
+        "@measure.startofline_trailing_nopadding",
+        "
+
+	",
+        "@measure.startofline_both",
+        "
+
+",
+        "}",
+      ],
+      "$type": "view",
+      "measure": {
+        "endofline_both": {
+          "$name": "endofline_both",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "
+		",
+            "@filters",
+            "
+	",
+            "}",
+          ],
+          "$type": "measure",
+          "filters": {
+            "$name": undefined,
+            "$strings": [
+              "filters",
+              ":",
+              " ",
+              "[",
+              ",",
+              [
+                "state",
+                "
+			",
+                "state",
+                ":",
+                " ",
+                """,
+                "@",
+                """,
+                ",",
+              ],
+              [
+                "duration",
+                "
+			",
+                "duration",
+                ":",
+                " ",
+                """,
+                "@",
+                """,
+                ",",
+              ],
+              "
+			",
+              "]",
+            ],
+            "$type": "filters",
+            "duration": ">5",
+            "state": "done",
+          },
+        },
+        "endofline_leading": {
+          "$name": "endofline_leading",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "
+		",
+            "@filters",
+            "
+	",
+            "}",
+          ],
+          "$type": "measure",
+          "filters": {
+            "$name": undefined,
+            "$strings": [
+              "filters",
+              ":",
+              " ",
+              "[",
+              ",",
+              [
+                "state",
+                "
+			",
+                "state",
+                ":",
+                " ",
+                """,
+                "@",
+                """,
+                ",",
+              ],
+              [
+                "duration",
+                "
+			",
+                "duration",
+                ":",
+                " ",
+                """,
+                "@",
+                """,
+                "
+			",
+              ],
+              "]",
+            ],
+            "$type": "filters",
+            "duration": ">5",
+            "state": "done",
+          },
+        },
+        "endofline_none": {
+          "$name": "endofline_none",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "
+		",
+            "@filters",
+            "
+	",
+            "}",
+          ],
+          "$type": "measure",
+          "filters": {
+            "$name": undefined,
+            "$strings": [
+              "filters",
+              ":",
+              " ",
+              "[",
+              [
+                "state",
+                "
+			",
+                "state",
+                ":",
+                " ",
+                """,
+                "@",
+                """,
+                ",",
+              ],
+              [
+                "duration",
+                "
+			",
+                "duration",
+                ":",
+                " ",
+                """,
+                "@",
+                """,
+                "
+			",
+              ],
+              "]",
+            ],
+            "$type": "filters",
+            "duration": ">5",
+            "state": "done",
+          },
+        },
+        "endofline_trailing": {
+          "$name": "endofline_trailing",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "
+		",
+            "@filters",
+            "
+	",
+            "}",
+          ],
+          "$type": "measure",
+          "filters": {
+            "$name": undefined,
+            "$strings": [
+              "filters",
+              ":",
+              " ",
+              "[",
+              [
+                "state",
+                "
+			",
+                "state",
+                ":",
+                " ",
+                """,
+                "@",
+                """,
+                ",",
+              ],
+              [
+                "duration",
+                "
+			",
+                "duration",
+                ":",
+                " ",
+                """,
+                "@",
+                """,
+                ",",
+              ],
+              "
+			",
+              "]",
+            ],
+            "$type": "filters",
+            "duration": ">5",
+            "state": "done",
+          },
+        },
+        "short_both": {
+          "$name": "short_both",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "@filters",
+            "}",
+          ],
+          "$type": "measure",
+          "filters": {
+            "$name": undefined,
+            "$strings": [
+              "filters",
+              ":",
+              "[",
+              ",",
+              [
+                "state",
+                "state",
+                ":",
+                """,
+                "@",
+                """,
+                ",",
+              ],
+              "]",
+            ],
+            "$type": "filters",
+            "state": "done",
+          },
+        },
+        "short_leading": {
+          "$name": "short_leading",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            "  ",
+            "{",
+            "@filters",
+            "}",
+          ],
+          "$type": "measure",
+          "filters": {
+            "$name": undefined,
+            "$strings": [
+              "filters",
+              ":",
+              "[",
+              ",",
+              [
+                "state",
+                "state",
+                ":",
+                """,
+                "@",
+                """,
+              ],
+              "]",
+            ],
+            "$type": "filters",
+            "state": "done",
+          },
+        },
+        "short_none": {
+          "$name": "short_none",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            "     ",
+            "{",
+            "@filters",
+            "}",
+          ],
+          "$type": "measure",
+          "filters": {
+            "$name": undefined,
+            "$strings": [
+              "filters",
+              ":",
+              "[",
+              [
+                "state",
+                "state",
+                ":",
+                """,
+                "@",
+                """,
+              ],
+              "]",
+            ],
+            "$type": "filters",
+            "state": "done",
+          },
+        },
+        "short_trailing": {
+          "$name": "short_trailing",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "@filters",
+            "}",
+          ],
+          "$type": "measure",
+          "filters": {
+            "$name": undefined,
+            "$strings": [
+              "filters",
+              ":",
+              "[",
+              [
+                "state",
+                "state",
+                ":",
+                """,
+                "@",
+                """,
+                ",",
+              ],
+              "]",
+            ],
+            "$type": "filters",
+            "state": "done",
+          },
+        },
+        "startofline_both": {
+          "$name": "startofline_both",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "
+		",
+            "@filters",
+            "
+	",
+            "}",
+          ],
+          "$type": "measure",
+          "filters": {
+            "$name": undefined,
+            "$strings": [
+              "filters",
+              ":",
+              " ",
+              "[",
+              "
+			",
+              ",",
+              [
+                "state",
+                "state",
+                ":",
+                " ",
+                """,
+                "@",
+                """,
+                "
+			",
+                ",",
+              ],
+              [
+                "duration",
+                "duration",
+                ":",
+                " ",
+                """,
+                "@",
+                """,
+                "
+			",
+                ",",
+              ],
+              "
+      ",
+              "]",
+            ],
+            "$type": "filters",
+            "duration": ">5",
+            "state": "done",
+          },
+        },
+        "startofline_leading": {
+          "$name": "startofline_leading",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "
+		",
+            "@filters",
+            "
+	",
+            "}",
+          ],
+          "$type": "measure",
+          "filters": {
+            "$name": undefined,
+            "$strings": [
+              "filters",
+              ":",
+              " ",
+              "[",
+              "
+			",
+              ",",
+              [
+                "state",
+                "state",
+                ":",
+                " ",
+                """,
+                "@",
+                """,
+                "
+			",
+                ",",
+              ],
+              [
+                "duration",
+                "duration",
+                ":",
+                " ",
+                """,
+                "@",
+                """,
+                "
+			",
+              ],
+              "]",
+            ],
+            "$type": "filters",
+            "duration": ">5",
+            "state": "done",
+          },
+        },
+        "startofline_none": {
+          "$name": "startofline_none",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "
+		",
+            "@filters",
+            "
+	",
+            "}",
+          ],
+          "$type": "measure",
+          "filters": {
+            "$name": undefined,
+            "$strings": [
+              "filters",
+              ":",
+              " ",
+              "[",
+              [
+                "state",
+                "
+			",
+                "state",
+                ":",
+                " ",
+                """,
+                "@",
+                """,
+                "
+			",
+                ",",
+              ],
+              [
+                "duration",
+                "duration",
+                ":",
+                " ",
+                """,
+                "@",
+                """,
+                "
+			",
+              ],
+              "]",
+            ],
+            "$type": "filters",
+            "duration": ">5",
+            "state": "done",
+          },
+        },
+        "startofline_trailing": {
+          "$name": "startofline_trailing",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "
+		",
+            "@filters",
+            "
+	",
+            "}",
+          ],
+          "$type": "measure",
+          "filters": {
+            "$name": undefined,
+            "$strings": [
+              "filters",
+              ":",
+              " ",
+              "[",
+              "
+			",
+              ",",
+              [
+                "state",
+                "state",
+                ":",
+                " ",
+                """,
+                "@",
+                """,
+                "
+			",
+                ",",
+              ],
+              [
+                "duration",
+                "duration",
+                ":",
+                " ",
+                """,
+                "@",
+                """,
+                "
+			",
+                ",",
+              ],
+              "
+      ",
+              "]",
+            ],
+            "$type": "filters",
+            "duration": ">5",
+            "state": "done",
+          },
+        },
+        "startofline_trailing_nopadding": {
+          "$name": "startofline_trailing_nopadding",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "
+		",
+            "@filters",
+            "
+	",
+            "}",
+          ],
+          "$type": "measure",
+          "filters": {
+            "$name": undefined,
+            "$strings": [
+              "filters",
+              ":",
+              " ",
+              "[",
+              [
+                "state",
+                "
+			",
+                "state",
+                ":",
+                " ",
+                """,
+                "@",
+                """,
+                "
+			",
+                ",",
+              ],
+              [
+                "duration",
+                "duration",
+                ":",
+                " ",
+                """,
+                "@",
+                """,
+                "
+			",
+                ",",
+              ],
+              "]",
+            ],
+            "$type": "filters",
+            "duration": ">5",
+            "state": "done",
+          },
+        },
+      },
+      "set": {
+        "endofline_both": {
+          "$name": "endofline_both",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "
+		",
+            [
+              "fields",
+              "fields",
+              ":",
+              " ",
+              "[",
+              ",",
+              [
+                "0",
+                "
+			",
+                "@",
+                ",",
+              ],
+              [
+                "1",
+                "
+			",
+                "@",
+                ",",
+              ],
+              "
+		",
+              "]",
+            ],
+            "
+	",
+            "}",
+          ],
+          "$type": "set",
+          "fields": [
+            "id",
+            "user.id",
+          ],
+        },
+        "endofline_leading": {
+          "$name": "endofline_leading",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "
+		",
+            [
+              "fields",
+              "fields",
+              ":",
+              " ",
+              "[",
+              ",",
+              [
+                "0",
+                "
+			",
+                "@",
+                ",",
+              ],
+              [
+                "1",
+                "
+			",
+                "@",
+                "
+		",
+              ],
+              "]",
+            ],
+            "
+	",
+            "}",
+          ],
+          "$type": "set",
+          "fields": [
+            "id",
+            "user.id",
+          ],
+        },
+        "endofline_none": {
+          "$name": "endofline_none",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "
+		",
+            [
+              "fields",
+              "fields",
+              ":",
+              " ",
+              "[",
+              [
+                "0",
+                "
+			",
+                "@",
+                ",",
+              ],
+              [
+                "1",
+                "
+			",
+                "@",
+                "
+		",
+              ],
+              "]",
+            ],
+            "
+	",
+            "}",
+          ],
+          "$type": "set",
+          "fields": [
+            "id",
+            "user.id",
+          ],
+        },
+        "endofline_trailing": {
+          "$name": "endofline_trailing",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "
+		",
+            [
+              "fields",
+              "fields",
+              ":",
+              " ",
+              "[",
+              [
+                "0",
+                "
+			",
+                "@",
+                ",",
+              ],
+              [
+                "1",
+                "
+			",
+                "@",
+                ",",
+              ],
+              "
+		",
+              "]",
+            ],
+            "
+	",
+            "}",
+          ],
+          "$type": "set",
+          "fields": [
+            "id",
+            "user.id",
+          ],
+        },
+        "endofline_trailing_nopadding": {
+          "$name": "endofline_trailing_nopadding",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "
+		",
+            [
+              "fields",
+              "fields",
+              ":",
+              " ",
+              "[",
+              [
+                "0",
+                "@",
+                ",",
+              ],
+              [
+                "1",
+                "
+			",
+                "@",
+                ",",
+              ],
+              "]",
+            ],
+            "
+	",
+            "}",
+          ],
+          "$type": "set",
+          "fields": [
+            "id",
+            "user.id",
+          ],
+        },
+        "short_both": {
+          "$name": "short_both",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            "     ",
+            "{",
+            " ",
+            [
+              "fields",
+              "fields",
+              ":",
+              " ",
+              "[",
+              ",",
+              [
+                "0",
+                "@",
+                ",",
+              ],
+              "]",
+            ],
+            " ",
+            "}",
+          ],
+          "$type": "set",
+          "fields": [
+            "id",
+          ],
+        },
+        "short_leading": {
+          "$name": "short_leading",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            "  ",
+            "{",
+            " ",
+            [
+              "fields",
+              "fields",
+              ":",
+              " ",
+              "[",
+              ",",
+              [
+                "0",
+                "@",
+              ],
+              "]",
+            ],
+            " ",
+            "}",
+          ],
+          "$type": "set",
+          "fields": [
+            "id",
+          ],
+        },
+        "short_none": {
+          "$name": "short_none",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            "     ",
+            "{",
+            " ",
+            [
+              "fields",
+              "fields",
+              ":",
+              " ",
+              "[",
+              [
+                "0",
+                "@",
+              ],
+              "]",
+            ],
+            " ",
+            "}",
+          ],
+          "$type": "set",
+          "fields": [
+            "id",
+          ],
+        },
+        "short_trailing": {
+          "$name": "short_trailing",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            " ",
+            [
+              "fields",
+              "fields",
+              ":",
+              " ",
+              "[",
+              [
+                "0",
+                "@",
+                ",",
+              ],
+              "]",
+            ],
+            " ",
+            "}",
+          ],
+          "$type": "set",
+          "fields": [
+            "id",
+          ],
+        },
+        "startofline_both": {
+          "$name": "startofline_both",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "
+		",
+            [
+              "fields",
+              "fields",
+              ":",
+              " ",
+              "[",
+              "
+			",
+              ",",
+              [
+                "0",
+                "@",
+                "
+			",
+                ",",
+              ],
+              [
+                "1",
+                "@",
+                "
+			",
+                ",",
+              ],
+              "
+		",
+              "]",
+            ],
+            "
+	",
+            "}",
+          ],
+          "$type": "set",
+          "fields": [
+            "id",
+            "user.id",
+          ],
+        },
+        "startofline_leading": {
+          "$name": "startofline_leading",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "
+		",
+            [
+              "fields",
+              "fields",
+              ":",
+              " ",
+              "[",
+              "
+			",
+              ",",
+              [
+                "0",
+                "@",
+                "
+			",
+                ",",
+              ],
+              [
+                "1",
+                "@",
+                "
+		",
+              ],
+              "]",
+            ],
+            "
+	",
+            "}",
+          ],
+          "$type": "set",
+          "fields": [
+            "id",
+            "user.id",
+          ],
+        },
+        "startofline_none": {
+          "$name": "startofline_none",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "
+		",
+            [
+              "fields",
+              "fields",
+              ":",
+              " ",
+              "[",
+              [
+                "0",
+                "
+			",
+                "@",
+                "
+			",
+                ",",
+              ],
+              [
+                "1",
+                "@",
+                "
+		",
+              ],
+              "]",
+            ],
+            "
+	",
+            "}",
+          ],
+          "$type": "set",
+          "fields": [
+            "id",
+            "user.id",
+          ],
+        },
+        "startofline_trailing": {
+          "$name": "startofline_trailing",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "
+		",
+            [
+              "fields",
+              "fields",
+              ":",
+              " ",
+              "[",
+              [
+                "0",
+                "
+			",
+                "@",
+                "
+			",
+                ",",
+              ],
+              [
+                "1",
+                "@",
+                "
+			",
+                ",",
+              ],
+              "
+		",
+              "]",
+            ],
+            "
+	",
+            "}",
+          ],
+          "$type": "set",
+          "fields": [
+            "id",
+            "user.id",
+          ],
+        },
+        "startofline_trailing_nopadding": {
+          "$name": "startofline_trailing_nopadding",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "
+		",
+            [
+              "fields",
+              "fields",
+              ":",
+              " ",
+              "[",
+              [
+                "0",
+                "@",
+                "
+			",
+                ",",
+              ],
+              [
+                "1",
+                "@",
+                "
+			",
+                ",",
+              ],
+              "]",
+            ],
+            "
+	",
+            "}",
+          ],
+          "$type": "set",
+          "fields": [
+            "id",
+            "user.id",
+          ],
+        },
+      },
+    },
+  },
+  "performance" => {
+    "file": {
+      "$file_name": "performance",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/010-list-commas/performance.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/010-list-commas/performance",
+      "$file_type": "view",
+      "$strings": [
+        "# I think the parser is non-backtracking here, but to just to make sure...
+",
+        "# The _ ","? _ sequence should not be O(n^2) on the length of the whitespace
+",
+        "
+",
+        "@view.fast",
+        "
+",
+      ],
+    },
+    "positions": undefined,
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/010-list-commas/performance.view.lkml",
+    "view": undefined,
+  },
+  "x-no-empty-middle" => {
+    "file": {
+      "$file_name": "x-no-empty-middle",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/010-list-commas/x-no-empty-middle.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/010-list-commas/x-no-empty-middle",
+      "$file_type": "view",
+      "error": ""Parse error@2,36 Expected \\"#\\", \\"\\\\\\"\\", \\"]\\", [ \\\\t\\\\n\\\\r], [ \\\\t], or [\\\\-+_a-zA-Z0-9.] but \\",\\" found."",
+    },
+    "positions": undefined,
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/010-list-commas/x-no-empty-middle.view.lkml",
+    "view": undefined,
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 011-expanded-model-names diagnostics: diagnostics-011-expanded-model-names 1`] = `
+"File: $money.model.lkml
+
+
+File: __proto__.model.lkml
+
+
+File: constructor.model.lkml
+
+
+File: hyphens-allowed.model.lkml
+
+
+File: prototype.model.lkml
+
+
+File: 日本.model.lkml
+
+"
+`;
+
+exports[`LookML Test Projects Project 011-expanded-model-names diagnostics: getErrors 1`] = `
+Map {
+  "__proto__.model" => [
+    {
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/011-expanded-model-names/__proto__.model",
+      "message": "addPositions is unable to add positions for object without $strings at $.file['/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/011-expanded-model-names/__proto__.model'].explore.__proto__",
+    },
+  ],
+  "constructor.model" => [
+    {
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/011-expanded-model-names/constructor.model",
+      "message": "addPositions is due to unexpected condition at $.file['/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/011-expanded-model-names/constructor.model'].prototype.polluted",
+    },
+  ],
+}
+`;
+
+exports[`LookML Test Projects Project 011-expanded-model-names diagnostics: getExplores 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 011-expanded-model-names diagnostics: getModels 1`] = `
+Map {
+  "__proto__" => {
+    "model": {
+      "$file_name": "__proto__",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/011-expanded-model-names/__proto__.model.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/011-expanded-model-names/__proto__",
+      "$file_type": "model",
+      "$strings": [
+        [
+          "polluted",
+          "polluted",
+          ":",
+          " ",
+          "@",
+        ],
+        "
+
+",
+        "@explore.__proto__",
+      ],
+      "explore": {
+        "$__proto__": {
+          "$name": "__proto__",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "
+	",
+            [
+              "polluted",
+              "polluted",
+              ":",
+              " ",
+              "@",
+            ],
+            "
+",
+            "}",
+          ],
+          "$type": "explore",
+          "polluted": "is_it",
+        },
+      },
+      "polluted": "is_it",
+    },
+    "positions": {
+      "$p": [
+        1,
+        1,
+      ],
+      "explore": {
+        "$__proto__": {
+          "$errors": [
+            "addPositions is unable to add positions for object without $strings at $.file['/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/011-expanded-model-names/__proto__.model'].explore.__proto__",
+          ],
+          "$p": [
+            3,
+            0,
+          ],
+        },
+      },
+      "polluted": {
+        "$p": [
+          1,
+          1,
+          1,
+          16,
+        ],
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/011-expanded-model-names/__proto__.model.lkml",
+  },
+  "$money" => {
+    "model": {
+      "$file_name": "$money",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/011-expanded-model-names/$money.model.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/011-expanded-model-names/$money",
+      "$file_type": "model",
+      "$strings": [
+        [
+          "cash",
+          "cash",
+          ":",
+          " ",
+          "@",
+        ],
+      ],
+      "cash": "money",
+    },
+    "positions": {
+      "$p": [
+        1,
+        1,
+        1,
+        12,
+      ],
+      "cash": {
+        "$p": [
+          1,
+          1,
+          1,
+          12,
+        ],
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/011-expanded-model-names/$money.model.lkml",
+  },
+  "constructor" => {
+    "model": {
+      "$file_name": "constructor",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/011-expanded-model-names/constructor.model.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/011-expanded-model-names/constructor",
+      "$file_type": "model",
+      "$prototype": {
+        "polluted": {
+          "$name": "polluted",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "}",
+          ],
+          "$type": "prototype",
+        },
+      },
+      "$strings": [
+        [
+          "polluted",
+          "polluted",
+          ":",
+          " ",
+          "@",
+        ],
+        "
+
+",
+        "@prototype.polluted",
+        "
+",
+      ],
+      "polluted": "is_it",
+    },
+    "positions": {
+      "$p": [
+        1,
+        1,
+      ],
+      "$prototype": {
+        "polluted": {
+          "$errors": [
+            "addPositions is due to unexpected condition at $.file['/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/011-expanded-model-names/constructor.model'].prototype.polluted",
+          ],
+          "$p": [
+            3,
+            0,
+          ],
+        },
+      },
+      "polluted": {
+        "$p": [
+          1,
+          1,
+          1,
+          16,
+        ],
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/011-expanded-model-names/constructor.model.lkml",
+  },
+  "hyphens-allowed" => {
+    "model": {
+      "$file_name": "hyphens-allowed",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/011-expanded-model-names/hyphens-allowed.model.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/011-expanded-model-names/hyphens-allowed",
+      "$file_type": "model",
+      "$strings": [
+        "@explore.hyphens",
+        "
+",
+      ],
+      "explore": {
+        "hyphens": {
+          "$name": "hyphens",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "}",
+          ],
+          "$type": "explore",
+        },
+      },
+    },
+    "positions": {
+      "$p": [
+        1,
+        1,
+        2,
+        0,
+      ],
+      "explore": {
+        "hyphens": {
+          "$name": {
+            "$p": [
+              1,
+              10,
+              1,
+              17,
+            ],
+          },
+          "$p": [
+            1,
+            1,
+            1,
+            20,
+          ],
+          "$type": {
+            "$p": [
+              1,
+              1,
+              1,
+              8,
+            ],
+          },
+        },
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/011-expanded-model-names/hyphens-allowed.model.lkml",
+  },
+  "prototype" => {
+    "model": {
+      "$file_name": "prototype",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/011-expanded-model-names/prototype.model.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/011-expanded-model-names/prototype",
+      "$file_type": "model",
+      "$strings": [],
+    },
+    "positions": {
+      "$p": [
+        1,
+        1,
+        1,
+        1,
+      ],
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/011-expanded-model-names/prototype.model.lkml",
+  },
+  "日本" => {
+    "model": {
+      "$file_name": "日本",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/011-expanded-model-names/日本.model.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/011-expanded-model-names/日本",
+      "$file_type": "model",
+      "$strings": [
+        "@explore.still_alphanumeric",
+      ],
+      "explore": {
+        "still_alphanumeric": {
+          "$name": "still_alphanumeric",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "}",
+          ],
+          "$type": "explore",
+        },
+      },
+    },
+    "positions": {
+      "$p": [
+        1,
+        1,
+        1,
+        31,
+      ],
+      "explore": {
+        "still_alphanumeric": {
+          "$name": {
+            "$p": [
+              1,
+              10,
+              1,
+              28,
+            ],
+          },
+          "$p": [
+            1,
+            1,
+            1,
+            31,
+          ],
+          "$type": {
+            "$p": [
+              1,
+              1,
+              1,
+              8,
+            ],
+          },
+        },
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/011-expanded-model-names/日本.model.lkml",
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 011-expanded-model-names diagnostics: getViews 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 012-extensions-refinements-simple diagnostics: diagnostics-012-extensions-refinements-simple 1`] = `
+"File: facts-refinement.view.lkml
+
+
+File: facts.view.lkml
+
+
+File: model1.model.lkml
+
+
+File: model2.model.lkml
+
+"
+`;
+
+exports[`LookML Test Projects Project 012-extensions-refinements-simple diagnostics: getErrors 1`] = `
+Map {
+  "facts-refinement.view" => [
+    {
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/012-extensions-refinements-simple/facts-refinement.view",
+      "message": "addPositions is unable to add positions for object without $strings at $.file['/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/012-extensions-refinements-simple/facts-refinement.view'].view.+facts",
+    },
+  ],
+}
+`;
+
+exports[`LookML Test Projects Project 012-extensions-refinements-simple diagnostics: getExplores 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 012-extensions-refinements-simple diagnostics: getModels 1`] = `
+Map {
+  "model1" => {
+    "model": {
+      "$file_name": "model1",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/012-extensions-refinements-simple/model1.model.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/012-extensions-refinements-simple/model1",
+      "$file_type": "model",
+      "$strings": [
+        [
+          "include",
+          "include",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+      ],
+      "include": "facts.view.lkml",
+    },
+    "positions": {
+      "$p": [
+        1,
+        1,
+        1,
+        27,
+      ],
+      "include": {
+        "$p": [
+          1,
+          1,
+          1,
+          27,
+        ],
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/012-extensions-refinements-simple/model1.model.lkml",
+  },
+  "model2" => {
+    "model": {
+      "$file_name": "model2",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/012-extensions-refinements-simple/model2.model.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/012-extensions-refinements-simple/model2",
+      "$file_type": "model",
+      "$strings": [
+        [
+          "include.0",
+          "include",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+",
+        [
+          "include.1",
+          "include",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+",
+      ],
+      "include": [
+        "facts.view.lkml",
+        "facts-refinement.view.lkml",
+      ],
+    },
+    "positions": {
+      "$p": [
+        1,
+        1,
+        3,
+        0,
+      ],
+      "include": {
+        "0": {
+          "$p": [
+            1,
+            1,
+            1,
+            27,
+          ],
+        },
+        "1": {
+          "$p": [
+            2,
+            0,
+            2,
+            37,
+          ],
+        },
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/012-extensions-refinements-simple/model2.model.lkml",
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 012-extensions-refinements-simple diagnostics: getViews 1`] = `
+Map {
+  "facts-refinement" => {
+    "file": {
+      "$file_name": "facts-refinement",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/012-extensions-refinements-simple/facts-refinement.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/012-extensions-refinements-simple/facts-refinement",
+      "$file_type": "view",
+      "$strings": [
+        "@view.+facts",
+        "
+",
+      ],
+    },
+    "positions": undefined,
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/012-extensions-refinements-simple/facts-refinement.view.lkml",
+    "view": undefined,
+  },
+  "facts" => {
+    "file": {
+      "$file_name": "facts",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/012-extensions-refinements-simple/facts.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/012-extensions-refinements-simple/facts",
+      "$file_type": "view",
+      "$strings": [
+        "@view.facts",
+        "
+",
+      ],
+    },
+    "positions": {
+      "$name": {
+        "$p": [
+          1,
+          7,
+          1,
+          12,
+        ],
+      },
+      "$p": [
+        1,
+        1,
+        3,
+        1,
+      ],
+      "$type": {
+        "$p": [
+          1,
+          1,
+          1,
+          5,
+        ],
+      },
+      "label": {
+        "$p": [
+          2,
+          1,
+          2,
+          13,
+        ],
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/012-extensions-refinements-simple/facts.view.lkml",
+    "view": {
+      "$name": "facts",
+      "$strings": [
+        "@$type",
+        ":",
+        " ",
+        "@$name",
+        " ",
+        "{",
+        "
+	",
+        [
+          "label",
+          "label",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+",
+        "}",
+      ],
+      "$type": "view",
+      "label": "Foo",
+    },
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 013-extensions-refinements-sequencing diagnostics: diagnostics-013-extensions-refinements-sequencing 1`] = `
+"File: fun-with-extensions.model.lkml
+
+"
+`;
+
+exports[`LookML Test Projects Project 013-extensions-refinements-sequencing diagnostics: getErrors 1`] = `
+Map {
+  "fun-with-extensions.model" => [
+    {
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/013-extensions-refinements-sequencing/fun-with-extensions.model",
+      "message": "addPositions is unable to add positions for object without $strings at $.file['/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/013-extensions-refinements-sequencing/fun-with-extensions.model'].explore.+has_label_a_plus",
+    },
+  ],
+}
+`;
+
+exports[`LookML Test Projects Project 013-extensions-refinements-sequencing diagnostics: getExplores 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 013-extensions-refinements-sequencing diagnostics: getModels 1`] = `
+Map {
+  "fun-with-extensions" => {
+    "model": {
+      "$file_name": "fun-with-extensions",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/013-extensions-refinements-sequencing/fun-with-extensions.model.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/013-extensions-refinements-sequencing/fun-with-extensions",
+      "$file_type": "model",
+      "$strings": [
+        "@view.my_view",
+        "
+
+",
+        "# 2 simple extensions, varying only in order
+",
+        "@explore.a_before_b",
+        "
+",
+        "@explore.b_before_a",
+        "
+
+",
+        "@explore.has_label_a",
+        "
+",
+        "@explore.has_label_b",
+        "
+
+",
+        "# 2 extensions, but  one is itself refined
+",
+        "@explore.a_plus_before_b",
+        "
+",
+        "@explore.b_before_a_plus",
+        "
+
+",
+        "@explore.has_label_a_plus",
+        "
+",
+        "@explore.+has_label_a_plus",
+        "
+
+",
+        "# 2 extensions, but also a refinement at the root (declared earlier)
+",
+        "@explore.+a_plus_before_b_plus_c",
+        "
+",
+        "@explore.a_plus_before_b_plus_c",
+        "
+
+",
+        "# 2 extensions, but also a refinement at the root (declared later)
+",
+        "@explore.a_plus_before_b_plus_d",
+        "
+",
+        "@explore.+a_plus_before_b_plus_d",
+        "
+
+
+",
+        "# An explore that extends, and a refinement that extends otherwise
+",
+        "@explore.b_plus_a",
+        "
+",
+        "@explore.+b_plus_a",
+        "
+
+",
+        "# A refined explore, but the refinement is extended by a previously applied extension
+",
+        "@explore.b_plus_a_then_b",
+        "
+",
+        "@explore.+b_plus_a_then_b",
+        "
+
+",
+        "@explore.a_plus_a_then_b",
+        "
+",
+        "@explore.+a_plus_a_then_b",
+        "
+",
+      ],
+      "explore": {
+        "+a_plus_a_then_b": [
+          {
+            "$name": "+a_plus_a_then_b",
+            "$strings": [
+              "@$type",
+              ":",
+              " ",
+              "@$name",
+              " ",
+              "{",
+              [
+                "extends",
+                "extends",
+                ":",
+                " ",
+                "[",
+                [
+                  "0",
+                  "@",
+                  ",",
+                  " ",
+                ],
+                [
+                  "1",
+                  "@",
+                ],
+                "]",
+              ],
+              "}",
+            ],
+            "$type": "explore",
+            "extends": [
+              "has_label_a",
+              "has_label_b",
+            ],
+          },
+        ],
+        "+a_plus_before_b_plus_c": [
+          {
+            "$name": "+a_plus_before_b_plus_c",
+            "$strings": [
+              "@$type",
+              ":",
+              " ",
+              "@$name",
+              " ",
+              "{",
+              " ",
+              [
+                "label",
+                "label",
+                ":",
+                " ",
+                """,
+                "@",
+                """,
+              ],
+              " ",
+              "}",
+            ],
+            "$type": "explore",
+            "label": "C+",
+          },
+        ],
+        "+a_plus_before_b_plus_d": [
+          {
+            "$name": "+a_plus_before_b_plus_d",
+            "$strings": [
+              "@$type",
+              ":",
+              " ",
+              "@$name",
+              " ",
+              "{",
+              " ",
+              [
+                "label",
+                "label",
+                ":",
+                " ",
+                """,
+                "@",
+                """,
+              ],
+              " ",
+              "}",
+            ],
+            "$type": "explore",
+            "label": "D+",
+          },
+        ],
+        "+b_plus_a": [
+          {
+            "$name": "+b_plus_a",
+            "$strings": [
+              "@$type",
+              ":",
+              " ",
+              "@$name",
+              " ",
+              "{",
+              [
+                "extends",
+                "extends",
+                ":",
+                " ",
+                "[",
+                [
+                  "0",
+                  "@",
+                ],
+                "]",
+              ],
+              "}",
+            ],
+            "$type": "explore",
+            "extends": [
+              "has_label_a",
+            ],
+          },
+        ],
+        "+b_plus_a_then_b": [
+          {
+            "$name": "+b_plus_a_then_b",
+            "$strings": [
+              "@$type",
+              ":",
+              " ",
+              "@$name",
+              " ",
+              "{",
+              [
+                "extends",
+                "extends",
+                ":",
+                " ",
+                "[",
+                [
+                  "0",
+                  "@",
+                  ",",
+                  " ",
+                ],
+                [
+                  "1",
+                  "@",
+                ],
+                "]",
+              ],
+              "}",
+            ],
+            "$type": "explore",
+            "extends": [
+              "has_label_a",
+              "has_label_b",
+            ],
+          },
+        ],
+        "+has_label_a_plus": [
+          {
+            "$name": "+has_label_a_plus",
+            "$strings": [
+              "@$type",
+              ":",
+              " ",
+              "@$name",
+              " ",
+              "{",
+              " ",
+              [
+                "label",
+                "label",
+                ":",
+                " ",
+                """,
+                "@",
+                """,
+              ],
+              "}",
+            ],
+            "$type": "explore",
+            "label": "A+",
+          },
+        ],
+        "a_before_b": {
+          "$name": "a_before_b",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            " ",
+            [
+              "from",
+              "from",
+              ":",
+              "@",
+            ],
+            " ",
+            [
+              "extends",
+              "extends",
+              ":",
+              " ",
+              "[",
+              [
+                "0",
+                "@",
+                ",",
+                " ",
+              ],
+              [
+                "1",
+                "@",
+              ],
+              "]",
+            ],
+            " ",
+            "}",
+          ],
+          "$type": "explore",
+          "extends": [
+            "has_label_a",
+            "has_label_b",
+          ],
+          "from": "my_view",
+        },
+        "a_plus_a_then_b": {
+          "$name": "a_plus_a_then_b",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            [
+              "from",
+              "from",
+              ":",
+              "@",
+            ],
+            " ",
+            [
+              "extends",
+              "extends",
+              ":",
+              " ",
+              "[",
+              [
+                "0",
+                "@",
+              ],
+              "]",
+            ],
+            "}",
+          ],
+          "$type": "explore",
+          "extends": [
+            "has_label_a",
+          ],
+          "from": "my_view",
+        },
+        "a_plus_before_b": {
+          "$name": "a_plus_before_b",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            " ",
+            [
+              "from",
+              "from",
+              ":",
+              "@",
+            ],
+            "  ",
+            [
+              "extends",
+              "extends",
+              ":",
+              " ",
+              "[",
+              [
+                "0",
+                "@",
+                ",",
+                " ",
+              ],
+              [
+                "1",
+                "@",
+                "     ",
+              ],
+              "]",
+            ],
+            " ",
+            "}",
+          ],
+          "$type": "explore",
+          "extends": [
+            "has_label_a_plus",
+            "has_label_b",
+          ],
+          "from": "my_view",
+        },
+        "a_plus_before_b_plus_c": {
+          "$name": "a_plus_before_b_plus_c",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            " ",
+            [
+              "from",
+              "from",
+              ":",
+              "@",
+            ],
+            "  ",
+            [
+              "extends",
+              "extends",
+              ":",
+              " ",
+              "[",
+              [
+                "0",
+                "@",
+                ",",
+                " ",
+              ],
+              [
+                "1",
+                "@",
+              ],
+              "]",
+            ],
+            " ",
+            "}",
+          ],
+          "$type": "explore",
+          "extends": [
+            "has_label_a",
+            "has_label_b",
+          ],
+          "from": "my_view",
+        },
+        "a_plus_before_b_plus_d": {
+          "$name": "a_plus_before_b_plus_d",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            " ",
+            [
+              "from",
+              "from",
+              ":",
+              "@",
+            ],
+            "  ",
+            [
+              "extends",
+              "extends",
+              ":",
+              " ",
+              "[",
+              [
+                "0",
+                "@",
+                ",",
+                " ",
+              ],
+              [
+                "1",
+                "@",
+              ],
+              "]",
+            ],
+            " ",
+            "}",
+          ],
+          "$type": "explore",
+          "extends": [
+            "has_label_a",
+            "has_label_b",
+          ],
+          "from": "my_view",
+        },
+        "b_before_a": {
+          "$name": "b_before_a",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            " ",
+            [
+              "from",
+              "from",
+              ":",
+              "@",
+            ],
+            "  ",
+            [
+              "extends",
+              "extends",
+              ":",
+              " ",
+              "[",
+              [
+                "0",
+                "@",
+                ",",
+                " ",
+              ],
+              [
+                "1",
+                "@",
+              ],
+              "]",
+            ],
+            " ",
+            "}",
+          ],
+          "$type": "explore",
+          "extends": [
+            "has_label_b",
+            "has_label_a",
+          ],
+          "from": "my_view",
+        },
+        "b_before_a_plus": {
+          "$name": "b_before_a_plus",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            " ",
+            [
+              "from",
+              "from",
+              ":",
+              "@",
+            ],
+            "  ",
+            [
+              "extends",
+              "extends",
+              ":",
+              " ",
+              "[",
+              [
+                "0",
+                "@",
+                ",",
+                "      ",
+              ],
+              [
+                "1",
+                "@",
+              ],
+              "]",
+            ],
+            " ",
+            "}",
+          ],
+          "$type": "explore",
+          "extends": [
+            "has_label_b",
+            "has_label_a_plus",
+          ],
+          "from": "my_view",
+        },
+        "b_plus_a": {
+          "$name": "b_plus_a",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            [
+              "from",
+              "from",
+              ":",
+              "@",
+            ],
+            " ",
+            [
+              "extends",
+              "extends",
+              ":",
+              " ",
+              "[",
+              [
+                "0",
+                "@",
+              ],
+              "]",
+            ],
+            "}",
+          ],
+          "$type": "explore",
+          "extends": [
+            "has_label_b",
+          ],
+          "from": "my_view",
+        },
+        "b_plus_a_then_b": {
+          "$name": "b_plus_a_then_b",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            [
+              "from",
+              "from",
+              ":",
+              "@",
+            ],
+            " ",
+            [
+              "extends",
+              "extends",
+              ":",
+              " ",
+              "[",
+              [
+                "0",
+                "@",
+              ],
+              "]",
+            ],
+            "}",
+          ],
+          "$type": "explore",
+          "extends": [
+            "has_label_b",
+          ],
+          "from": "my_view",
+        },
+        "has_label_a": {
+          "$name": "has_label_a",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            " ",
+            [
+              "extension",
+              "extension",
+              ":",
+              " ",
+              "@",
+            ],
+            " ",
+            [
+              "label",
+              "label",
+              ":",
+              " ",
+              """,
+              "@",
+              """,
+            ],
+            " ",
+            "}",
+          ],
+          "$type": "explore",
+          "extension": "required",
+          "label": "A",
+        },
+        "has_label_a_plus": {
+          "$name": "has_label_a_plus",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            "  ",
+            "{",
+            " ",
+            [
+              "extension",
+              "extension",
+              ":",
+              " ",
+              "@",
+            ],
+            " ",
+            [
+              "label",
+              "label",
+              ":",
+              " ",
+              """,
+              "@",
+              """,
+            ],
+            " ",
+            "}",
+          ],
+          "$type": "explore",
+          "extension": "required",
+          "label": "A",
+        },
+        "has_label_b": {
+          "$name": "has_label_b",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            " ",
+            [
+              "extension",
+              "extension",
+              ":",
+              " ",
+              "@",
+            ],
+            " ",
+            [
+              "label",
+              "label",
+              ":",
+              " ",
+              """,
+              "@",
+              """,
+            ],
+            " ",
+            "}",
+          ],
+          "$type": "explore",
+          "extension": "required",
+          "label": "B",
+        },
+      },
+      "view": {
+        "my_view": {
+          "$name": "my_view",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "}",
+          ],
+          "$type": "view",
+        },
+      },
+    },
+    "positions": {
+      "$p": [
+        1,
+        1,
+      ],
+      "explore": {
+        "+has_label_a_plus": {
+          "$errors": [
+            "addPositions is unable to add positions for object without $strings at $.file['/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/013-extensions-refinements-sequencing/fun-with-extensions.model'].explore.+has_label_a_plus",
+          ],
+          "$p": [
+            15,
+            0,
+          ],
+        },
+        "a_before_b": {
+          "$name": {
+            "$p": [
+              4,
+              9,
+              4,
+              19,
+            ],
+          },
+          "$p": [
+            4,
+            0,
+            4,
+            72,
+          ],
+          "$type": {
+            "$p": [
+              4,
+              0,
+              4,
+              7,
+            ],
+          },
+          "extends": {
+            "$p": [
+              4,
+              35,
+              4,
+              70,
+            ],
+            "0": {
+              "$p": [
+                4,
+                45,
+                4,
+                58,
+              ],
+            },
+            "1": {
+              "$p": [
+                4,
+                58,
+                4,
+                69,
+              ],
+            },
+          },
+          "from": {
+            "$p": [
+              4,
+              22,
+              4,
+              34,
+            ],
+          },
+        },
+        "a_plus_before_b": {
+          "$name": {
+            "$p": [
+              11,
+              9,
+              11,
+              24,
+            ],
+          },
+          "$p": [
+            11,
+            0,
+            11,
+            88,
+          ],
+          "$type": {
+            "$p": [
+              11,
+              0,
+              11,
+              7,
+            ],
+          },
+          "extends": {
+            "$p": [
+              11,
+              41,
+              11,
+              86,
+            ],
+            "0": {
+              "$p": [
+                11,
+                51,
+                11,
+                69,
+              ],
+            },
+            "1": {
+              "$p": [
+                11,
+                69,
+                11,
+                85,
+              ],
+            },
+          },
+          "from": {
+            "$p": [
+              11,
+              27,
+              11,
+              39,
+            ],
+          },
+        },
+        "b_before_a": {
+          "$name": {
+            "$p": [
+              5,
+              9,
+              5,
+              19,
+            ],
+          },
+          "$p": [
+            5,
+            0,
+            5,
+            73,
+          ],
+          "$type": {
+            "$p": [
+              5,
+              0,
+              5,
+              7,
+            ],
+          },
+          "extends": {
+            "$p": [
+              5,
+              36,
+              5,
+              71,
+            ],
+            "0": {
+              "$p": [
+                5,
+                46,
+                5,
+                59,
+              ],
+            },
+            "1": {
+              "$p": [
+                5,
+                59,
+                5,
+                70,
+              ],
+            },
+          },
+          "from": {
+            "$p": [
+              5,
+              22,
+              5,
+              34,
+            ],
+          },
+        },
+        "b_before_a_plus": {
+          "$name": {
+            "$p": [
+              12,
+              9,
+              12,
+              24,
+            ],
+          },
+          "$p": [
+            12,
+            0,
+            12,
+            88,
+          ],
+          "$type": {
+            "$p": [
+              12,
+              0,
+              12,
+              7,
+            ],
+          },
+          "extends": {
+            "$p": [
+              12,
+              41,
+              12,
+              86,
+            ],
+            "0": {
+              "$p": [
+                12,
+                51,
+                12,
+                69,
+              ],
+            },
+            "1": {
+              "$p": [
+                12,
+                69,
+                12,
+                85,
+              ],
+            },
+          },
+          "from": {
+            "$p": [
+              12,
+              27,
+              12,
+              39,
+            ],
+          },
+        },
+        "has_label_a": {
+          "$name": {
+            "$p": [
+              7,
+              9,
+              7,
+              20,
+            ],
+          },
+          "$p": [
+            7,
+            0,
+            7,
+            55,
+          ],
+          "$type": {
+            "$p": [
+              7,
+              0,
+              7,
+              7,
+            ],
+          },
+          "extension": {
+            "$p": [
+              7,
+              23,
+              7,
+              42,
+            ],
+          },
+          "label": {
+            "$p": [
+              7,
+              43,
+              7,
+              53,
+            ],
+          },
+        },
+        "has_label_a_plus": {
+          "$name": {
+            "$p": [
+              14,
+              9,
+              14,
+              25,
+            ],
+          },
+          "$p": [
+            14,
+            0,
+            14,
+            61,
+          ],
+          "$type": {
+            "$p": [
+              14,
+              0,
+              14,
+              7,
+            ],
+          },
+          "extension": {
+            "$p": [
+              14,
+              29,
+              14,
+              48,
+            ],
+          },
+          "label": {
+            "$p": [
+              14,
+              49,
+              14,
+              59,
+            ],
+          },
+        },
+        "has_label_b": {
+          "$name": {
+            "$p": [
+              8,
+              9,
+              8,
+              20,
+            ],
+          },
+          "$p": [
+            8,
+            0,
+            8,
+            55,
+          ],
+          "$type": {
+            "$p": [
+              8,
+              0,
+              8,
+              7,
+            ],
+          },
+          "extension": {
+            "$p": [
+              8,
+              23,
+              8,
+              42,
+            ],
+          },
+          "label": {
+            "$p": [
+              8,
+              43,
+              8,
+              53,
+            ],
+          },
+        },
+      },
+      "view": {
+        "my_view": {
+          "$name": {
+            "$p": [
+              1,
+              7,
+              1,
+              14,
+            ],
+          },
+          "$p": [
+            1,
+            1,
+            1,
+            17,
+          ],
+          "$type": {
+            "$p": [
+              1,
+              1,
+              1,
+              5,
+            ],
+          },
+        },
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/013-extensions-refinements-sequencing/fun-with-extensions.model.lkml",
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 013-extensions-refinements-sequencing diagnostics: getViews 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 015-ext-abstract-handling diagnostics: diagnostics-015-ext-abstract-handling 1`] = `
+"File: myext.view.lkml
+
+
+File: myext_base.view.lkml
+
+
+File: mymodel.model.lkml
+
+"
+`;
+
+exports[`LookML Test Projects Project 015-ext-abstract-handling diagnostics: getErrors 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 015-ext-abstract-handling diagnostics: getExplores 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 015-ext-abstract-handling diagnostics: getModels 1`] = `
+Map {
+  "mymodel" => {
+    "model": {
+      "$file_name": "mymodel",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/015-ext-abstract-handling/mymodel.model.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/015-ext-abstract-handling/mymodel",
+      "$file_type": "model",
+      "$strings": [
+        [
+          "include",
+          "include",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+      ],
+      "include": "*.view.lkml",
+    },
+    "positions": {
+      "$p": [
+        1,
+        1,
+        1,
+        23,
+      ],
+      "include": {
+        "$p": [
+          1,
+          1,
+          1,
+          23,
+        ],
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/015-ext-abstract-handling/mymodel.model.lkml",
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 015-ext-abstract-handling diagnostics: getViews 1`] = `
+Map {
+  "myext_base" => {
+    "file": {
+      "$file_name": "myext_base",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/015-ext-abstract-handling/myext_base.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/015-ext-abstract-handling/myext_base",
+      "$file_type": "view",
+      "$strings": [
+        "@view.my_extension_base",
+        "
+",
+      ],
+    },
+    "positions": undefined,
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/015-ext-abstract-handling/myext_base.view.lkml",
+    "view": undefined,
+  },
+  "myext" => {
+    "file": {
+      "$file_name": "myext",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/015-ext-abstract-handling/myext.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/015-ext-abstract-handling/myext",
+      "$file_type": "view",
+      "$strings": [
+        "@view.my_extension",
+        "
+",
+      ],
+    },
+    "positions": undefined,
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/015-ext-abstract-handling/myext.view.lkml",
+    "view": undefined,
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 016-ref-abstract-handling diagnostics: diagnostics-016-ref-abstract-handling 1`] = `
+"File: mymodel.model.lkml
+
+
+File: myref-refinement.view.lkml
+
+
+File: myref.view.lkml
+
+"
+`;
+
+exports[`LookML Test Projects Project 016-ref-abstract-handling diagnostics: getErrors 1`] = `
+Map {
+  "myref-refinement.view" => [
+    {
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/016-ref-abstract-handling/myref-refinement.view",
+      "message": "addPositions is unable to add positions for object without $strings at $.file['/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/016-ref-abstract-handling/myref-refinement.view'].view.+facts",
+    },
+  ],
+}
+`;
+
+exports[`LookML Test Projects Project 016-ref-abstract-handling diagnostics: getExplores 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 016-ref-abstract-handling diagnostics: getModels 1`] = `
+Map {
+  "mymodel" => {
+    "model": {
+      "$file_name": "mymodel",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/016-ref-abstract-handling/mymodel.model.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/016-ref-abstract-handling/mymodel",
+      "$file_type": "model",
+      "$strings": [
+        [
+          "include",
+          "include",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+      ],
+      "include": "*.view.lkml",
+    },
+    "positions": {
+      "$p": [
+        1,
+        1,
+        1,
+        23,
+      ],
+      "include": {
+        "$p": [
+          1,
+          1,
+          1,
+          23,
+        ],
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/016-ref-abstract-handling/mymodel.model.lkml",
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 016-ref-abstract-handling diagnostics: getViews 1`] = `
+Map {
+  "myref-refinement" => {
+    "file": {
+      "$file_name": "myref-refinement",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/016-ref-abstract-handling/myref-refinement.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/016-ref-abstract-handling/myref-refinement",
+      "$file_type": "view",
+      "$strings": [
+        "@view.+facts",
+        "
+",
+      ],
+    },
+    "positions": undefined,
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/016-ref-abstract-handling/myref-refinement.view.lkml",
+    "view": undefined,
+  },
+  "myref" => {
+    "file": {
+      "$file_name": "myref",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/016-ref-abstract-handling/myref.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/016-ref-abstract-handling/myref",
+      "$file_type": "view",
+      "$strings": [
+        "@view.facts",
+        "
+",
+      ],
+    },
+    "positions": undefined,
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/016-ref-abstract-handling/myref.view.lkml",
+    "view": undefined,
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 017-ref-sequencing-error diagnostics: diagnostics-017-ref-sequencing-error 1`] = `
+"File: my_explore.explore.lkml
+
+
+File: my_model.model.lkml
+
+
+File: view_base.view.lkml
+
+
+File: view_refine_1.view.lkml
+
+
+File: view_refine_2.view.lkml
+
+"
+`;
+
+exports[`LookML Test Projects Project 017-ref-sequencing-error diagnostics: getErrors 1`] = `
+Map {
+  "view_refine_1.view" => [
+    {
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/017-ref-sequencing-error/view_refine_1.view",
+      "message": "addPositions is unable to add positions for object without $strings at $.file['/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/017-ref-sequencing-error/view_refine_1.view'].view.+my_view",
+    },
+  ],
+  "view_refine_2.view" => [
+    {
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/017-ref-sequencing-error/view_refine_2.view",
+      "message": "addPositions is unable to add positions for object without $strings at $.file['/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/017-ref-sequencing-error/view_refine_2.view'].view.+my_view",
+    },
+  ],
+}
+`;
+
+exports[`LookML Test Projects Project 017-ref-sequencing-error diagnostics: getExplores 1`] = `
+Map {
+  "my_explore" => {
+    "explore": {
+      "$name": "my_explore",
+      "$strings": [
+        "@$type",
+        ":",
+        " ",
+        "@$name",
+        " ",
+        "{",
+        "
+  ",
+        [
+          "from",
+          "from",
+          ":",
+          " ",
+          "@",
+        ],
+        "
+",
+        "}",
+      ],
+      "$type": "explore",
+      "from": "my_view",
+    },
+    "file": {
+      "$file_name": "my_explore",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/017-ref-sequencing-error/my_explore.explore.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/017-ref-sequencing-error/my_explore",
+      "$file_type": "explore",
+      "$strings": [
+        [
+          "include",
+          "include",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+
+",
+        "@explore.my_explore",
+        "
+",
+      ],
+      "include": "view_refine_2.view.lkml",
+    },
+    "positions": {
+      "$name": {
+        "$p": [
+          3,
+          9,
+          3,
+          19,
+        ],
+      },
+      "$p": [
+        3,
+        0,
+        5,
+        1,
+      ],
+      "$type": {
+        "$p": [
+          3,
+          0,
+          3,
+          7,
+        ],
+      },
+      "from": {
+        "$p": [
+          4,
+          2,
+          4,
+          15,
+        ],
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/017-ref-sequencing-error/my_explore.explore.lkml",
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 017-ref-sequencing-error diagnostics: getModels 1`] = `
+Map {
+  "my_model" => {
+    "model": {
+      "$file_name": "my_model",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/017-ref-sequencing-error/my_model.model.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/017-ref-sequencing-error/my_model",
+      "$file_type": "model",
+      "$strings": [
+        "# Although test project #013 did a fairly thorough job of testing refinement sequencing,
+",
+        "# it did not test it in the context of a model assembled from multiple files. And, it turned
+",
+        "# out that the model assembly logic was merging refinement arrays as though they were a an object,
+",
+        "# later breaking the refinement code. See LAMS issue #134 for more details
+",
+        "
+",
+        [
+          "include",
+          "include",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+",
+      ],
+      "include": "*.explore",
+    },
+    "positions": {
+      "$p": [
+        1,
+        1,
+        7,
+        0,
+      ],
+      "include": {
+        "$p": [
+          6,
+          0,
+          6,
+          20,
+        ],
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/017-ref-sequencing-error/my_model.model.lkml",
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 017-ref-sequencing-error diagnostics: getViews 1`] = `
+Map {
+  "view_base" => {
+    "file": {
+      "$file_name": "view_base",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/017-ref-sequencing-error/view_base.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/017-ref-sequencing-error/view_base",
+      "$file_type": "view",
+      "$strings": [
+        "@view.my_view",
+        "
+",
+      ],
+    },
+    "positions": undefined,
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/017-ref-sequencing-error/view_base.view.lkml",
+    "view": undefined,
+  },
+  "view_refine_1" => {
+    "file": {
+      "$file_name": "view_refine_1",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/017-ref-sequencing-error/view_refine_1.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/017-ref-sequencing-error/view_refine_1",
+      "$file_type": "view",
+      "$strings": [
+        [
+          "include",
+          "include",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+
+",
+        "@view.+my_view",
+        "
+",
+      ],
+      "include": "view_base.view.lkml",
+    },
+    "positions": undefined,
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/017-ref-sequencing-error/view_refine_1.view.lkml",
+    "view": undefined,
+  },
+  "view_refine_2" => {
+    "file": {
+      "$file_name": "view_refine_2",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/017-ref-sequencing-error/view_refine_2.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/017-ref-sequencing-error/view_refine_2",
+      "$file_type": "view",
+      "$strings": [
+        [
+          "include",
+          "include",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+
+",
+        "@view.+my_view",
+        "
+",
+      ],
+      "include": "view_refine_1.view.lkml",
+    },
+    "positions": undefined,
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/017-ref-sequencing-error/view_refine_2.view.lkml",
+    "view": undefined,
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 018-imported-projects diagnostics: diagnostics-018-imported-projects 1`] = `""`;
+
+exports[`LookML Test Projects Project 018-imported-projects diagnostics: getErrors 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 018-imported-projects diagnostics: getExplores 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 018-imported-projects diagnostics: getModels 1`] = `
+Map {
+  "my_model" => {
+    "model": {
+      "$file_name": "my_model",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/018-imported-projects/model_in_a_folder/my_model.model.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/018-imported-projects/model_in_a_folder/my_model",
+      "$file_type": "model",
+      "$strings": [
+        [
+          "include.0",
+          "include",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+",
+        [
+          "include.1",
+          "include",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+",
+        [
+          "include.2",
+          "include",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+",
+      ],
+      "include": [
+        "/root_folder/root_view.view.lkml",
+        "nested_folder/relative_view.view.lkml",
+        "//project_foo/remote_view.view.lkml",
+      ],
+    },
+    "positions": {
+      "$p": [
+        1,
+        1,
+        4,
+        0,
+      ],
+      "include": {
+        "0": {
+          "$p": [
+            1,
+            1,
+            1,
+            44,
+          ],
+        },
+        "1": {
+          "$p": [
+            2,
+            0,
+            2,
+            48,
+          ],
+        },
+        "2": {
+          "$p": [
+            3,
+            0,
+            3,
+            46,
+          ],
+        },
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/018-imported-projects/model_in_a_folder/my_model.model.lkml",
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 018-imported-projects diagnostics: getViews 1`] = `
+Map {
+  "remote_view" => {
+    "file": {
+      "$file_name": "remote_view",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/018-imported-projects/imported_projects/project_foo/remote_view.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/018-imported-projects/imported_projects/project_foo/remote_view",
+      "$file_type": "view",
+      "$strings": [
+        "@view.remote_view",
+        "
+",
+      ],
+    },
+    "positions": {
+      "$name": {
+        "$p": [
+          1,
+          7,
+          1,
+          18,
+        ],
+      },
+      "$p": [
+        1,
+        1,
+        1,
+        21,
+      ],
+      "$type": {
+        "$p": [
+          1,
+          1,
+          1,
+          5,
+        ],
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/018-imported-projects/imported_projects/project_foo/remote_view.view.lkml",
+    "view": {
+      "$name": "remote_view",
+      "$strings": [
+        "@$type",
+        ":",
+        " ",
+        "@$name",
+        " ",
+        "{",
+        "}",
+      ],
+      "$type": "view",
+    },
+  },
+  "relative_view" => {
+    "file": {
+      "$file_name": "relative_view",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/018-imported-projects/model_in_a_folder/nested_folder/relative_view.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/018-imported-projects/model_in_a_folder/nested_folder/relative_view",
+      "$file_type": "view",
+      "$strings": [
+        "@view.relative_view",
+        "
+",
+      ],
+    },
+    "positions": {
+      "$name": {
+        "$p": [
+          1,
+          7,
+          1,
+          20,
+        ],
+      },
+      "$p": [
+        1,
+        1,
+        1,
+        23,
+      ],
+      "$type": {
+        "$p": [
+          1,
+          1,
+          1,
+          5,
+        ],
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/018-imported-projects/model_in_a_folder/nested_folder/relative_view.view.lkml",
+    "view": {
+      "$name": "relative_view",
+      "$strings": [
+        "@$type",
+        ":",
+        " ",
+        "@$name",
+        " ",
+        "{",
+        "}",
+      ],
+      "$type": "view",
+    },
+  },
+  "root_view" => {
+    "file": {
+      "$file_name": "root_view",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/018-imported-projects/root_folder/root_view.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/018-imported-projects/root_folder/root_view",
+      "$file_type": "view",
+      "$strings": [
+        "@view.root_view",
+        "
+",
+      ],
+    },
+    "positions": {
+      "$name": {
+        "$p": [
+          1,
+          7,
+          1,
+          16,
+        ],
+      },
+      "$p": [
+        1,
+        1,
+        1,
+        19,
+      ],
+      "$type": {
+        "$p": [
+          1,
+          1,
+          1,
+          5,
+        ],
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/018-imported-projects/root_folder/root_view.view.lkml",
+    "view": {
+      "$name": "root_view",
+      "$strings": [
+        "@$type",
+        ":",
+        " ",
+        "@$name",
+        " ",
+        "{",
+        "}",
+      ],
+      "$type": "view",
+    },
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 019-include-parent-folder-relatively diagnostics: diagnostics-019-include-parent-folder-relatively 1`] = `""`;
+
+exports[`LookML Test Projects Project 019-include-parent-folder-relatively diagnostics: getErrors 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 019-include-parent-folder-relatively diagnostics: getExplores 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 019-include-parent-folder-relatively diagnostics: getModels 1`] = `
+Map {
+  "my_model" => {
+    "model": {
+      "$file_name": "my_model",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/019-include-parent-folder-relatively/models/my_model.model.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/019-include-parent-folder-relatively/models/my_model",
+      "$file_type": "model",
+      "$strings": [
+        [
+          "include",
+          "include",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+",
+      ],
+      "include": "../views/first.view.lkml",
+    },
+    "positions": {
+      "$p": [
+        1,
+        1,
+        2,
+        0,
+      ],
+      "include": {
+        "$p": [
+          1,
+          1,
+          1,
+          36,
+        ],
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/019-include-parent-folder-relatively/models/my_model.model.lkml",
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 019-include-parent-folder-relatively diagnostics: getViews 1`] = `
+Map {
+  "first" => {
+    "file": {
+      "$file_name": "first",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/019-include-parent-folder-relatively/views/first.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/019-include-parent-folder-relatively/views/first",
+      "$file_type": "view",
+      "$strings": [
+        "@view.first",
+        "
+",
+      ],
+    },
+    "positions": {
+      "$name": {
+        "$p": [
+          1,
+          7,
+          1,
+          12,
+        ],
+      },
+      "$p": [
+        1,
+        1,
+        1,
+        15,
+      ],
+      "$type": {
+        "$p": [
+          1,
+          1,
+          1,
+          5,
+        ],
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/019-include-parent-folder-relatively/views/first.view.lkml",
+    "view": {
+      "$name": "first",
+      "$strings": [
+        "@$type",
+        ":",
+        " ",
+        "@$name",
+        " ",
+        "{",
+        "}",
+      ],
+      "$type": "view",
+    },
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 020-explore-extensions-issue diagnostics: diagnostics-020-explore-extensions-issue 1`] = `""`;
+
+exports[`LookML Test Projects Project 020-explore-extensions-issue diagnostics: getErrors 1`] = `
+Map {
+  "fct_client_invoice_paid.view" => [
+    {
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/020-explore-extensions-issue/views/fct_client_invoice_paid.view",
+      "message": "addPositions is due to unexpected condition at $.file['/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/020-explore-extensions-issue/views/fct_client_invoice_paid.view'].view.fct_client_invoice_paid.view",
+    },
+  ],
+}
+`;
+
+exports[`LookML Test Projects Project 020-explore-extensions-issue diagnostics: getExplores 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 020-explore-extensions-issue diagnostics: getModels 1`] = `
+Map {
+  "_base_dimension_joins" => {
+    "model": {
+      "$file_name": "_base_dimension_joins",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/020-explore-extensions-issue/models/_base_dimension_joins.model.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/020-explore-extensions-issue/models/_base_dimension_joins",
+      "$file_type": "model",
+      "$strings": [
+        [
+          "connection",
+          "connection",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+
+",
+        [
+          "include.0",
+          "include",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+",
+        [
+          "include.1",
+          "include",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+",
+        [
+          "include.2",
+          "include",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+
+",
+        "@explore.account",
+        "
+
+",
+        "@explore.client",
+        "
+
+",
+        "@explore.user",
+        "
+",
+      ],
+      "connection": "< some database >",
+      "explore": {
+        "account": {
+          "$name": "account",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "
+  ",
+            [
+              "extension",
+              "extension",
+              ":",
+              " ",
+              "@",
+            ],
+            "
+  ",
+            [
+              "view_name",
+              "view_name",
+              ":",
+              " ",
+              "@",
+            ],
+            "
+  ",
+            "@join.dim_account",
+            "
+",
+            "}",
+          ],
+          "$type": "explore",
+          "extension": "required",
+          "join": {
+            "dim_account": {
+              "$name": "dim_account",
+              "$strings": [
+                "@$type",
+                ":",
+                " ",
+                "@$name",
+                " ",
+                "{",
+                "
+    ",
+                [
+                  "from",
+                  "from",
+                  ":",
+                  " ",
+                  "@",
+                ],
+                "
+    ",
+                [
+                  "relationship",
+                  "relationship",
+                  ":",
+                  " ",
+                  "@",
+                ],
+                "
+    ",
+                [
+                  "view_label",
+                  "view_label",
+                  ":",
+                  " ",
+                  """,
+                  "@",
+                  """,
+                ],
+                "
+    ",
+                [
+                  "sql_on",
+                  "sql_on",
+                  ":",
+                  "@",
+                  ";;",
+                ],
+                "
+  ",
+                "}",
+              ],
+              "$type": "join",
+              "from": "dim_account",
+              "relationship": "many_to_one",
+              "sql_on": " \${fact.account_id} = \${dim_account.id} ",
+              "view_label": "Accounts",
+            },
+          },
+          "view_name": "fact",
+        },
+        "client": {
+          "$name": "client",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "
+  ",
+            [
+              "extension",
+              "extension",
+              ":",
+              " ",
+              "@",
+            ],
+            "
+  ",
+            [
+              "view_name",
+              "view_name",
+              ":",
+              " ",
+              "@",
+            ],
+            "
+  ",
+            "@join.dim_client",
+            "
+",
+            "}",
+          ],
+          "$type": "explore",
+          "extension": "required",
+          "join": {
+            "dim_client": {
+              "$name": "dim_client",
+              "$strings": [
+                "@$type",
+                ":",
+                " ",
+                "@$name",
+                " ",
+                "{",
+                "
+    ",
+                [
+                  "relationship",
+                  "relationship",
+                  ":",
+                  " ",
+                  "@",
+                ],
+                "
+    ",
+                [
+                  "view_label",
+                  "view_label",
+                  ":",
+                  " ",
+                  """,
+                  "@",
+                  """,
+                ],
+                "
+    ",
+                [
+                  "sql_on",
+                  "sql_on",
+                  ":",
+                  "@",
+                  ";;",
+                ],
+                "
+  ",
+                "}",
+              ],
+              "$type": "join",
+              "relationship": "many_to_one",
+              "sql_on": " \${fact.client_id} = \${dim_client.id} ",
+              "view_label": "Clients",
+            },
+          },
+          "view_name": "fact",
+        },
+        "user": {
+          "$name": "user",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "
+  ",
+            [
+              "extension",
+              "extension",
+              ":",
+              " ",
+              "@",
+            ],
+            "
+  ",
+            [
+              "view_name",
+              "view_name",
+              ":",
+              " ",
+              "@",
+            ],
+            "
+  ",
+            "@join.dim_user",
+            "
+",
+            "}",
+          ],
+          "$type": "explore",
+          "extension": "required",
+          "join": {
+            "dim_user": {
+              "$name": "dim_user",
+              "$strings": [
+                "@$type",
+                ":",
+                " ",
+                "@$name",
+                " ",
+                "{",
+                "
+    ",
+                [
+                  "relationship",
+                  "relationship",
+                  ":",
+                  " ",
+                  "@",
+                ],
+                "
+    ",
+                [
+                  "view_label",
+                  "view_label",
+                  ":",
+                  " ",
+                  """,
+                  "@",
+                  """,
+                ],
+                "
+    ",
+                [
+                  "sql_on",
+                  "sql_on",
+                  ":",
+                  "@",
+                  ";;",
+                ],
+                "
+  ",
+                "}",
+              ],
+              "$type": "join",
+              "relationship": "many_to_one",
+              "sql_on": " \${fact.user_id} = \${dim_user.id} ",
+              "view_label": "Users",
+            },
+          },
+          "view_name": "fact",
+        },
+      },
+      "include": [
+        "../views/dim_account.view.lkml",
+        "../views/dim_client.view.lkml",
+        "../views/dim_user.view.lkml",
+      ],
+    },
+    "positions": {
+      "$p": [
+        1,
+        1,
+        37,
+        0,
+      ],
+      "connection": {
+        "$p": [
+          1,
+          1,
+          1,
+          32,
+        ],
+      },
+      "explore": {
+        "account": {
+          "$name": {
+            "$p": [
+              7,
+              9,
+              7,
+              16,
+            ],
+          },
+          "$p": [
+            7,
+            0,
+            16,
+            1,
+          ],
+          "$type": {
+            "$p": [
+              7,
+              0,
+              7,
+              7,
+            ],
+          },
+          "extension": {
+            "$p": [
+              8,
+              2,
+              8,
+              21,
+            ],
+          },
+          "join": {
+            "dim_account": {
+              "$name": {
+                "$p": [
+                  10,
+                  8,
+                  10,
+                  19,
+                ],
+              },
+              "$p": [
+                10,
+                2,
+                15,
+                3,
+              ],
+              "$type": {
+                "$p": [
+                  10,
+                  2,
+                  10,
+                  6,
+                ],
+              },
+              "from": {
+                "$p": [
+                  11,
+                  4,
+                  11,
+                  21,
+                ],
+              },
+              "relationship": {
+                "$p": [
+                  12,
+                  4,
+                  12,
+                  29,
+                ],
+              },
+              "sql_on": {
+                "$p": [
+                  14,
+                  4,
+                  14,
+                  53,
+                ],
+              },
+              "view_label": {
+                "$p": [
+                  13,
+                  4,
+                  13,
+                  26,
+                ],
+              },
+            },
+          },
+          "view_name": {
+            "$p": [
+              9,
+              2,
+              9,
+              17,
+            ],
+          },
+        },
+        "client": {
+          "$name": {
+            "$p": [
+              18,
+              9,
+              18,
+              15,
+            ],
+          },
+          "$p": [
+            18,
+            0,
+            26,
+            1,
+          ],
+          "$type": {
+            "$p": [
+              18,
+              0,
+              18,
+              7,
+            ],
+          },
+          "extension": {
+            "$p": [
+              19,
+              2,
+              19,
+              21,
+            ],
+          },
+          "join": {
+            "dim_client": {
+              "$name": {
+                "$p": [
+                  21,
+                  8,
+                  21,
+                  18,
+                ],
+              },
+              "$p": [
+                21,
+                2,
+                25,
+                3,
+              ],
+              "$type": {
+                "$p": [
+                  21,
+                  2,
+                  21,
+                  6,
+                ],
+              },
+              "relationship": {
+                "$p": [
+                  22,
+                  4,
+                  22,
+                  29,
+                ],
+              },
+              "sql_on": {
+                "$p": [
+                  24,
+                  4,
+                  24,
+                  51,
+                ],
+              },
+              "view_label": {
+                "$p": [
+                  23,
+                  4,
+                  23,
+                  25,
+                ],
+              },
+            },
+          },
+          "view_name": {
+            "$p": [
+              20,
+              2,
+              20,
+              17,
+            ],
+          },
+        },
+        "user": {
+          "$name": {
+            "$p": [
+              28,
+              9,
+              28,
+              13,
+            ],
+          },
+          "$p": [
+            28,
+            0,
+            36,
+            1,
+          ],
+          "$type": {
+            "$p": [
+              28,
+              0,
+              28,
+              7,
+            ],
+          },
+          "extension": {
+            "$p": [
+              29,
+              2,
+              29,
+              21,
+            ],
+          },
+          "join": {
+            "dim_user": {
+              "$name": {
+                "$p": [
+                  31,
+                  8,
+                  31,
+                  16,
+                ],
+              },
+              "$p": [
+                31,
+                2,
+                35,
+                3,
+              ],
+              "$type": {
+                "$p": [
+                  31,
+                  2,
+                  31,
+                  6,
+                ],
+              },
+              "relationship": {
+                "$p": [
+                  32,
+                  4,
+                  32,
+                  29,
+                ],
+              },
+              "sql_on": {
+                "$p": [
+                  34,
+                  4,
+                  34,
+                  47,
+                ],
+              },
+              "view_label": {
+                "$p": [
+                  33,
+                  4,
+                  33,
+                  23,
+                ],
+              },
+            },
+          },
+          "view_name": {
+            "$p": [
+              30,
+              2,
+              30,
+              17,
+            ],
+          },
+        },
+      },
+      "include": {
+        "0": {
+          "$p": [
+            3,
+            0,
+            3,
+            41,
+          ],
+        },
+        "1": {
+          "$p": [
+            4,
+            0,
+            4,
+            40,
+          ],
+        },
+        "2": {
+          "$p": [
+            5,
+            0,
+            5,
+            38,
+          ],
+        },
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/020-explore-extensions-issue/models/_base_dimension_joins.model.lkml",
+  },
+  "core" => {
+    "model": {
+      "$file_name": "core",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/020-explore-extensions-issue/models/core.model.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/020-explore-extensions-issue/models/core",
+      "$file_type": "model",
+      "$strings": [
+        [
+          "include.0",
+          "include",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+",
+        [
+          "include.1",
+          "include",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+
+",
+        "@explore.fct_client_created",
+        "
+
+",
+        "@explore.fct_client_invoice_paid",
+        "
+
+",
+        "@explore.fct_user_signed_in",
+      ],
+      "explore": {
+        "fct_client_created": {
+          "$name": "fct_client_created",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "
+  ",
+            [
+              "extends",
+              "extends",
+              ":",
+              " ",
+              "[",
+              [
+                "0",
+                "@",
+                ",",
+                " ",
+              ],
+              [
+                "1",
+                "@",
+              ],
+              "]",
+            ],
+            "
+  ",
+            [
+              "from",
+              "from",
+              ":",
+              " ",
+              "@",
+            ],
+            "
+",
+            "}",
+          ],
+          "$type": "explore",
+          "extends": [
+            "account",
+            "client",
+          ],
+          "from": "fct_client_created",
+        },
+        "fct_client_invoice_paid": {
+          "$name": "fct_client_invoice_paid",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "
+  ",
+            [
+              "extends",
+              "extends",
+              ":",
+              " ",
+              "[",
+              [
+                "0",
+                "@",
+                ",",
+                " ",
+              ],
+              [
+                "1",
+                "@",
+                ",",
+                " ",
+              ],
+              [
+                "2",
+                "@",
+              ],
+              "]",
+            ],
+            "
+  ",
+            [
+              "from",
+              "from",
+              ":",
+              " ",
+              "@",
+            ],
+            "
+",
+            "}",
+          ],
+          "$type": "explore",
+          "extends": [
+            "account",
+            "client",
+            "user",
+          ],
+          "from": "fct_client_invoice_paid",
+        },
+        "fct_user_signed_in": {
+          "$name": "fct_user_signed_in",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "
+  ",
+            [
+              "extends",
+              "extends",
+              ":",
+              " ",
+              "[",
+              [
+                "0",
+                "@",
+                ",",
+                " ",
+              ],
+              [
+                "1",
+                "@",
+              ],
+              "]",
+            ],
+            "
+  ",
+            [
+              "from",
+              "from",
+              ":",
+              " ",
+              "@",
+            ],
+            "
+",
+            "}",
+          ],
+          "$type": "explore",
+          "extends": [
+            "account",
+            "client",
+          ],
+          "from": "fct_user_signed_in",
+        },
+      },
+      "include": [
+        "_base_dimension_joins.model.lkml",
+        "../views/fct_client_invoice_paid.view.lkml",
+      ],
+    },
+    "positions": {
+      "$p": [
+        1,
+        1,
+        17,
+        1,
+      ],
+      "explore": {
+        "fct_client_created": {
+          "$name": {
+            "$p": [
+              4,
+              9,
+              4,
+              27,
+            ],
+          },
+          "$p": [
+            4,
+            0,
+            7,
+            1,
+          ],
+          "$type": {
+            "$p": [
+              4,
+              0,
+              4,
+              7,
+            ],
+          },
+          "extends": {
+            "$p": [
+              5,
+              2,
+              5,
+              28,
+            ],
+            "0": {
+              "$p": [
+                5,
+                12,
+                5,
+                21,
+              ],
+            },
+            "1": {
+              "$p": [
+                5,
+                21,
+                5,
+                27,
+              ],
+            },
+          },
+          "from": {
+            "$p": [
+              6,
+              2,
+              6,
+              26,
+            ],
+          },
+        },
+        "fct_client_invoice_paid": {
+          "$name": {
+            "$p": [
+              9,
+              9,
+              9,
+              32,
+            ],
+          },
+          "$p": [
+            9,
+            0,
+            12,
+            1,
+          ],
+          "$type": {
+            "$p": [
+              9,
+              0,
+              9,
+              7,
+            ],
+          },
+          "extends": {
+            "$p": [
+              10,
+              2,
+              10,
+              34,
+            ],
+            "0": {
+              "$p": [
+                10,
+                12,
+                10,
+                21,
+              ],
+            },
+            "1": {
+              "$p": [
+                10,
+                21,
+                10,
+                29,
+              ],
+            },
+            "2": {
+              "$p": [
+                10,
+                29,
+                10,
+                33,
+              ],
+            },
+          },
+          "from": {
+            "$p": [
+              11,
+              2,
+              11,
+              31,
+            ],
+          },
+        },
+        "fct_user_signed_in": {
+          "$name": {
+            "$p": [
+              14,
+              9,
+              14,
+              27,
+            ],
+          },
+          "$p": [
+            14,
+            0,
+            17,
+            1,
+          ],
+          "$type": {
+            "$p": [
+              14,
+              0,
+              14,
+              7,
+            ],
+          },
+          "extends": {
+            "$p": [
+              15,
+              2,
+              15,
+              28,
+            ],
+            "0": {
+              "$p": [
+                15,
+                12,
+                15,
+                21,
+              ],
+            },
+            "1": {
+              "$p": [
+                15,
+                21,
+                15,
+                27,
+              ],
+            },
+          },
+          "from": {
+            "$p": [
+              16,
+              2,
+              16,
+              26,
+            ],
+          },
+        },
+      },
+      "include": {
+        "0": {
+          "$p": [
+            1,
+            1,
+            1,
+            44,
+          ],
+        },
+        "1": {
+          "$p": [
+            2,
+            0,
+            2,
+            53,
+          ],
+        },
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/020-explore-extensions-issue/models/core.model.lkml",
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 020-explore-extensions-issue diagnostics: getViews 1`] = `
+Map {
+  "dim_account" => {
+    "file": {
+      "$file_name": "dim_account",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/020-explore-extensions-issue/views/dim_account.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/020-explore-extensions-issue/views/dim_account",
+      "$file_type": "view",
+      "$strings": [
+        "@view.dim_account",
+        "
+",
+      ],
+    },
+    "positions": {
+      "$name": {
+        "$p": [
+          1,
+          7,
+          1,
+          18,
+        ],
+      },
+      "$p": [
+        1,
+        1,
+        1,
+        21,
+      ],
+      "$type": {
+        "$p": [
+          1,
+          1,
+          1,
+          5,
+        ],
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/020-explore-extensions-issue/views/dim_account.view.lkml",
+    "view": {
+      "$name": "dim_account",
+      "$strings": [
+        "@$type",
+        ":",
+        " ",
+        "@$name",
+        " ",
+        "{",
+        "}",
+      ],
+      "$type": "view",
+    },
+  },
+  "fct_client_invoice_paid" => {
+    "file": {
+      "$file_name": "fct_client_invoice_paid",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/020-explore-extensions-issue/views/fct_client_invoice_paid.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/020-explore-extensions-issue/views/fct_client_invoice_paid",
+      "$file_type": "view",
+      "$strings": [
+        "@view.fct_client_invoice_paid.view",
+        "
+",
+      ],
+    },
+    "positions": {
+      "view": {
+        "$errors": [
+          "addPositions is due to unexpected condition at $.file['/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/020-explore-extensions-issue/views/fct_client_invoice_paid.view'].view.fct_client_invoice_paid.view",
+        ],
+        "$p": [
+          1,
+          1,
+        ],
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/020-explore-extensions-issue/views/fct_client_invoice_paid.view.lkml",
+    "view": undefined,
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 021-include-import-transitively diagnostics: diagnostics-021-include-import-transitively 1`] = `
+"File: my_model.model.lkml
+
+"
+`;
+
+exports[`LookML Test Projects Project 021-include-import-transitively diagnostics: getErrors 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 021-include-import-transitively diagnostics: getExplores 1`] = `Map {}`;
+
+exports[`LookML Test Projects Project 021-include-import-transitively diagnostics: getModels 1`] = `
+Map {
+  "remote" => {
+    "model": {
+      "$file_name": "remote",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/021-include-import-transitively/imported_projects/my_remote_project/remote.model.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/021-include-import-transitively/imported_projects/my_remote_project/remote",
+      "$file_type": "model",
+      "$strings": [
+        [
+          "include",
+          "include",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+      ],
+      "include": "/views/remote.view.lkml",
+    },
+    "positions": {
+      "$p": [
+        1,
+        1,
+        1,
+        35,
+      ],
+      "include": {
+        "$p": [
+          1,
+          1,
+          1,
+          35,
+        ],
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/021-include-import-transitively/imported_projects/my_remote_project/remote.model.lkml",
+  },
+  "my_model" => {
+    "model": {
+      "$file_name": "my_model",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/021-include-import-transitively/my_model.model.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/021-include-import-transitively/my_model",
+      "$file_type": "model",
+      "$strings": [
+        [
+          "include.0",
+          "include",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+
+",
+        [
+          "include.1",
+          "include",
+          ":",
+          " ",
+          """,
+          "@",
+          """,
+        ],
+        "
+
+",
+        "@explore.my_view",
+      ],
+      "explore": {
+        "my_view": {
+          "$name": "my_view",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "}",
+          ],
+          "$type": "explore",
+        },
+      },
+      "include": [
+        "//my_remote_project/remote.model.lkml",
+        "/views/my_view.view.lkml",
+      ],
+    },
+    "positions": {
+      "$p": [
+        1,
+        1,
+        5,
+        19,
+      ],
+      "explore": {
+        "my_view": {
+          "$name": {
+            "$p": [
+              5,
+              9,
+              5,
+              16,
+            ],
+          },
+          "$p": [
+            5,
+            0,
+            5,
+            19,
+          ],
+          "$type": {
+            "$p": [
+              5,
+              0,
+              5,
+              7,
+            ],
+          },
+        },
+      },
+      "include": {
+        "0": {
+          "$p": [
+            1,
+            1,
+            1,
+            49,
+          ],
+        },
+        "1": {
+          "$p": [
+            3,
+            0,
+            3,
+            35,
+          ],
+        },
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/021-include-import-transitively/my_model.model.lkml",
+  },
+}
+`;
+
+exports[`LookML Test Projects Project 021-include-import-transitively diagnostics: getViews 1`] = `
+Map {
+  "remote" => {
+    "file": {
+      "$file_name": "remote",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/021-include-import-transitively/imported_projects/my_remote_project/views/remote.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/021-include-import-transitively/imported_projects/my_remote_project/views/remote",
+      "$file_type": "view",
+      "$strings": [
+        "@view.remote",
+      ],
+    },
+    "positions": {
+      "$name": {
+        "$p": [
+          1,
+          7,
+          1,
+          13,
+        ],
+      },
+      "$p": [
+        1,
+        1,
+        3,
+        1,
+      ],
+      "$type": {
+        "$p": [
+          1,
+          1,
+          1,
+          5,
+        ],
+      },
+      "dimension": {
+        "foo": {
+          "$name": {
+            "$p": [
+              2,
+              12,
+              2,
+              15,
+            ],
+          },
+          "$p": [
+            2,
+            1,
+            2,
+            18,
+          ],
+          "$type": {
+            "$p": [
+              2,
+              1,
+              2,
+              10,
+            ],
+          },
+        },
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/021-include-import-transitively/imported_projects/my_remote_project/views/remote.view.lkml",
+    "view": {
+      "$name": "remote",
+      "$strings": [
+        "@$type",
+        ":",
+        " ",
+        "@$name",
+        " ",
+        "{",
+        "
+	",
+        "@dimension.foo",
+        "	
+",
+        "}",
+      ],
+      "$type": "view",
+      "dimension": {
+        "foo": {
+          "$name": "foo",
+          "$strings": [
+            "@$type",
+            ":",
+            " ",
+            "@$name",
+            " ",
+            "{",
+            "}",
+          ],
+          "$type": "dimension",
+        },
+      },
+    },
+  },
+  "my_view" => {
+    "file": {
+      "$file_name": "my_view",
+      "$file_path": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/021-include-import-transitively/views/my_view.view.lkml",
+      "$file_rel": "/Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/021-include-import-transitively/views/my_view",
+      "$file_type": "view",
+      "$strings": [
+        "@view.my_view",
+        "
+",
+      ],
+    },
+    "positions": {
+      "$name": {
+        "$p": [
+          1,
+          7,
+          1,
+          14,
+        ],
+      },
+      "$p": [
+        1,
+        1,
+        3,
+        1,
+      ],
+      "$type": {
+        "$p": [
+          1,
+          1,
+          1,
+          5,
+        ],
+      },
+      "extends": {
+        "$p": [
+          2,
+          1,
+          2,
+          18,
+        ],
+        "0": {
+          "$p": [
+            2,
+            11,
+            2,
+            17,
+          ],
+        },
+      },
+    },
+    "uri": "/Users/rileylove/Looker/lookml-language-server/server//Users/rileylove/Looker/lookml-language-server/server/src/__tests__/test-projects/021-include-import-transitively/views/my_view.view.lkml",
+    "view": {
+      "$name": "my_view",
+      "$strings": [
+        "@$type",
+        ":",
+        " ",
+        "@$name",
+        " ",
+        "{",
+        "
+	",
+        [
+          "extends",
+          "extends",
+          ":",
+          " ",
+          "[",
+          [
+            "0",
+            "@",
+          ],
+          "]",
+        ],
+        "
+",
+        "}",
+      ],
+      "$type": "view",
+      "extends": [
+        "remote",
+      ],
+    },
+  },
+}
+`;
