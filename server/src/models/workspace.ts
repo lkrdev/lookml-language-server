@@ -39,47 +39,42 @@ export class WorkspaceModel {
     this.lookmlParser = new LookMLParser();
   }
 
-  /**
-   * Get all views in the workspace
-   */
+
+  public getView(name: string): LookmlViewWithFileInfo | undefined {
+    return this.views.get(name);
+  }
+
   public getViews(): Map<string, LookmlViewWithFileInfo> {
     return this.views;
+  }
+
+  public getViewsByFile(uri: string): string[] {
+    return this.viewsByFile.get(uri) ?? [];
   }
 
   public getErrorsByFileName(fileName: string): LookmlError[] {
     return this.errors.get(fileName) ?? [];
   }
 
-  public getExploresByFile(uri: DocumentUri): string[] | undefined {
-    return this.exploresByFile.get(uri);
-  }
 
-  /**
-   * Get a specific view by name
-   */
-  public getView(name: string): LookmlViewWithFileInfo | undefined {
-    return this.views.get(name);
-  }
-
-  /**
-   * Get all explores in the workspace
-   */
-  public getExplores(): Map<string, LookmlExploreWithFileInfo> {
-    return this.explores;
-  }
-
-  /**
-   * Get a specific explore by name
-   */
   public getExplore(name: string): LookmlExploreWithFileInfo | undefined {
     return this.explores.get(name);
   }
 
-  /**
-   * Get all models in the workspace
-   */
+  public getExplores(): Map<string, LookmlExploreWithFileInfo> {
+    return this.explores;
+  }
+
+  public getExploresByFile(uri: string): string[] {
+    return this.exploresByFile.get(uri) ?? [];
+  }
+
   public getModels(): Map<string, LookmlModelWithFileInfo> {
     return this.models;
+  }
+
+  public getModelsByFile(uri: string): string[] {
+    return this.modelsByFile.get(uri) ?? [];
   }
 
   /**
@@ -179,19 +174,30 @@ export class WorkspaceModel {
           const fileName = value.$file_name;
 
           const uri = `${process.cwd()}/${filePath}`;
+          const fileViewNames = this.viewsByFile.get(uri) || [];
+
           const filePositions = project.positions.file[viewName];
 
-          this.views.set(fileName, {
-            file: rest,
-            uri,
-            view: view?.[fileName],
-            positions: filePositions?.view?.[fileName],
+          if (!view) {
+            continue;
+          }
+
+          Object.entries(view).forEach(([key, value]) => {
+            this.views.set(key, {
+              file: rest,
+              uri,
+              view: view?.[key],
+              positions: filePositions?.view?.[key],
+            });
+  
+            
+            if (fileViewNames.includes(fileName)) {
+              return;
+            }
+
+            fileViewNames.push(fileName);
+            this.viewsByFile.set(uri, fileViewNames);
           });
-
-          const fileViewNames = this.viewsByFile.get(uri) || [];
-          fileViewNames.push(fileName);
-
-          this.viewsByFile.set(uri, fileViewNames);
           break;
         }
 
@@ -235,8 +241,11 @@ export class WorkspaceModel {
           });
 
           const modelFileNames = this.modelsByFile.get(uri) || [];
-          modelFileNames.push(fileName);
-          this.modelsByFile.set(uri, modelFileNames);
+
+          if (!modelFileNames.includes(fileName)) {
+            modelFileNames.push(fileName);
+            this.modelsByFile.set(uri, modelFileNames);
+          }
 
           const includes = typeof model.include === 'string' ? [model.include] : model.include;
           if (!includes) {
@@ -274,7 +283,6 @@ export class WorkspaceModel {
       });
     } catch (error) {
       console.error("updateDocument parse error", error);
-      console.error("JSON parse error", (error as any).toJSON());
     }
   }
 
