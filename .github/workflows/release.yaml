@@ -4,13 +4,6 @@ on:
   release:
     types: [created]
 
-env:
-  REGION: us-central1
-  SERVICE_NAME: explore-blend-api
-  APP_NAME: explore-blending
-  BUCKET_NAME: ${{ secrets.GCP_BUCKET_NAME }}
-  TAG: ${{ github.event.release.tag_name }}
-
 jobs:
   publish-vscode-extension:
     runs-on: ubuntu-latest
