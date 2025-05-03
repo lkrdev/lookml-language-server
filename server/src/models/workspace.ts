@@ -258,11 +258,6 @@ export class WorkspaceModel {
         }
       }
     }
-
-    console.log("views", this.views);
-    console.log("explores", this.explores);
-    console.log("models", this.models);
-    console.log("done");
   }
 
   /**
