@@ -81,6 +81,7 @@ export class DiagnosticsProvider {
 
   // Shared valid types between dimensions and measures
   private readonly sharedValidTypes = [
+    "time",
     "date",
     "number",
     "string",
