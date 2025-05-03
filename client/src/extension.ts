@@ -90,6 +90,7 @@ let client: LanguageClient;
 const outputChannel = vscode.window.createOutputChannel("LookML");
 
 export function activate(context: ExtensionContext) {
+  console.log("activate");
   // The server is implemented in node
   const serverModule = context.asAbsolutePath(
     path.join("server", "out", "server.js")

@@ -98,7 +98,7 @@
     "compile": "tsc --build",
     "watch": "tsc --build --watch",
     "lint": "eslint src --ext ts",
-    "test": "jest"
+    "test:server": "cd server && npm test"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",

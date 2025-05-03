@@ -145,20 +145,15 @@ export class AuthenticationService {
     }
 
     public async testConnection(config: LookerOAuthConfig): Promise<boolean> {
-        try {
-            await this.initializeOAuth(config);
-            const sdk = this.getSDK();
-            if (!sdk) {
-                return false;
-            }
-
-            // Verify connection by fetching user info
-            await sdk.ok(sdk.me());
-            return true;
-        } catch (error) {
-            console.error('Failed to connect to Looker:', error);
+        await this.initializeOAuth(config);
+        const sdk = this.getSDK();
+        if (!sdk) {
             return false;
         }
+
+        // Verify connection by fetching user info
+        await sdk.ok(sdk.me());
+        return true;
     }
 
     public async resetToRemote(project_name: string): Promise<void> {

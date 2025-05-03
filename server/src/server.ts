@@ -129,9 +129,9 @@ connection.onExecuteCommand(async (params: ExecuteCommandParams) => {
   const { command, arguments: args } = params;
   switch (command) {
     case "looker.authenticate":
+      console.log("looker.authenticate", args);
       const base_url = "https://gcpl252.cloud.looker.com";
       const client_id = "lkr-cli";
-
 
       try {
 
@@ -148,15 +148,16 @@ connection.onExecuteCommand(async (params: ExecuteCommandParams) => {
 
         if (success) {
           return {
-            success: true,
+            success,
             message: "Successfully authenticated with Looker",
           };
-        } else {
-          return {
-            success: false,
-            message: "Failed to authenticate with Looker",
-          };
         }
+        
+        
+        return {
+          success,
+          message: "Failed to authenticate with Looker",
+        };
       } catch (error) {
         logger.error("Authentication error:", error);
         return {

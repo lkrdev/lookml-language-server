@@ -417,37 +417,6 @@ export class LookMLParser {
   }
 
   /**
-   * Enhance the parse result with lookml-parser information
-   */
-  private async enhanceWithLookMLParser(document: TextDocument, result: ParseResult): Promise<void> {
-    if (!this.tempFilesDir) {
-      console.error('Temp directory not initialized');
-      return;
-    }
-
-    try {
-      const uri = document.uri;
-      const content = document.getText();
-      const fileUri = URI.parse(uri);
-      const fileName = path.basename(fileUri.fsPath);
-      
-      // Write document content to temp file for lookml-parser to read
-      const tempFilePath = path.join(this.tempFilesDir, fileName);
-      await fs.writeFile(tempFilePath, content);
-
-      // Parse the file using lookml-parser
-      const parsedProject = await parseFiles({
-        source: tempFilePath,
-      });
-
-      
-    } catch (error) {
-      console.error(`Error using lookml-parser for ${document.uri}:`, error);
-      // Continue with existing parser results if lookml-parser fails
-    }
-  }
-
-  /**
    * Generate diagnostics for a document using lookml-parser
    */
   public getDiagnostics(document: TextDocument): any[] {
