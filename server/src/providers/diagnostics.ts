@@ -19,7 +19,17 @@ import {
   LookMlViewPositions,
   LookmlExplore
 } from "lookml-parser";
-import { z, ZodError } from 'zod';
+import { ZodError } from 'zod';
+import {
+  dimensionSchema,
+  dimensionGroupSchema,
+  measureSchema,
+  setSchema,
+  exploreSchema,
+  dimensionValidTypes,
+  measureValidTypes,
+  dimensionGroupValidTypes
+} from '../schemas/lookml';
 
 export enum DiagnosticCode {
   // Syntax validation (10000-19999)
@@ -78,117 +88,6 @@ export enum DiagnosticCode {
 
 export class DiagnosticsProvider {
   private workspaceModel: WorkspaceModel;
-
-  // Shared valid types between dimensions and measures
-  private readonly sharedValidTypes = [
-    "time",
-    "date",
-    "number",
-    "string",
-    "yesno",
-    "zipcode",
-    "date_day_of_month",
-    "date_day_of_week",
-    "date_day_of_week_index",
-    "date_day_of_year",
-    "date_fiscal_month_num",
-    "date_fiscal_quarter",
-    "date_fiscal_quarter_of_year",
-    "date_fiscal_year",
-    "date_hour",
-    "date_hour2",
-    "date_hour3",
-    "date_hour4",
-    "date_hour6",
-    "date_hour8",
-    "date_hour12",
-    "date_hour_of_day",
-    "date_microsecond",
-    "date_millisecond",
-    "date_millisecond2",
-    "date_millisecond4",
-    "date_millisecond5",
-    "date_millisecond8",
-    "date_millisecond10",
-    "date_millisecond20",
-    "date_millisecond25",
-    "date_millisecond40",
-    "date_millisecond50",
-    "date_millisecond100",
-    "date_millisecond125",
-    "date_millisecond200",
-    "date_millisecond250",
-    "date_millisecond500",
-    "date_minute",
-    "date_minute2",
-    "date_minute3",
-    "date_minute4",
-    "date_minute5",
-    "date_minute6",
-    "date_minute10",
-    "date_minute12",
-    "date_minute15",
-    "date_minute20",
-    "date_minute30",
-    "date_month",
-    "date_month_name",
-    "date_month_num",
-    "date_quarter",
-    "date_quarter_of_year",
-    "date_raw",
-    "date_second",
-    "date_time",
-    "date_time_of_day",
-    "date_week",
-    "date_week_of_year",
-    "date_year"
-  ];
-
-  // Dimension-specific valid types (extends shared types)
-  private readonly dimensionValidTypes = [
-    ...this.sharedValidTypes,
-    "bin",
-    "distance",
-    "location",
-    "tier",
-    "duration_day",
-    "duration_hour",
-    "duration_minute",
-    "duration_month",
-    "duration_quarter",
-    "duration_second",
-    "duration_week",
-    "duration_year"
-  ];
-
-  // Measure-specific valid types (extends shared types)
-  private readonly measureValidTypes = [
-    ...this.sharedValidTypes,
-    "average",
-    "average_distinct",
-    "count",
-    "count_distinct",
-    "int",
-    "list",
-    "max",
-    "median",
-    "median_distinct",
-    "min",
-    "percent_of_previous",
-    "percent_of_total",
-    "percentile",
-    "percentile_distinct",
-    "running_total",
-    "sum",
-    "sum_distinct",
-    "date_date"
-  ];
-
-  private readonly dimensionGroupValidTypes = [
-    ...this.sharedValidTypes,
-    "time",
-    "duration"
-  ];
 
   constructor(workspaceModel: WorkspaceModel) {
     this.workspaceModel = workspaceModel;
@@ -891,157 +790,76 @@ export class DiagnosticsProvider {
     return null;
   }
 
+  // Then in the validation method:
+  protected validateProperties(document: TextDocument): Diagnostic[] {
+    let diagnostics: Diagnostic[] = [];
 
-  // Base schemas for common properties
-  private recursiveStringArray: z.ZodType<unknown> = z.lazy(() =>
-    z.union([z.string(), z.array(this.recursiveStringArray)])
-  );
+    // Parse the document into a structure
+    const parsedStructure = this.getFileStructure(document);
 
+    if (parsedStructure.views.length) {
+      for (const viewDetails of parsedStructure.views) {
+        const positions = viewDetails.positions;
 
-  private baseProperties = z.object({
-    $name: z.string(),
-    $type: z.string(),
-    $strings: this.recursiveStringArray,
-    label: z.string().optional(),
-    description: z.string().optional(),
-    hidden: z.boolean().optional(),
-    view_label: z.string().optional(),
-    group_label: z.string().optional(),
-    tags: z.array(z.string()).optional(),
-    value_format_name: z.string().optional(),
-  });
+        Object.entries(viewDetails.view).forEach(([key, value]) => {
+          switch (key) {
+            case "dimension":
+              const dimensionDiagnostics = this.validateDimension(value, positions);
+              diagnostics = [...diagnostics, ...dimensionDiagnostics];
+              break;
+            case "dimension_group":
+              const dimensionGroupDiagnostics = this.validateDimensionGroup(value, positions);
+              diagnostics = [...diagnostics, ...dimensionGroupDiagnostics];
+              break;
+            case "measure":
+              const measureDiagnostics = this.validateMeasure({
+                measures: value,
+                viewDetails
+              });
+              diagnostics = [...diagnostics, ...measureDiagnostics];
+              break;
+            case "set":
+              const setDiagnostics = this.validateSet({
+                sets: value,
+                viewDetails
+              });
+              diagnostics = [...diagnostics, ...setDiagnostics];
+              break;
+          }
+        });
+      }
+    }
 
-  private linkSchema = z.object({
-    label: z.string(),
-    $name: z.string().optional(),
-    $type: z.string(),
-    $strings: this.recursiveStringArray,
-    icon_url: z.string().optional(),
-    url: z.string(),
-  }).strict();
+    if (parsedStructure.models.length) {
+      for (const modelDetails of parsedStructure.models) {
+        const modelDiagnostics = this.validateModel(modelDetails);
+        diagnostics = [...diagnostics, ...modelDiagnostics];
+      }
+    }
 
-  private actionParamSchema = z.object({
-    name: z.string(),
-    value: z.string().optional(),
-    required: z.boolean().optional(),
-    default: z.string().optional(),
-    type: z.enum(['textarea']).optional(),
-  });
-  
-  private actionSchema = z.object({
-    label: z.string(),
-    url: z.string(),
-    icon_url: z.string().optional(),
-    param: this.actionParamSchema.optional(),
-    form_param: z.union([this.actionParamSchema, z.array(this.actionParamSchema)]).optional(),
-  });
+    return diagnostics;
+  }
 
-  // Dimension schema
-  private dimensionSchema = this.baseProperties.extend({
-    map_layer_name: z.string().optional(),
-    primary_key: z.boolean().optional(),
-    sql_end: z.string().optional(),
-    sql_start: z.string().optional(),
-    sql: z.string().optional(),
-    type: z.enum(this.dimensionValidTypes as [string, ...string[]]).optional(),
-    value_format: z.string().optional(),
-    link: this.linkSchema.optional(),
-    style: z.enum(['integer', 'float', 'ordinal']).optional(),
-    tiers: z.array(z.string()).optional(),
-    action: this.actionSchema.optional(), // ✅ added
-  }).strict();
+  public getFileStructure(document: TextDocument): {
+    views: LookmlViewWithFileInfo[];
+    explores: LookmlExploreWithFileInfo[];
+    models: LookmlModelWithFileInfo[];
+  } {
+    const uri = document.uri.replace("file://", "");
+    const views = (this.workspaceModel.getViewsByFile(uri) || [])
+      .map(viewName => this.workspaceModel.getView(viewName))
+      .filter((v): v is LookmlViewWithFileInfo => v !== undefined);
 
-  // Dimension group schema
-  private dimensionGroupSchema = this.baseProperties.extend({
-    convert_tz: z.boolean().optional(),
-    datatype: z.enum(['date', 'datetime', 'unixtime']).optional(),
-    sql_end: z.string().optional(),
-    sql_start: z.string().optional(),
-    sql: z.string(),
-    timeframes: z.array(
-      z.enum([
-        'raw',
-        'time',
-        'date',
-        'week',
-        'month',
-        'quarter',
-        'year',
-        'day_of_week',
-        'day_of_month',
-        'day_of_year',
-        'week_of_year',
-        'month_of_year',
-        'quarter_of_year',
-        'hour',
-        'minute',
-        'second',
-        'hour_of_day',
-        'minute_of_hour',
-        'second_of_minute',
-        'time_of_day',
-        'day_of_week_index',
-        'week_start_date',
-        'month_name',
-        'quarter_name',
-        'day_name',
-      ])
-    ),
-    type: z.literal('time'),
-  }).strict();
+    const explores = (this.workspaceModel.getExploresByFile(uri) || [])
+      .map(exploreName => this.workspaceModel.getExplore(exploreName))
+      .filter((e): e is LookmlExploreWithFileInfo => e !== undefined);
 
-  // Measure schema
-  private measureFiltersSchema = z.union([
-    z.object({
-      field: z.string(),
-      value: z.string(),
-    }),
-    z.record(z.string(), z.string())
-  ]);
-  
-  private measureSchema = this.baseProperties.extend({
-    drill_fields: z.array(z.string()).optional(),
-    filters: this.measureFiltersSchema.optional(),
-    link: this.linkSchema.optional(),
-    percentile: z.string().min(0).max(100).optional(),
-    sql: z.string().optional(),
-    type: z.enum(this.measureValidTypes as [string, ...string[]]),
-    value_format: z.string().optional(),
-  }).strict();
+    const models = (this.workspaceModel.getModelsByFile(uri) || [])
+      .map(modelName => this.workspaceModel.getModel(modelName))
+      .filter((m): m is LookmlModelWithFileInfo => m !== undefined);
 
-  // Set schema
-  private setSchema = this.baseProperties.extend({
-    fields: z.array(z.string())
-  }).strict();
-
-  private joinSchema = this.baseProperties.extend({
-    type: z.enum(['left_outer', 'inner', 'full_outer', 'cross']).optional(),
-    relationship: z.enum(['one_to_one', 'one_to_many', 'many_to_one', 'many_to_many']).optional(),
-    sql_on: z.string().optional(),
-    sql_where: z.string().optional(),
-    sql_having: z.string().optional(),
-    from: z.string().optional(),
-    fields: z.array(z.string()).optional(),
-    required_joins: z.array(z.string()).optional(),
-    foreign_key: z.string().optional(),
-    view_label: z.string().optional(),
-    outer_only: z.boolean().optional(),
-  }).strict();
-
-  // Explore schema
-  private exploreSchema = this.baseProperties.extend({
-    view_name: z.string().optional(),
-    from: z.string().optional(),
-    extends: z.string().optional(),
-    join: z.record(z.string(), this.joinSchema).optional(),
-  }).strict();
-
-  private suggestionsSchema = z.array(
-    z.object({
-      label: z.string(),
-      value: z.string(),
-    })
-  );
+    return { views, explores, models };
+  }
 
   private validateSet({ viewDetails, sets }: {
     viewDetails: LookmlViewWithFileInfo,
@@ -1052,7 +870,7 @@ export class DiagnosticsProvider {
 
     Object.entries(sets).forEach(([setName, set]) => {
       try {
-        this.setSchema.parse(set);
+        setSchema.parse(set);
 
         for (const [index, field] of set.fields.entries()) {
           let fieldName = field;
@@ -1155,7 +973,7 @@ export class DiagnosticsProvider {
 
     Object.values(dimensions).forEach((dimension) => {
       try {
-        this.dimensionSchema.parse(dimension);
+        dimensionSchema.parse(dimension);
       } catch (error: ZodError | unknown) {
         if (error instanceof ZodError) {
           for (const issue of error.issues) {
@@ -1206,7 +1024,7 @@ export class DiagnosticsProvider {
 
     Object.values(measures).forEach((measure) => {
       try {
-        this.measureSchema.parse(measure);
+        measureSchema.parse(measure);
 
         if (measure.drill_fields) {
           for (const [index, drillField] of measure.drill_fields.entries()) {
@@ -1336,7 +1154,7 @@ export class DiagnosticsProvider {
 
     Object.values(dimensionGroups).forEach((dimensionGroup) => {
       try {
-        this.dimensionGroupSchema.parse(dimensionGroup);
+        dimensionGroupSchema.parse(dimensionGroup);
       } catch (error: ZodError | unknown) {
         if (error instanceof ZodError) {
           for (const issue of error.issues) {
@@ -1398,7 +1216,7 @@ export class DiagnosticsProvider {
 
           Object.values(models).forEach((explore) => {
             try {
-              this.exploreSchema.parse(explore);
+              exploreSchema.parse(explore);
             } catch (error: ZodError | unknown) {
               if (error instanceof ZodError) {
                 for (const issue of error.issues) {
@@ -1447,76 +1265,5 @@ export class DiagnosticsProvider {
     });
 
     return diagnostics;
-  }
-
-  // Then in the validation method:
-  protected validateProperties(document: TextDocument): Diagnostic[] {
-    let diagnostics: Diagnostic[] = [];
-
-    // Parse the document into a structure
-    const parsedStructure = this.getFileStructure(document);
-
-    if (parsedStructure.views.length) {
-      for (const viewDetails of parsedStructure.views) {
-        const positions = viewDetails.positions;
-
-        Object.entries(viewDetails.view).forEach(([key, value]) => {
-          switch (key) {
-            case "dimension":
-              const dimensionDiagnostics = this.validateDimension(value, positions);
-              diagnostics = [...diagnostics, ...dimensionDiagnostics];
-              break;
-            case "dimension_group":
-              const dimensionGroupDiagnostics = this.validateDimensionGroup(value, positions);
-              diagnostics = [...diagnostics, ...dimensionGroupDiagnostics];
-              break;
-            case "measure":
-              const measureDiagnostics = this.validateMeasure({
-                measures: value,
-                viewDetails
-              });
-              diagnostics = [...diagnostics, ...measureDiagnostics];
-              break;
-            case "set":
-              const setDiagnostics = this.validateSet({
-                sets: value,
-                viewDetails
-              });
-              diagnostics = [...diagnostics, ...setDiagnostics];
-              break;
-          }
-        });
-      }
-    }
-
-    if (parsedStructure.models.length) {
-      for (const modelDetails of parsedStructure.models) {
-        const modelDiagnostics = this.validateModel(modelDetails);
-        diagnostics = [...diagnostics, ...modelDiagnostics];
-      }
-    }
-
-    return diagnostics;
-  }
-
-  public getFileStructure(document: TextDocument): {
-    views: LookmlViewWithFileInfo[];
-    explores: LookmlExploreWithFileInfo[];
-    models: LookmlModelWithFileInfo[];
-  } {
-    const uri = document.uri.replace("file://", "");
-    const views = (this.workspaceModel.getViewsByFile(uri) || [])
-      .map(viewName => this.workspaceModel.getView(viewName))
-      .filter((v): v is LookmlViewWithFileInfo => v !== undefined);
-
-    const explores = (this.workspaceModel.getExploresByFile(uri) || [])
-      .map(exploreName => this.workspaceModel.getExplore(exploreName))
-      .filter((e): e is LookmlExploreWithFileInfo => e !== undefined);
-
-    const models = (this.workspaceModel.getModelsByFile(uri) || [])
-      .map(modelName => this.workspaceModel.getModel(modelName))
-      .filter((m): m is LookmlModelWithFileInfo => m !== undefined);
-
-    return { views, explores, models };
   }
 }
