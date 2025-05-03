@@ -910,34 +910,45 @@ export class DiagnosticsProvider {
 
   // Dimension schema
   private dimensionSchema = this.baseProperties.extend({
-    type: z.enum(this.dimensionValidTypes as [string, ...string[]]),
-    sql: z.string().optional(),
-    sql_start: z.string().optional(),
-    sql_end: z.string().optional(),
+    map_layer_name: z.string().optional(),
     primary_key: z.boolean().optional(),
-    map_layer_name: z.string().optional()
+    sql_end: z.string().optional(),
+    sql_start: z.string().optional(),
+    sql: z.string().optional(),
+    type: z.enum(this.dimensionValidTypes as [string, ...string[]]),
+    value_format: z.string().optional(),
     // ... other dimension properties
   }).strict();
 
   // Dimension group schema
   private dimensionGroupSchema = this.baseProperties.extend({
-    type: z.literal('time'), // dimension_groups must have type: time
+    convert_tz: z.boolean().optional(),
+    datatype: z.enum(['date', 'datetime', 'unixtime']).optional(),
+    sql_end: z.string().optional(),
+    sql_start: z.string().optional(),
+    sql: z.string(),
+
     timeframes: z.array(
       z.enum(['raw', 'time', 'date', 'week', 'month', 'quarter', 'year'])
     ),
-    convert_tz: z.boolean().optional(),
-    datatype: z.enum(['date', 'datetime', 'unixtime']).optional(),
-    sql: z.string(),
-    sql_start: z.string().optional(),
-    sql_end: z.string().optional(),
+    type: z.literal('time'),
   }).strict();
 
   // Measure schema
+  private measureFiltersSchema = z.union([
+    z.object({
+      field: z.string(),
+      value: z.string(),
+    }),
+    z.record(z.string(), z.string())
+  ]);
+  
   private measureSchema = this.baseProperties.extend({
-    type: z.enum(this.measureValidTypes as [string, ...string[]]),
-    sql: z.string().optional(),
     drill_fields: z.array(z.string()).optional(),
-    // ... other measure properties
+    sql: z.string().optional(),
+    type: z.enum(this.measureValidTypes as [string, ...string[]]),
+    value_format: z.string().optional(),
+    filters: this.measureFiltersSchema.optional(),
   }).strict();
 
   // Set schema
