@@ -266,10 +266,11 @@ export class WorkspaceModel {
 
     // Remove existing data for this file
     this.clearDocumentData(uri);
-
+    
+    const cleanUri = uri.replace(`file://${process.cwd()}/`, "");
     try {
       await this.parseFiles({
-        source: uri.replace("file://", ""),
+        source: cleanUri,
       });
     } catch (error) {
       console.error("updateDocument parse error", error);

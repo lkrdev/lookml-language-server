@@ -6,6 +6,7 @@ import {
 } from 'vscode-languageserver/node';
 import { WorkspaceModel } from '../models/workspace';
 
+
 export class DefinitionProvider {
     private workspaceModel: WorkspaceModel;
 
