@@ -1,0 +1,33 @@
+name: Release Docker Image
+
+on:
+  release:
+    types: [created]
+
+env:
+  REGION: us-central1
+  SERVICE_NAME: explore-blend-api
+  APP_NAME: explore-blending
+  BUCKET_NAME: ${{ secrets.GCP_BUCKET_NAME }}
+  TAG: ${{ github.event.release.tag_name }}
+
+jobs:
+  publish-vscode-extension:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: "read"
+      id-token: "write"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Replace version in package.json
+        run: |
+          find . -name "package.json" -exec sed -i "s/\"version\": \".*\"/\"version\": \"${{ env.TAG }}\"/" {} +
+
+      - name: Install vsce
+        run: npm install -g @vscode/vsce
+
+      - name: Publish VSCode Extension
+        run: vsce publish -p ${{ secrets.VSCE_TOKEN }}
