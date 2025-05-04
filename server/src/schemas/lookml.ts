@@ -244,24 +244,25 @@ export const setSchema = baseProperties.extend({
 
 // Join schema
 export const joinSchema = baseProperties.extend({
-  type: z.enum(['left_outer', 'inner', 'full_outer', 'cross']).optional(),
+  fields: z.array(z.string()).optional(),
+  foreign_key: z.string().optional(),
+  from: z.string().optional(),
+  outer_only: z.boolean().optional(),
   relationship: z.enum(['one_to_one', 'one_to_many', 'many_to_one', 'many_to_many']).optional(),
+  required_joins: z.array(z.string()).optional(),
+  sql_having: z.string().optional(),
   sql_on: z.string().optional(),
   sql_where: z.string().optional(),
-  sql_having: z.string().optional(),
-  from: z.string().optional(),
-  fields: z.array(z.string()).optional(),
-  required_joins: z.array(z.string()).optional(),
-  foreign_key: z.string().optional(),
+  sql: z.string().optional(),
+  type: z.enum(['left_outer', 'inner', 'full_outer', 'cross']).optional(),
   view_label: z.string().optional(),
-  outer_only: z.boolean().optional(),
 }).strict();
 
 // Explore schema
 export const exploreSchema = baseProperties.extend({
   view_name: z.string().optional(),
   from: z.string().optional(),
-  extends: z.string().optional(),
+  extends: z.array(z.string()).optional(),
   join: z.record(z.string(), joinSchema).optional(),
 }).strict();
 

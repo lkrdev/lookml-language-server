@@ -207,7 +207,7 @@ declare module "lookml-parser" {
         description?: string;
         hidden?: boolean;
         from?: string;
-        extends?: string | string[];
+        extends?: string[];
         extension?: boolean;
         sql_always_where?: string;
         sql_always_having?: string;
