@@ -129,12 +129,9 @@ connection.onExecuteCommand(async (params: ExecuteCommandParams) => {
   const { command, arguments: args } = params;
   switch (command) {
     case "looker.authenticate":
-      const base_url = "https://gcpl252.cloud.looker.com";
-      const client_id = "lkr-cli";
-
+      const [base_url, client_id] = args ?? [];
 
       try {
-
         if (!authService) {
           authService = new AuthenticationService();
         }
