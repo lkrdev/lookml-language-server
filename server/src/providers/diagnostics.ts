@@ -26,9 +26,6 @@ import {
   measureSchema,
   setSchema,
   exploreSchema,
-  dimensionValidTypes,
-  measureValidTypes,
-  dimensionGroupValidTypes
 } from '../schemas/lookml';
 
 export enum DiagnosticCode {
@@ -103,7 +100,7 @@ export class DiagnosticsProvider {
     diagnostics.push(...this.validateSyntax(document));
     isView ?
       diagnostics.push(...this.validateViewReferences(document)) :
-      diagnostics.push(...this.validateReferences(document));
+      diagnostics.push(...this.validateModelReferences(document));
     diagnostics.push(...this.validateProperties(document));
 
     const fileName = document.uri.split("/").pop() ?? "";
@@ -1292,6 +1289,7 @@ export class DiagnosticsProvider {
 
   private validateModel(modelDetails: LookmlModelWithFileInfo): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
+    const modelIncludedViews = this.workspaceModel.getIncludedViewsForModel(modelDetails.model.$file_name);
 
     Object.entries(modelDetails.model).forEach(([key, value]) => {
       switch (key) {
@@ -1305,6 +1303,29 @@ export class DiagnosticsProvider {
           Object.values(models).forEach((explore) => {
             try {
               exploreSchema.parse(explore);
+
+              if (explore.extends) {
+                for (const [index, field] of explore.extends.entries()) {
+                  if (!modelIncludedViews?.has(field)) {
+                    const startLine = positions.explore?.[explore.$name]?.extends?.[index]?.$p[0];
+                    const startCharater = positions.explore?.[explore.$name]?.extends?.[index]?.$p[1];
+                    const endLine = positions.explore?.[explore.$name]?.extends?.[index]?.$p[2];
+                    const endCharater = startCharater + field.length;
+
+
+                    diagnostics.push({
+                      severity: DiagnosticSeverity.Error,
+                      range: {
+                        start: { line: startLine - 1, character: startCharater },
+                        end: { line: endLine - 1, character: endCharater }
+                      },
+                      message: `Extend View: "${field}" not found in model "${modelDetails.model.$file_name}"`,
+                      source: "lookml-lsp",
+                      code: DiagnosticCode.EXPLORE_VIEW_NOT_FOUND
+                    })
+                  }
+                }
+              }
             } catch (error: ZodError | unknown) {
               if (error instanceof ZodError) {
                 for (const issue of error.issues) {
@@ -1353,5 +1374,181 @@ export class DiagnosticsProvider {
     });
 
     return diagnostics;
+  }
+
+  private validateModelReferences(document: TextDocument): Diagnostic[] {
+    const diagnostics: Diagnostic[] = [];
+    const modelName = this.workspaceModel.getModelNameFromUri(document.uri);
+    if (!modelName) return diagnostics;
+
+    const model = this.workspaceModel.getModel(modelName);
+    if (!model) return diagnostics;
+
+    const includedViews = this.workspaceModel.getIncludedViewsForModel(modelName) || new Set();
+
+    // Track explores and their available views
+    const exploreAvailableViews: Map<string, Set<string>> = new Map();
+
+    // First pass: build explore context and available views
+    if (model.model.explore) {
+      Object.entries(model.model.explore).forEach(([exploreName, explore]) => {
+        // Initialize available views for this explore
+
+        const exploreViewName = this.workspaceModel.getView(exploreName);
+        if (exploreViewName) return;
+
+        const availableViews = new Set<string>();
+        if (exploreViewName) {
+          availableViews.add(exploreName);
+        };
+
+        exploreAvailableViews.set(exploreName, availableViews);
+
+        // Add the base view
+        if (explore.from) {
+          availableViews.add(explore.from);
+        }
+
+        // Add joined views
+        if (explore.join) {
+          Object.keys(explore.join).forEach(joinName => {
+            availableViews.add(joinName);
+          });
+        }
+      });
+    }
+
+    // Second pass: validate references
+    if (model.model.explore) {
+      Object.entries(model.model.explore).forEach(([exploreName, explore]) => {
+        const availableViews = exploreAvailableViews.get(exploreName);
+
+        console.log("exploreName availableViews", exploreName, availableViews);
+        if (!availableViews) return;
+
+        // Validate base view
+        if (explore.from) {
+          const viewName = explore.from;
+          const viewDetails = this.workspaceModel.getView(viewName);
+          if (!viewDetails) {
+            diagnostics.push({
+              severity: DiagnosticSeverity.Error,
+              range: this.getRangeFromPositions(model.positions, exploreName, 'from'),
+              message: `Referenced view "${viewName}" not found in workspace`,
+              source: "lookml-lsp",
+              code: DiagnosticCode.VIEW_REF_VIEW_NOT_FOUND
+            });
+          } else if (!includedViews.has(viewName)) {
+            diagnostics.push({
+              severity: DiagnosticSeverity.Error,
+              range: this.getRangeFromPositions(model.positions, exploreName, 'from'),
+              message: `View "${viewName}" exists but is not included in this model`,
+              source: "lookml-lsp",
+              code: DiagnosticCode.VIEW_REF_VIEW_NOT_INCLUDED
+            });
+          }
+        }
+
+        // Validate joins
+        if (explore.join) {
+          Object.entries(explore.join).forEach(([joinName, join]) => {
+            const viewDetails = this.workspaceModel.getView(joinName);
+            if (!viewDetails) {
+              diagnostics.push({
+                severity: DiagnosticSeverity.Error,
+                range: this.getRangeFromPositions(model.positions, exploreName, 'join', joinName),
+                message: `Referenced view "${joinName}" not found in workspace`,
+                source: "lookml-lsp",
+                code: DiagnosticCode.JOIN_VIEW_NOT_FOUND
+              });
+            } else if (!includedViews.has(joinName)) {
+              diagnostics.push({
+                severity: DiagnosticSeverity.Error,
+                range: this.getRangeFromPositions(model.positions, exploreName, 'join', joinName),
+                message: `View "${joinName}" exists but is not included in this model`,
+                source: "lookml-lsp",
+                code: DiagnosticCode.JOIN_VIEW_NOT_INCLUDED
+              });
+            }
+
+            // Validate sql_on references
+            if (join.sql_on) {
+              const fieldRefPattern = /\$\{([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\}/g;
+              let fieldMatch;
+
+              const sqlOnPosition = model.positions.explore?.[exploreName]?.join?.[joinName]?.sql_on;
+              const startLine = sqlOnPosition?.$p[0];
+              const startCharater = sqlOnPosition?.$p[1];
+              const endLine = sqlOnPosition?.$p[2];
+              const endCharater = sqlOnPosition?.$p[3];
+
+              while ((fieldMatch = fieldRefPattern.exec(join.sql_on)) !== null) {
+                const viewName = fieldMatch[1];
+                const fieldName = fieldMatch[2];
+
+                // Check if view exists and is available
+                const viewDetails = this.workspaceModel.getView(viewName);
+                if (!viewDetails) {
+                  diagnostics.push({
+                    severity: DiagnosticSeverity.Error,
+                    range: {
+                      start: { line: startLine - 1, character: startCharater },
+                      end: { line: endLine - 1, character: endCharater }
+                    },
+                    message: `Referenced view "${viewName}" not found in workspace`,
+                    source: "lookml-lsp",
+                    code: DiagnosticCode.SQL_REF_VIEW_NOT_FOUND
+                  });
+                } else if (!availableViews.has(viewName)) {
+                  diagnostics.push({
+                    severity: DiagnosticSeverity.Error,
+                    range: {
+                      start: { line: startLine - 1, character: startCharater },
+                      end: { line: endLine - 1, character: endCharater }
+                    },
+                    message: `View "${viewName}" is not available in this explore context. It must be joined before it can be referenced.`,
+                    source: "lookml-lsp",
+                    code: DiagnosticCode.SQL_REF_VIEW_NOT_AVAILABLE
+                  });
+                } else if (!viewDetails.view.measure?.[fieldName] && 
+                          !viewDetails.view.dimension?.[fieldName] && 
+                          !viewDetails.view.dimension_group?.[fieldName]) {
+                  diagnostics.push({
+                    severity: DiagnosticSeverity.Error,
+                    range: {
+                      start: { line: startLine - 1, character: startCharater },
+                      end: { line: endLine - 1, character: endCharater }
+                    },
+                    message: `Field "${fieldName}" not found in view "${viewName}"`,
+                    source: "lookml-lsp",
+                    code: DiagnosticCode.SQL_REF_FIELD_NOT_FOUND
+                  });
+                }
+              }
+            }
+          });
+        }
+      });
+    }
+
+    return diagnostics;
+  }
+
+  private getRangeFromPositions(positions: any, ...path: string[]): Range {
+    let current = positions;
+    for (const part of path) {
+      if (!current) break;
+      current = current[part];
+    }
+    
+    if (!current || !current.$p) {
+      return Range.create(0, 0, 0, 0);
+    }
+
+    const [startLine, startChar, endLine, endChar] = current.$p;
+    return Range.create(
+      Position.create(startLine - 1, startChar),
+      Position.create(endLine - 1, endChar)
+    );
   }
 }
