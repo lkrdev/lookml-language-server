@@ -804,7 +804,10 @@ export class DiagnosticsProvider {
         Object.entries(viewDetails.view).forEach(([key, value]) => {
           switch (key) {
             case "dimension":
-              const dimensionDiagnostics = this.validateDimension(value, positions);
+              const dimensionDiagnostics = this.validateDimension({
+                viewDetails,
+                dimensions: value
+              });
               diagnostics = [...diagnostics, ...dimensionDiagnostics];
               break;
             case "dimension_group":
@@ -968,20 +971,108 @@ export class DiagnosticsProvider {
     return diagnostics;
   }
 
-  private validateDimension(dimensions: { [key: string]: LookmlDimension }, positions: LookMlViewPositions): Diagnostic[] {
+  private validateDimension({ viewDetails, dimensions }: {
+    viewDetails: LookmlViewWithFileInfo,
+    dimensions: { [key: string]: LookmlDimension },
+  }): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
+    const positions = viewDetails.positions;
 
     Object.values(dimensions).forEach((dimension) => {
       try {
         dimensionSchema.parse(dimension);
+        
+        if (dimension.drill_fields) {
+          for (const [index, drillField] of dimension.drill_fields.entries()) {
+            let fieldName = drillField;
+            let targetedViewName: string | undefined = viewDetails.view.$name;
+            let targetedViewDetails: LookmlViewWithFileInfo | undefined = viewDetails;
+
+            const drillFieldPosition = positions.dimension?.[dimension.$name]?.drill_fields?.[index];
+            if (!drillFieldPosition) {
+              throw new Error(`No position found for drill field ${drillField}`);
+            }
+
+            if (drillField.includes("*")) {
+              const fieldWithoutAsterisk = drillField.replace("*", "");
+
+              if (!targetedViewDetails?.view?.set?.[fieldWithoutAsterisk]) {
+                const startCharater = drillFieldPosition.$p[1];
+                const endCharater = targetedViewName ? startCharater + fieldWithoutAsterisk.length : drillFieldPosition.$p[3];
+                diagnostics.push({
+                  severity: DiagnosticSeverity.Error,
+                  range: {
+                    start: { line: drillFieldPosition.$p[0] - 1, character: startCharater },
+                    end: { line: drillFieldPosition.$p[2] - 1, character: endCharater }
+                  },
+                  message: `Set "${fieldWithoutAsterisk}" not found in view "${targetedViewName}"`,
+                  source: "lookml-lsp",
+                  code: DiagnosticCode.DRILL_FIELDS_SET_NOT_FOUND
+                });
+
+              }
+              continue;
+            }
+
+            if (drillField.includes(".")) {
+              const drillFieldParts = drillField.split(".");
+              targetedViewName = drillFieldParts[0];
+              fieldName = drillFieldParts[1];
+              targetedViewDetails = this.workspaceModel.getView(targetedViewName);
+            }
+
+            const fieldLength = fieldName.length;
+
+            if (!targetedViewDetails) {
+              const startCharater = drillFieldPosition.$p[1];
+              const endCharater = targetedViewName ? startCharater + targetedViewName.length : drillFieldPosition.$p[3];
+
+              diagnostics.push({
+                severity: DiagnosticSeverity.Error,
+                message: `View ${targetedViewName} not found`,
+                range: {
+                  start: { line: drillFieldPosition.$p[0] - 1, character: startCharater },
+                  end: { line: drillFieldPosition.$p[2] - 1, character: endCharater }
+                },
+                source: "lookml-lsp",
+                code: DiagnosticCode.DRILL_FIELDS_VIEW_NOT_FOUND
+              });
+              continue;
+            }
+
+            const viewDimensions = targetedViewDetails.view.dimension;
+            const viewMeasures = targetedViewDetails.view.measure;
+            const viewDimensionGroups = targetedViewDetails.view.dimension_group;
+
+            if (!viewDimensions?.[fieldName] && !viewMeasures?.[fieldName] && !viewDimensionGroups?.[fieldName]) {
+              diagnostics.push({
+                severity: DiagnosticSeverity.Error,
+                message: `Field ${fieldName} not found in view ${viewDetails.view.$name}`,
+                range: {
+                  start: { line: drillFieldPosition.$p[0] - 1, character: drillFieldPosition.$p[1] },
+                  end: { line: drillFieldPosition.$p[2] - 1, character: drillFieldPosition.$p[1] + fieldLength }
+                },
+                source: "lookml-lsp",
+                code: DiagnosticCode.DRILL_FIELDS_FIELD_NOT_FOUND
+              });
+              continue;
+            }
+          }
+        }
       } catch (error: ZodError | unknown) {
         if (error instanceof ZodError) {
           for (const issue of error.issues) {
             const dimensionName = dimension.$name;
-            const path = issue.path[0] as string;
+            const path = issue.path as string[]
             const fieldPositions = positions.dimension as Record<string, DimensionPosition> | undefined;
             const dimensionPositions = fieldPositions?.[dimensionName] as DimensionPosition | undefined;
-            const position = dimensionPositions?.[path as keyof DimensionPosition] as LookmlPosition | undefined ?? dimensionPositions as LookmlPosition | undefined;
+
+            let currentPosition: any = dimensionPositions;
+            for (const pathPart of path) {
+              if (!currentPosition) break;
+              currentPosition = currentPosition[pathPart];
+            }
+            const position = currentPosition as LookmlPosition | undefined;
 
             if (!position) {
               throw new Error(`No position found for dimension ${dimensionName}`);
@@ -1004,9 +1095,8 @@ export class DiagnosticsProvider {
                 code: DiagnosticCode.PROP_INVALID_PROPERTY
               }
             );
-            return
           }
-
+        } else {
           throw error;
         }
       }
@@ -1139,9 +1229,8 @@ export class DiagnosticsProvider {
                 code: DiagnosticCode.PROP_INVALID_PROPERTY
               }
             );
-            return
           }
-
+        } else {
           throw error;
         }
       }
@@ -1191,9 +1280,8 @@ export class DiagnosticsProvider {
                 code: DiagnosticCode.PROP_INVALID_PROPERTY
               }
             );
-            return
           }
-
+        } else {
           throw error;
         }
       }

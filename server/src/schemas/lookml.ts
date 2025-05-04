@@ -156,17 +156,18 @@ export const dimensionGroupValidTypes = [
 
 // Dimension schema
 export const dimensionSchema = baseProperties.extend({
+  action: actionSchema.optional(),
+  drill_fields: z.array(z.string()).optional(),
+  link: linkSchema.optional(),
   map_layer_name: z.string().optional(),
   primary_key: z.boolean().optional(),
   sql_end: z.string().optional(),
   sql_start: z.string().optional(),
   sql: z.string().optional(),
-  type: z.enum(dimensionValidTypes).optional(),
-  value_format: z.string().optional(),
-  link: linkSchema.optional(),
   style: z.enum(['integer', 'float', 'ordinal']).optional(),
   tiers: z.array(z.string()).optional(),
-  action: actionSchema.optional(),
+  type: z.enum(dimensionValidTypes).optional(),
+  value_format: z.string().optional(),
 }).strict();
 
 // Dimension group schema
