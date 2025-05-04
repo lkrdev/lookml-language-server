@@ -165,9 +165,12 @@ export const dimensionGroupValidTypes = [
 
 // Dimension schema
 export const dimensionSchema = baseProperties.extend({
-  action: z.array(actionSchema).optional(),
+  action: z.union([
+    actionSchema,
+    z.array(actionSchema)
+  ]).optional(),
   drill_fields: z.array(z.string()).optional(),
-  link: linkSchema.optional(),
+  link: z.union([linkSchema, z.array(linkSchema)]).optional(),
   map_layer_name: z.string().optional(),
   primary_key: z.boolean().optional(),
   sql_end: z.string().optional(),

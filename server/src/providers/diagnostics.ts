@@ -1305,12 +1305,12 @@ export class DiagnosticsProvider {
               exploreSchema.parse(explore);
 
               if (explore.extends) {
-                for (const [index, field] of explore.extends.entries()) {
-                  if (!modelIncludedViews?.has(field)) {
+                for (const [index, view] of explore.extends.entries()) {
+                  if (!modelIncludedViews?.has(view) && !modelDetails.model.explore?.[view]) {
                     const startLine = positions.explore?.[explore.$name]?.extends?.[index]?.$p[0];
                     const startCharater = positions.explore?.[explore.$name]?.extends?.[index]?.$p[1];
                     const endLine = positions.explore?.[explore.$name]?.extends?.[index]?.$p[2];
-                    const endCharater = startCharater + field.length;
+                    const endCharater = startCharater + view.length;
 
 
                     diagnostics.push({
@@ -1319,7 +1319,7 @@ export class DiagnosticsProvider {
                         start: { line: startLine - 1, character: startCharater },
                         end: { line: endLine - 1, character: endCharater }
                       },
-                      message: `Extend View: "${field}" not found in model "${modelDetails.model.$file_name}"`,
+                      message: `Extend View: "${view}" not found in model "${modelDetails.model.$file_name}"`,
                       source: "lookml-lsp",
                       code: DiagnosticCode.EXPLORE_VIEW_NOT_FOUND
                     })
