@@ -1,14 +1,18 @@
 import { z } from 'zod';
 
+
 // Base schemas for common properties
 export const recursiveStringArray: z.ZodType<unknown> = z.lazy(() =>
   z.union([z.string(), z.array(recursiveStringArray)])
 );
 
-export const baseProperties = z.object({
-  $name: z.string(),
+const parserValues = z.object({
+  $name: z.string().optional(),
   $type: z.string(),
   $strings: recursiveStringArray,
+});
+
+export const baseProperties = parserValues.extend({
   label: z.string().optional(),
   description: z.string().optional(),
   hidden: z.boolean().optional(),
@@ -18,15 +22,11 @@ export const baseProperties = z.object({
   value_format_name: z.string().optional(),
 });
 
-export const linkSchema = z.object({
+export const linkSchema = parserValues.extend({
   label: z.string(),
-  $name: z.string().optional(),
-  $type: z.string(),
-  $strings: recursiveStringArray,
   icon_url: z.string().optional(),
   url: z.string(),
 }).strict();
-
 
 const actionOptionSchema = z.object({
   name: z.string()
@@ -49,126 +49,55 @@ const actionSchema = z.object({
   url: z.string(),
   icon_url: z.string().optional(),
   param: actionParamSchema.optional(),
-  form_param: z.array(actionParamSchema).optional(),
+  form_param: z.union([
+    actionParamSchema,
+    z.array(actionParamSchema)
+  ]).optional(),
 });
 
 // Shared valid types between dimensions and measures
 export const sharedValidTypes = [
-  "time",
-  "date",
-  "number",
-  "string",
-  "yesno",
-  "zipcode",
-  "date_day_of_month",
-  "date_day_of_week",
-  "date_day_of_week_index",
-  "date_day_of_year",
-  "date_fiscal_month_num",
-  "date_fiscal_quarter",
-  "date_fiscal_quarter_of_year",
-  "date_fiscal_year",
-  "date_hour",
-  "date_hour2",
-  "date_hour3",
-  "date_hour4",
-  "date_hour6",
-  "date_hour8",
-  "date_hour12",
-  "date_hour_of_day",
-  "date_microsecond",
-  "date_millisecond",
-  "date_millisecond2",
-  "date_millisecond4",
-  "date_millisecond5",
-  "date_millisecond8",
-  "date_millisecond10",
-  "date_millisecond20",
-  "date_millisecond25",
-  "date_millisecond40",
-  "date_millisecond50",
-  "date_millisecond100",
-  "date_millisecond125",
-  "date_millisecond200",
-  "date_millisecond250",
-  "date_millisecond500",
-  "date_minute",
-  "date_minute2",
-  "date_minute3",
-  "date_minute4",
-  "date_minute5",
-  "date_minute6",
-  "date_minute10",
-  "date_minute12",
-  "date_minute15",
-  "date_minute20",
-  "date_minute30",
-  "date_month",
-  "date_month_name",
-  "date_month_num",
-  "date_quarter",
-  "date_quarter_of_year",
-  "date_raw",
-  "date_second",
-  "date_time",
-  "date_time_of_day",
-  "date_week",
-  "date_week_of_year",
-  "date_year"
+  "time", "date", "number", "string", "yesno", "zipcode",
+  "date_day_of_month", "date_day_of_week", "date_day_of_week_index",
+  "date_day_of_year", "date_fiscal_month_num", "date_fiscal_quarter",
+  "date_fiscal_quarter_of_year", "date_fiscal_year", "date_hour",
+  "date_hour2", "date_hour3", "date_hour4", "date_hour6", "date_hour8",
+  "date_hour12", "date_hour_of_day", "date_microsecond",
+  "date_millisecond", "date_millisecond2", "date_millisecond4",
+  "date_millisecond5", "date_millisecond8", "date_millisecond10",
+  "date_millisecond20", "date_millisecond25", "date_millisecond40",
+  "date_millisecond50", "date_millisecond100", "date_millisecond125",
+  "date_millisecond200", "date_millisecond250", "date_millisecond500",
+  "date_minute", "date_minute2", "date_minute3", "date_minute4",
+  "date_minute5", "date_minute6", "date_minute10", "date_minute12",
+  "date_minute15", "date_minute20", "date_minute30", "date_month",
+  "date_month_name", "date_month_num", "date_quarter",
+  "date_quarter_of_year", "date_raw", "date_second", "date_time",
+  "date_time_of_day", "date_week", "date_week_of_year", "date_year"
 ] as const;
 
-// Dimension-specific valid types (extends shared types)
 export const dimensionValidTypes = [
   ...sharedValidTypes,
-  "bin",
-  "distance",
-  "location",
-  "tier",
-  "duration_day",
-  "duration_hour",
-  "duration_minute",
-  "duration_month",
-  "duration_quarter",
-  "duration_second",
-  "duration_week",
-  "duration_year"
+  "bin", "distance", "location", "tier", "duration_day", "duration_hour",
+  "duration_minute", "duration_month", "duration_quarter", "duration_second",
+  "duration_week", "duration_year"
 ] as const;
 
-// Measure-specific valid types (extends shared types)
 export const measureValidTypes = [
   ...sharedValidTypes,
-  "average",
-  "average_distinct",
-  "count",
-  "count_distinct",
-  "int",
-  "list",
-  "max",
-  "median",
-  "median_distinct",
-  "min",
-  "percent_of_previous",
-  "percent_of_total",
-  "percentile",
-  "percentile_distinct",
-  "running_total",
-  "sum",
-  "sum_distinct",
-  "date_date"
+  "average", "average_distinct", "count", "count_distinct", "int", "list",
+  "max", "median", "median_distinct", "min", "percent_of_previous",
+  "percent_of_total", "percentile", "percentile_distinct", "running_total",
+  "sum", "sum_distinct", "date_date"
 ] as const;
 
 export const dimensionGroupValidTypes = [
   ...sharedValidTypes,
-  "time",
-  "duration"
+  "time", "duration"
 ] as const;
 
-// Dimension schema
 export const dimensionSchema = baseProperties.extend({
-  action: z.union([
-    actionSchema,
-    z.array(actionSchema)
-  ]).optional(),
+  action: z.union([actionSchema, z.array(actionSchema)]).optional(),
   drill_fields: z.array(z.string()).optional(),
   link: z.union([linkSchema, z.array(linkSchema)]).optional(),
   map_layer_name: z.string().optional(),
@@ -176,13 +105,12 @@ export const dimensionSchema = baseProperties.extend({
   sql_end: z.string().optional(),
   sql_start: z.string().optional(),
   sql: z.string().optional(),
-  style: z.enum(['integer', 'float', 'ordinal']).optional(),
+  style: z.enum(['integer', 'float', 'ordinal', 'interval']).optional(),
   tiers: z.array(z.string()).optional(),
   type: z.enum(dimensionValidTypes).optional(),
   value_format: z.string().optional(),
 }).strict();
 
-// Dimension group schema
 export const dimensionGroupSchema = baseProperties.extend({
   convert_tz: z.boolean().optional(),
   datatype: z.enum(['date', 'datetime', 'unixtime']).optional(),
@@ -191,37 +119,17 @@ export const dimensionGroupSchema = baseProperties.extend({
   sql: z.string(),
   timeframes: z.array(
     z.enum([
-      'raw',
-      'time',
-      'date',
-      'week',
-      'month',
-      'quarter',
-      'year',
-      'day_of_week',
-      'day_of_month',
-      'day_of_year',
-      'week_of_year',
-      'month_of_year',
-      'quarter_of_year',
-      'hour',
-      'minute',
-      'second',
-      'hour_of_day',
-      'minute_of_hour',
-      'second_of_minute',
-      'time_of_day',
-      'day_of_week_index',
-      'week_start_date',
-      'month_name',
-      'quarter_name',
-      'day_name',
+      'raw', 'time', 'date', 'week', 'month', 'quarter', 'year',
+      'day_of_week', 'day_of_month', 'day_of_year', 'week_of_year',
+      'month_of_year', 'quarter_of_year', 'hour', 'minute', 'second',
+      'hour_of_day', 'minute_of_hour', 'second_of_minute', 'time_of_day',
+      'day_of_week_index', 'week_start_date', 'month_name', 'quarter_name',
+      'day_name'
     ])
   ),
   type: z.literal('time'),
 }).strict();
 
-// Measure schema
 export const measureFiltersSchema = z.union([
   z.object({
     field: z.string(),
@@ -233,20 +141,18 @@ export const measureFiltersSchema = z.union([
 export const measureSchema = baseProperties.extend({
   drill_fields: z.array(z.string()).optional(),
   filters: measureFiltersSchema.optional(),
-  link: linkSchema.optional(),
+  link: z.union([linkSchema, z.array(linkSchema)]).optional(),
   percentile: z.string().min(0).max(100).optional(),
   sql: z.string().optional(),
   type: z.enum(measureValidTypes),
   value_format: z.string().optional(),
 }).strict();
 
-// Set schema
-export const setSchema = baseProperties.extend({
+export const setSchema = parserValues.extend({
   fields: z.array(z.string())
 }).strict();
 
-// Join schema
-export const joinSchema = baseProperties.extend({
+export const joinSchema = parserValues.extend({
   fields: z.array(z.string()).optional(),
   foreign_key: z.string().optional(),
   from: z.string().optional(),
@@ -261,7 +167,6 @@ export const joinSchema = baseProperties.extend({
   view_label: z.string().optional(),
 }).strict();
 
-// Explore schema
 export const exploreSchema = baseProperties.extend({
   view_name: z.string().optional(),
   from: z.string().optional(),
@@ -269,10 +174,9 @@ export const exploreSchema = baseProperties.extend({
   join: z.record(z.string(), joinSchema).optional(),
 }).strict();
 
-// Suggestions schema
 export const suggestionsSchema = z.array(
   z.object({
     label: z.string(),
     value: z.string(),
   })
-); 
+);
