@@ -1060,7 +1060,6 @@ export class DiagnosticsProvider {
           }
         }
       } catch (error: ZodError | unknown) {
-        console.log(error);
         if (error instanceof ZodError) {
           for (const issue of error.issues) {
             const dimensionName = dimension.$name;
