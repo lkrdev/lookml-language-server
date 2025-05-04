@@ -27,20 +27,29 @@ export const linkSchema = z.object({
   url: z.string(),
 }).strict();
 
-export const actionParamSchema = z.object({
+
+const actionOptionSchema = z.object({
+  name: z.string()
+});
+
+const actionParamSchema = z.object({
   name: z.string(),
   value: z.string().optional(),
   required: z.boolean().optional(),
   default: z.string().optional(),
-  type: z.enum(['textarea']).optional(),
+  type: z.enum(['textarea', 'select']).optional(),
+  option: z.union([
+    actionOptionSchema,
+    z.array(actionOptionSchema)
+  ]).optional(),
 });
 
-export const actionSchema = z.object({
+const actionSchema = z.object({
   label: z.string(),
   url: z.string(),
   icon_url: z.string().optional(),
   param: actionParamSchema.optional(),
-  form_param: z.union([actionParamSchema, z.array(actionParamSchema)]).optional(),
+  form_param: z.array(actionParamSchema).optional(),
 });
 
 // Shared valid types between dimensions and measures
@@ -156,7 +165,7 @@ export const dimensionGroupValidTypes = [
 
 // Dimension schema
 export const dimensionSchema = baseProperties.extend({
-  action: actionSchema.optional(),
+  action: z.array(actionSchema).optional(),
   drill_fields: z.array(z.string()).optional(),
   link: linkSchema.optional(),
   map_layer_name: z.string().optional(),
