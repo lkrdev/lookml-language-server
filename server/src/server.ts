@@ -136,23 +136,32 @@ connection.onExecuteCommand(async (params: ExecuteCommandParams) => {
           authService = new AuthenticationService();
         }
 
-        const success = await authService.testConnection(
+        const state = await authService.testConnection(
           {
             base_url,
             client_id,
           }
         );
 
-        if (success) {
-          return {
-            success: true,
-            message: "Successfully authenticated with Looker",
-          };
-        } else {
-          return {
-            success: false,
-            message: "Failed to authenticate with Looker",
-          };
+        switch (state) {
+          case "requested":
+            return {
+              success: true,
+              message: "Authentication requested",
+            };
+
+          case "authenticated":
+            return {
+              success: true,
+              message: "Successfully authenticated with Looker",
+            };
+
+          default:
+          case "failed":
+            return {
+              success: false,
+              message: "Failed to authenticate with Looker",
+            };
         }
       } catch (error) {
         logger.error("Authentication error:", error);
@@ -166,6 +175,7 @@ connection.onExecuteCommand(async (params: ExecuteCommandParams) => {
 
     case "looker.remoteReset":
       if (!args || args.length !== 1) {
+        
         throw new Error("Invalid arguments for remoteReset command");
       }
       const project_name = args[0] as string;

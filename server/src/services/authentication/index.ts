@@ -12,6 +12,8 @@ interface LookerOAuthConfig {
     client_id: string;
 }
 
+export type AuthenticationState = "requested" | "authenticated" | "failed";
+
 export class AuthenticationService {
     private static readonly DEFAULT_PORT = 8000;
     private static readonly DEFAULT_CALLBACK_PATH = '/callback';
@@ -30,7 +32,6 @@ export class AuthenticationService {
                     }
 
                     const code = parsedUrl.query.code as string;
-                    console.log("CODE", code);
                     if (!code) {
                         throw new Error('No authorization code received');
                     }
@@ -60,7 +61,6 @@ export class AuthenticationService {
             this.setupHttpServer();
             
             this.server.listen(AuthenticationService.DEFAULT_PORT, () => {
-                console.log(`OAuth callback server listening on port ${AuthenticationService.DEFAULT_PORT}`);
                 resolve();
             }).on('error', (err: Error) => {
                 console.error('Failed to start OAuth callback server:', err);
@@ -76,10 +76,9 @@ export class AuthenticationService {
         }
     }
 
-    public async initializeOAuth(config: LookerOAuthConfig) {
+    public async initializeOAuth(config: LookerOAuthConfig): Promise<AuthenticationState> {
         const redirect_uri = `http://localhost:${AuthenticationService.DEFAULT_PORT}${AuthenticationService.DEFAULT_CALLBACK_PATH}`;
 
-        console.log("config", config);
         // Check for a valid token in the database first
         const existing = await getValidAuthToken(config.client_id, config.base_url);
         if (existing) {
@@ -104,10 +103,9 @@ export class AuthenticationService {
                 this.oauthSession.activeToken.expiresAt = new Date(existing.expires_at);
             }
             this.sdk = new Looker40SDK(this.oauthSession);
-            return;
+            return "authenticated";
         }
         try {
-            
             const settings = new ApiSettings({
                 base_url: config.base_url,
             });
@@ -135,6 +133,8 @@ export class AuthenticationService {
             );
 
             await open(authUrl);
+
+            return "requested";
         } catch (error) {
             console.error('OAuth initialization failed:', error);
             this.sdk = null;
@@ -144,20 +144,23 @@ export class AuthenticationService {
         }
     }
 
-    public async testConnection(config: LookerOAuthConfig): Promise<boolean> {
+    public async testConnection(config: LookerOAuthConfig): Promise< AuthenticationState> {
         try {
-            await this.initializeOAuth(config);
+            const response =await this.initializeOAuth(config);
+            if (response === "requested") {
+                return "requested";
+            }
             const sdk = this.getSDK();
             if (!sdk) {
-                return false;
+                return "failed";
             }
 
             // Verify connection by fetching user info
             await sdk.ok(sdk.me());
-            return true;
+            return "authenticated";
         } catch (error) {
             console.error('Failed to connect to Looker:', error);
-            return false;
+            return "failed";
         }
     }
 
