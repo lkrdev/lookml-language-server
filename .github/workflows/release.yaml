@@ -1,0 +1,26 @@
+name: Release Docker Image
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  publish-vscode-extension:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: "read"
+      id-token: "write"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Replace version in package.json
+        run: |
+          find . -name "package.json" -exec sed -i "s/\"version\": \".*\"/\"version\": \"${{ env.TAG }}\"/" {} +
+
+      - name: Install vsce
+        run: npm install -g @vscode/vsce
+
+      - name: Publish VSCode Extension
+        run: vsce publish -p ${{ secrets.VSCE_TOKEN }}

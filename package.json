@@ -2,8 +2,13 @@
   "name": "lookml-language-server",
   "description": "LookML Language Server for Visual Studio Code",
   "author": "rileylnapier@gmail.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lkrdev/lookml-language-server"
+  },
+  "publisher": "lkr-dev",
   "license": "MIT",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "categories": [],
   "engines": {
     "vscode": "^1.75.0"
@@ -104,9 +109,8 @@
     "@types/jest": "^29.5.14",
     "@types/node": "^20.17.30",
     "ts-jest": "^29.3.2",
-    "typescript": "^5.2.2"
-  },
-  "dependencies": {
+    "typescript": "^5.2.2",
     "vscode": "^1.1.37"
-  }
+  },
+  "dependencies": {}
 }
