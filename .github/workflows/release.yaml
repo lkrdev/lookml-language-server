@@ -4,6 +4,9 @@ on:
   release:
     types: [created]
 
+env:
+  TAG: ${{ github.event.release.tag_name }}
+
 jobs:
   publish-vscode-extension:
     runs-on: ubuntu-latest
