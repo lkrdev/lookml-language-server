@@ -34,14 +34,12 @@ export async function handleAuthenticate(
     
     const state = await authService.testConnection(config);
 
-    console.log("testConnection state1", state);
     
     if (state === "authenticated") {
       const branch_name = await getCurrentBranch();
-      console.log('Connected to Looker development mode on branch:', branch_name);
       return { 
         success: true, 
-        message: 'Successfully authenticated with Looker via OAuth' 
+        message: `Successfully authenticated with Looker via OAuth ( ${branch_name} )`,
       };
     }
 

@@ -127,7 +127,6 @@ connection.onInitialized(async () => {
 // Add command handlers
 connection.onExecuteCommand(async (params: ExecuteCommandParams) => {
   const { command, arguments: args } = params;
-  console.log("executeCommand command", command);
   switch (command) {
     case "looker.authenticate":
       const [base_url, client_id] = args ?? [];
@@ -143,8 +142,6 @@ connection.onExecuteCommand(async (params: ExecuteCommandParams) => {
             client_id,
           }
         );
-
-        console.log("testConnection state", state);
 
         switch (state) {
           case "requested":
@@ -177,7 +174,6 @@ connection.onExecuteCommand(async (params: ExecuteCommandParams) => {
       }
 
     case "looker.remoteReset":
-      console.log("remoteReset args", args);
       if (!args || args.length !== 1) {
         
         throw new Error("Invalid arguments for remoteReset command");

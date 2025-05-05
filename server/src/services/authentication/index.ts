@@ -32,7 +32,6 @@ export class AuthenticationService {
                     }
 
                     const code = parsedUrl.query.code as string;
-                    console.log("CODE", code);
                     if (!code) {
                         throw new Error('No authorization code received');
                     }
@@ -62,7 +61,6 @@ export class AuthenticationService {
             this.setupHttpServer();
             
             this.server.listen(AuthenticationService.DEFAULT_PORT, () => {
-                console.log(`OAuth callback server listening on port ${AuthenticationService.DEFAULT_PORT}`);
                 resolve();
             }).on('error', (err: Error) => {
                 console.error('Failed to start OAuth callback server:', err);
@@ -167,7 +165,6 @@ export class AuthenticationService {
     }
 
     public async resetToRemote(project_name: string): Promise<void> {
-        console.log("resetToRemote project_name", project_name);
         const sdk = this.getSDK();
         if (!sdk) {
             throw new Error('SDK not initialized');
