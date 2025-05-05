@@ -912,6 +912,17 @@ export class DiagnosticsProvider {
           const viewDimensionGroups = targetedViewDetails.view.dimension_group;
 
           if (!viewDimensions?.[fieldName] && !viewMeasures?.[fieldName] && !viewDimensionGroups?.[fieldName]) {
+            if (field.includes("_")) {
+              const fieldSplit = field.split("_");
+              const [dimensionGroupName, groupName] = fieldSplit;
+  
+              const dimensionGroup = viewDimensionGroups?.[dimensionGroupName];
+              
+              if (viewDimensionGroups?.[dimensionGroupName] && dimensionGroup?.timeframes?.includes(groupName)) {
+                continue;
+              }
+            }
+            
             diagnostics.push({
               severity: DiagnosticSeverity.Error,
               message: `Field ${fieldName} not found in view ${targetedViewName}`,
