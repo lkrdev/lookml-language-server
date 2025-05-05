@@ -7,7 +7,7 @@ interface CommandResponse {
 }
 
 export async function handleAuthenticate(
-  args: any[],
+  args: [string, string],
   authService: AuthenticationService | null
 ): Promise<CommandResponse> {
   const [base_url, client_id] = args;
@@ -32,21 +32,30 @@ export async function handleAuthenticate(
       authService = new AuthenticationService();
     }
     
-    const success = await authService.testConnection(config);
+    const state = await authService.testConnection(config);
+
+    console.log("testConnection state1", state);
     
-    if (success) {
+    if (state === "authenticated") {
       const branch_name = await getCurrentBranch();
       console.log('Connected to Looker development mode on branch:', branch_name);
       return { 
         success: true, 
         message: 'Successfully authenticated with Looker via OAuth' 
       };
-    } else {
+    }
+
+    if (state === "requested") {
       return { 
-        success: false, 
-        message: 'Failed to authenticate with Looker. Please check your credentials and try again.' 
+        success: true, 
+        message: 'Authentication requested' 
       };
     }
+
+    return { 
+      success: false, 
+      message: 'Failed to authenticate with Looker. Please check your credentials and try again.' 
+    };
   } catch (error) {
     console.error('Authentication error:', error);
     

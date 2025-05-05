@@ -43,11 +43,11 @@
 		{
 			"type": "extensionHost",
 			"request": "launch",
-			"name": "Launch Client (The Look Mozilla)",
+			"name": "Launch Client (Call Center Demo)",
 			"runtimeExecutable": "${execPath}",
 			"args": [
 				"--extensionDevelopmentPath=${workspaceRoot}",
-				"${workspaceRoot}/../looker-spoke-default"
+				"${workspaceRoot}/../call_center_demo"
 			],
 			"outFiles": [
 				"${workspaceRoot}/client/out/**/*.js",

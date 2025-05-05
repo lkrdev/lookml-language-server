@@ -20,6 +20,7 @@ export const baseProperties = parserValues.extend({
   group_label: z.string().optional(),
   tags: z.array(z.string()).optional(),
   value_format_name: z.string().optional(),
+  required_fields: z.array(z.string()).optional(),
 });
 
 export const linkSchema = parserValues.extend({
@@ -48,7 +49,7 @@ const actionSchema = z.object({
   label: z.string(),
   url: z.string(),
   icon_url: z.string().optional(),
-  param: actionParamSchema.optional(),
+  param: z.union([actionParamSchema, z.array(actionParamSchema)]).optional(),
   form_param: z.union([
     actionParamSchema,
     z.array(actionParamSchema)
@@ -96,20 +97,51 @@ export const dimensionGroupValidTypes = [
   "time", "duration"
 ] as const;
 
+const caseWhenSchema = z.object({
+  label: z.string(),
+  sql: z.string(),
+});
+
+const caseSchema = parserValues.extend({
+  when: z.union([caseWhenSchema, z.array(caseWhenSchema)]).optional(),
+  else: z.union([z.string(), z.object({ label: z.string() })]).optional(),
+}).strict();
+
 export const dimensionSchema = baseProperties.extend({
   action: z.union([actionSchema, z.array(actionSchema)]).optional(),
+  case: caseSchema.optional(),
   drill_fields: z.array(z.string()).optional(),
   link: z.union([linkSchema, z.array(linkSchema)]).optional(),
   map_layer_name: z.string().optional(),
   primary_key: z.boolean().optional(),
+  required_fields: z.array(z.string()).optional(),
   sql_end: z.string().optional(),
+  sql_latitude: z.string().optional(),
+  sql_longitude: z.string().optional(),
   sql_start: z.string().optional(),
   sql: z.string().optional(),
   style: z.enum(['integer', 'float', 'ordinal', 'interval']).optional(),
   tiers: z.array(z.string()).optional(),
   type: z.enum(dimensionValidTypes).optional(),
   value_format: z.string().optional(),
-}).strict();
+}).strict().superRefine((val, ctx) => {
+  if (val.type === 'location') {
+    if (!val.sql_latitude) {
+      ctx.addIssue({
+        path: ['sql_latitude'],
+        code: z.ZodIssueCode.custom,
+        message: 'sql_latitude is required for type: location',
+      });
+    }
+    if (!val.sql_longitude) {
+      ctx.addIssue({
+        path: ['sql_longitude'],
+        code: z.ZodIssueCode.custom,
+        message: 'sql_longitude is required for type: location',
+      });
+    }
+  }
+});
 
 export const dimensionGroupSchema = baseProperties.extend({
   convert_tz: z.boolean().optional(),

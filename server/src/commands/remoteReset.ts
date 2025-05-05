@@ -11,6 +11,7 @@ export async function handleRemoteReset(
     project_name: string,
   },
 ): Promise<CommandResponse> {
+  console.log("handleRemoteReset args", args);
   if (!args.project_name?.length) {
     throw new Error('Invalid arguments for remoteReset command');
   }
