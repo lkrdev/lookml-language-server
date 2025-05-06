@@ -97,7 +97,7 @@ export class DiagnosticsProvider {
     const diagnostics: Diagnostic[] = [];
     const isView = this.workspaceModel.isViewFile(document);
     // Combine results from all validation checks
-    diagnostics.push(...this.validateSyntax(document));
+    //diagnostics.push(...this.validateSyntax(document));
     isView ?
       diagnostics.push(...this.validateViewReferences(document)) :
       diagnostics.push(...this.validateModelReferences(document));
@@ -120,671 +120,106 @@ export class DiagnosticsProvider {
     return diagnostics;
   }
 
-  /**
-   * Validate the basic syntax of the document (braces, colons, etc.)
-   */
-  private validateSyntax(document: TextDocument): Diagnostic[] {
+  private validateSqlReferences(
+    sql: string,
+    position: LookmlPosition | undefined,
+  ): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
-    const text = document.getText();
-    const lines = text.split("\n");
+    if (!position) return diagnostics;
+  
+    const validRefPattern = /\$\{([^}]+)\}/g;
+    const invalidRefPattern = /\$[^{][^}\s]*}?|\$\{[^}]*$/g;
+  
+    let match;
+  
+    const charStart = position.$p[1];
+    const charEnd = position.$p[3];
+    const lineStart = position.$p[0] - 1;
+    const lineEnd = position.$p[2] - 1;
 
-    // Check for unbalanced braces
-    let openBraces = 0;
-    let braceStack: { line: number; char: number }[] = [];
+    const range = {
+      start: { line: lineStart, character: charStart  },
+      end: { line: lineEnd, character: charEnd },
+    };
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-
-      for (let j = 0; j < line.length; j++) {
-        if (line[j] === "{") {
-          openBraces++;
-          braceStack.push({ line: i, char: j });
-        } else if (line[j] === "}") {
-          openBraces--;
-
-          if (openBraces < 0) {
-            diagnostics.push({
-              severity: DiagnosticSeverity.Error,
-              range: {
-                start: { line: i, character: j },
-                end: { line: i, character: j + 1 },
-              },
-              message: "Unbalanced closing brace",
-              source: "lookml-lsp",
-              code: DiagnosticCode.SYNTAX_UNBALANCED_CLOSING_BRACE
-            });
-            openBraces = 0;
-            braceStack = [];
-          } else {
-            braceStack.pop();
-          }
-        }
-      }
-    }
-
-    // Report unclosed braces
-    if (openBraces > 0 && braceStack.length > 0) {
-      // Report each unclosed brace
-      for (const brace of braceStack) {
+    // ✅ Detect valid references
+    while ((match = validRefPattern.exec(sql)) !== null) {
+      if (!match[0].startsWith("${") || !match[0].endsWith("}")) {
         diagnostics.push({
           severity: DiagnosticSeverity.Error,
-          range: {
-            start: { line: brace.line, character: brace.char },
-            end: { line: brace.line, character: brace.char + 1 },
-          },
-          message: "Unclosed brace",
+          range,
+          message: "Invalid field reference syntax. Use ${view_name.field_name}",
           source: "lookml-lsp",
-          code: DiagnosticCode.SYNTAX_UNCLOSED_BRACE
+          code: DiagnosticCode.VIEW_REF_FIELD_IN_SQL
         });
       }
     }
-
-    // Check for missing colons in block declarations
-    const blockRegex = /^\s*([a-zA-Z0-9_]+)\s+([a-zA-Z0-9_]+)\s*\{/;
-    const validBlockTypes = [
-      "access_grant",
-      "datagroup",
-      "derived_table",
-      "dimension_group",
-      "dimension",
-      "explore",
-      "filter",
-      "join",
-      "measure",
-      "model",
-      "parameter",
-      "set",
-      "view",
-    ];
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (line === "" || line.startsWith("#")) continue;
-
-      // Check for invalid property declarations
-      const propertyDeclMatch = line.match(/^\s*([^:]+):\s*([^{]*?)(?:;;|\s*$)/);
-      if (propertyDeclMatch && !propertyDeclMatch[1].match(/^[a-zA-Z0-9_]+$/)) {
-        diagnostics.push({
-          severity: DiagnosticSeverity.Error,
-          range: {
-            start: { line: i, character: lines[i].indexOf(propertyDeclMatch[1]) },
-            end: { line: i, character: lines[i].indexOf(propertyDeclMatch[1]) + propertyDeclMatch[1].length },
-          },
-          message: `Invalid property name "${propertyDeclMatch[1]}". Property names must contain only letters, numbers, and underscores.`,
-          source: "lookml-lsp",
-          code: DiagnosticCode.SYNTAX_INVALID_PROPERTY_NAME
-        });
-      }
-
-      // Check for incorrect indentation markers (dots, dashes, etc.)
-      const incorrectIndentMatch = line.match(/^(\s*[.|-]+)([a-zA-Z0-9_]+)\s+/);
-      if (incorrectIndentMatch) {
-        const [_, indentMarker, propertyName] = incorrectIndentMatch;
-        diagnostics.push({
-          severity: DiagnosticSeverity.Error,
-          range: {
-            start: { line: i, character: lines[i].indexOf(indentMarker) },
-            end: { line: i, character: lines[i].indexOf(propertyName) + propertyName.length },
-          },
-          message: `Invalid indentation "${indentMarker.trim()}". Use spaces for indentation and a colon after the property name. Change to: "${propertyName}:"`,
-          source: "lookml-lsp",
-          code: DiagnosticCode.SYNTAX_INVALID_INDENTATION
-        });
-      }
-
-      // Check for missing semicolons in SQL statements
-      const sqlMatch = line.match(/^\s*sql:\s*(.*)$/);
-      if (sqlMatch) {
-        // Start scanning from the current line
-        let foundTerminator = false;
-        let j = i;
-        while (j < lines.length) {
-          const checkLine = lines[j].trim();
-          if (checkLine === "" || checkLine.startsWith("#")) {
-            j++;
-            continue;
-          }
-          if (checkLine.endsWith(";;")) {
-            foundTerminator = true;
-            break;
-          }
-          // If we hit a new property or block end, stop
-          if (/^[a-zA-Z0-9_]+:/.test(checkLine) && j !== i) break;
-          if (checkLine === "}" && j !== i) break;
-          j++;
-        }
-        if (!foundTerminator) {
-          diagnostics.push({
-            severity: DiagnosticSeverity.Error,
-            range: {
-              start: { line: i, character: 0 },
-              end: { line: i, character: line.length },
-            },
-            message: "SQL statement missing terminating semicolons (;;)",
-            source: "lookml-lsp",
-            code: DiagnosticCode.SYNTAX_MISSING_SQL_TERMINATOR
-          });
-        }
-      }
-
-      // Check if a block declaration is missing a colon
-      const incorrectBlockMatch = line.match(blockRegex);
-      if (
-        incorrectBlockMatch &&
-        validBlockTypes.includes(incorrectBlockMatch[1])
-      ) {
-        diagnostics.push({
-          severity: DiagnosticSeverity.Error,
-          range: {
-            start: {
-              line: i,
-              character: lines[i].indexOf(incorrectBlockMatch[1]),
-            },
-            end: {
-              line: i,
-              character:
-                lines[i].indexOf(incorrectBlockMatch[1]) +
-                incorrectBlockMatch[1].length +
-                incorrectBlockMatch[2].length +
-                1,
-            },
-          },
-          message: `Missing colon in block definition. Use "${incorrectBlockMatch[1]}: ${incorrectBlockMatch[2]}" instead`,
-          source: "lookml-lsp",
-          code: DiagnosticCode.SYNTAX_MISSING_BLOCK_COLON
-        });
-      }
-
-      // Check for invalid block types
-      const blockTypeMatch = line.match(/^\s*([a-zA-Z0-9_]+):\s*[a-zA-Z0-9_]+\s*\{/);
-      if (blockTypeMatch && !validBlockTypes.includes(blockTypeMatch[1])) {
-        diagnostics.push({
-          severity: DiagnosticSeverity.Error,
-          range: {
-            start: { line: i, character: lines[i].indexOf(blockTypeMatch[1]) },
-            end: { line: i, character: lines[i].indexOf(blockTypeMatch[1]) + blockTypeMatch[1].length },
-          },
-          message: `Invalid block type "${blockTypeMatch[1]}". Valid block types are: ${validBlockTypes.join(", ")}.`,
-          source: "lookml-lsp",
-          code: DiagnosticCode.SYNTAX_INVALID_BLOCK_TYPE
-        });
-      }
+  
+    // ❌ Detect malformed references (e.g. $foo, $foo}, ${bar)
+    while ((match = invalidRefPattern.exec(sql)) !== null) {
+      diagnostics.push({
+        severity: DiagnosticSeverity.Error,
+        range,
+        message: "Malformed LookML reference. Use full ${view.field} syntax.",
+        source: "lookml-lsp",
+        code: DiagnosticCode.VIEW_REF_FIELD_IN_SQL
+      });
     }
-
-    return diagnostics;
-  }
-
-  /**
-   * Validate references to views, fields, etc.
-   */
-  private validateReferences(document: TextDocument): Diagnostic[] {
-    const diagnostics: Diagnostic[] = [];
-    const text = document.getText();
-    const lines = text.split("\n");
-    // Get the model this document belongs to
-    const modelName = this.workspaceModel.getModelNameFromUri(document.uri);
-
-    // Get the set of views included by this model
-    const includedViews = modelName
-      ? this.workspaceModel.getIncludedViewsForModel(modelName)
-      : new Set();
-
-    // Track explores and their available views
-    const exploreAvailableViews: Map<string, Set<string>> = new Map();
-
-    // First pass: build context structure and available views
-    let currentExplore: string | null = null;
-    let currentContext: { type: string; name: string } | null = null;
-    let indentLevel = 0;
-    let contextStack: Array<{ type: string; name: string; level: number }> = [];
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (line === "" || line.startsWith("#")) continue;
-
-      // Track blocks and indentation
-      const blockMatch = line.match(/^([a-zA-Z0-9_]+):\s+([a-zA-Z0-9_]+)\s*\{/);
-      if (blockMatch) {
-        const blockType = blockMatch[1];
-        const blockName = blockMatch[2];
-
-        // Count leading spaces to determine indent level
-        const indent = lines[i].length - lines[i].trimLeft().length;
-
-        // Update context stack
-        while (
-          contextStack.length > 0 &&
-          contextStack[contextStack.length - 1].level >= indent
-        ) {
-          contextStack.pop();
-        }
-
-        contextStack.push({ type: blockType, name: blockName, level: indent });
-        currentContext = { type: blockType, name: blockName };
-
-        // If this is an explore, initialize its available views
-        if (blockType === "explore") {
-          currentExplore = blockName;
-          exploreAvailableViews.set(blockName, new Set([blockName])); // Start with the explore itself
-        }
-        // If this is a join within an explore, add it to available views
-        else if (
-          blockType === "join" &&
-          contextStack.length >= 2 &&
-          contextStack[contextStack.length - 2].type === "explore"
-        ) {
-          const exploreName = contextStack[contextStack.length - 2].name;
-          const availableViews = exploreAvailableViews.get(exploreName);
-          if (availableViews) {
-            availableViews.add(blockName); // Add the join name to available views
-          }
-        }
-      } else if (line === "}") {
-        // Closing brace - pop from context stack if matching indent
-        if (contextStack.length > 0) {
-          const currentIndent = lines[i].length - lines[i].trimLeft().length;
-          while (
-            contextStack.length > 0 &&
-            contextStack[contextStack.length - 1].level >= currentIndent
-          ) {
-            contextStack.pop();
-          }
-
-          currentContext =
-            contextStack.length > 0
-              ? {
-                type: contextStack[contextStack.length - 1].type,
-                name: contextStack[contextStack.length - 1].name,
-              }
-              : null;
-
-          if (
-            contextStack.length > 0 &&
-            contextStack[contextStack.length - 1].type === "explore"
-          ) {
-            currentExplore = contextStack[contextStack.length - 1].name;
-          } else {
-            currentExplore = null;
-          }
-        }
-      }
-
-      // Add views specified by view_name or from
-      const viewNameMatch = line.match(
-        /^\s*(view_name|from):\s+([a-zA-Z0-9_]+)/
-      );
-
-      if (viewNameMatch && currentContext) {
-        const propertyName = viewNameMatch[1];
-        const viewName = viewNameMatch[2];
-        const refStart = lines[i].indexOf(viewName);
-        const range = {
-          start: { line: i, character: refStart },
-          end: { line: i, character: refStart + viewName.length },
-        };
-
-        // Check if view exists in workspace
-        const viewDetails = this.workspaceModel.getView(viewName);
-        const view = viewDetails?.view;
-        if (!view) {
-          diagnostics.push({
-            severity: DiagnosticSeverity.Error,
-            range,
-            message: `Referenced view "${viewName}" not found in workspace`,
-            source: "lookml-lsp",
-            code: DiagnosticCode.VIEW_REF_VIEW_NOT_FOUND
-          });
-        } else if (!includedViews?.has(viewName) && modelName) {
-          // Check if view is included in the model
-          diagnostics.push({
-            severity: DiagnosticSeverity.Error,
-            range,
-            message: `View "${viewName}" exists but is not included in this model`,
-            source: "lookml-lsp",
-            code: DiagnosticCode.VIEW_REF_VIEW_NOT_INCLUDED
-          });
-        }
-      }
-    }
-
-    // Reset for second pass - actual validation
-    currentContext = null;
-    contextStack = [];
-    currentExplore = null;
-
-    // Second pass: check for reference errors
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (line === "" || line.startsWith("#")) continue;
-
-      // Track context (same as first pass)
-      const blockMatch = line.match(/^([a-zA-Z0-9_]+):\s+([a-zA-Z0-9_]+)\s*\{/);
-      if (blockMatch) {
-        const blockType = blockMatch[1];
-        const blockName = blockMatch[2];
-
-        if (blockType === "explore") {
-          currentExplore = blockName;
-        }
-
-        const indent = lines[i].length - lines[i].trimLeft().length;
-
-        while (
-          contextStack.length > 0 &&
-          contextStack[contextStack.length - 1].level >= indent
-        ) {
-          contextStack.pop();
-        }
-
-        contextStack.push({ type: blockType, name: blockName, level: indent });
-        currentContext = { type: blockType, name: blockName };
-
-        // Your existing explore validation code...
-      } else if (line === "}") {
-        // Same closing brace handling as first pass
-        if (contextStack.length > 0) {
-          const currentIndent = lines[i].length - lines[i].trimLeft().length;
-          while (
-            contextStack.length > 0 &&
-            contextStack[contextStack.length - 1].level >= currentIndent
-          ) {
-            contextStack.pop();
-          }
-
-          currentContext =
-            contextStack.length > 0
-              ? {
-                type: contextStack[contextStack.length - 1].type,
-                name: contextStack[contextStack.length - 1].name,
-              }
-              : null;
-
-          if (
-            contextStack.length > 0 &&
-            contextStack[contextStack.length - 1].type === "explore"
-          ) {
-            currentExplore = contextStack[contextStack.length - 1].name;
-          } else {
-            currentExplore = null;
-          }
-        }
-      }
-
-      // Your existing extends, from, and view_name validation code...
-
-      // Enhanced sql_on validation to check for explore context
-      const sqlOnMatch = line.match(/^\s*sql_on:\s+(.+?)(?:;;|$)/);
-      if (sqlOnMatch && currentContext?.type === "join" && currentExplore) {
-        const sqlOnContent = sqlOnMatch[1];
-        const fieldRefPattern = /\$\{([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\}/g;
-        let fieldMatch;
-
-        // Get the set of available views for this explore
-        const availableViews = exploreAvailableViews.get(currentExplore);
-
-        while ((fieldMatch = fieldRefPattern.exec(sqlOnContent)) !== null) {
-          const viewName = fieldMatch[1];
-          const fieldName = fieldMatch[2];
-
-          const refStart = lines[i].indexOf(fieldMatch[0]);
-          const range = {
-            start: { line: i, character: refStart },
-            end: { line: i, character: refStart + fieldMatch[0].length },
-          };
-
-          // Check if view exists in workspace and model (your existing checks)
-          const viewDetails = this.workspaceModel.getView(viewName);
-          const view = viewDetails?.view;
-          const viewIncluded = includedViews?.has(viewName) || false;
-
-          if (!view) {
-            diagnostics.push({
-              severity: DiagnosticSeverity.Error,
-              range,
-              message: `Referenced view "${viewName}" not found in workspace`,
-              source: "lookml-lsp",
-              code: DiagnosticCode.SQL_REF_VIEW_NOT_FOUND
-            });
-          } else if (!viewIncluded && modelName) {
-            diagnostics.push({
-              severity: DiagnosticSeverity.Error,
-              range,
-              message: `View "${viewName}" exists but is not included in this model`,
-              source: "lookml-lsp",
-              code: DiagnosticCode.SQL_REF_VIEW_NOT_INCLUDED
-            });
-          } else if (!view.measure?.[fieldName] && !view.dimension?.[fieldName] && !view.dimension_group?.[fieldName]) {
-            diagnostics.push({
-              severity: DiagnosticSeverity.Error,
-              range,
-              message: `Field "${fieldName}" not found in view "${viewName}"`,
-              source: "lookml-lsp",
-              code: DiagnosticCode.SQL_REF_FIELD_NOT_FOUND
-            });
-          }
-          // NEW CHECK: Verify the view is available in this explore context
-          else if (availableViews && !availableViews?.has(viewName)) {
-            diagnostics.push({
-              severity: DiagnosticSeverity.Error,
-              range,
-              message: `View "${viewName}" is not available in this explore context. It must be joined before it can be referenced.`,
-              source: "lookml-lsp",
-              code: DiagnosticCode.SQL_REF_VIEW_NOT_AVAILABLE
-            });
-          }
-        }
-      }
-    }
-
+  
     return diagnostics;
   }
 
   private validateViewReferences(document: TextDocument): Diagnostic[] {
-    const viewFileName = this.workspaceModel.getViewNameFromFile(document);
-
-    let currentViewName: string | undefined = viewFileName;
-    let currentContext: { type: string; name: string } | null = null;
-
-    let contextStack: Array<{ type: string; name: string; level: number }> = [];
-
     const diagnostics: Diagnostic[] = [];
-    const text = document.getText();
-    const lines = text.split("\n");
+    const uri = document.uri.replace("file://", "");
+    const viewNames = this.workspaceModel.getViewsByFile(uri);
+    if (!viewNames?.length) return diagnostics;
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (line === "" || line.startsWith("#")) continue;
+    // Process each view in the file
+    for (const viewName of viewNames) {
+      const viewDetails = this.workspaceModel.getView(viewName);
+      if (!viewDetails) continue;
 
-      // Track context (same as first pass)
-      const blockMatch = line.match(/^([a-zA-Z0-9_]+):\s+([a-zA-Z0-9_]+)\s*\{/);
-      if (blockMatch) {
-        if (blockMatch[1] === "view") {
-          currentViewName = blockMatch[2];
-        }
+      const positions = viewDetails.positions;
 
-        const blockType = blockMatch[1];
-        const blockName = blockMatch[2];
-
-        const indent = lines[i].length - lines[i].trimLeft().length;
-
-        while (
-          contextStack.length > 0 &&
-          contextStack[contextStack.length - 1].level >= indent
-        ) {
-          contextStack.pop();
-        }
-
-        contextStack.push({ type: blockType, name: blockName, level: indent });
-        currentContext = { type: blockType, name: blockName };
-
-        // Your existing explore validation code...
-      } else if (line === "}") {
-        // Same closing brace handling as first pass
-        if (contextStack.length > 0) {
-          const currentIndent = lines[i].length - lines[i].trimLeft().length;
-          while (
-            contextStack.length > 0 &&
-            contextStack[contextStack.length - 1].level >= currentIndent
-          ) {
-            contextStack.pop();
+      // Validate dimensions
+      if (viewDetails.view.dimension) {
+        Object.entries(viewDetails.view.dimension).forEach(([dimName, dimension]) => {
+          if (!dimension.sql) {
+            return;
           }
 
-          currentContext =
-            contextStack.length > 0
-              ? {
-                type: contextStack[contextStack.length - 1].type,
-                name: contextStack[contextStack.length - 1].name,
-              }
-              : null;
-        }
+          const sqlPosition = positions.dimension?.[dimName]?.sql;
+          diagnostics.push(...this.validateSqlReferences(dimension.sql, sqlPosition));
+        });
       }
-      // Add validation for SQL properties in dimensions and measures
-      const dimensionOrMeasureSqlMatch = line.match(/^\s*sql:\s+(.+?)(?:;;|$)/);
 
-      if (dimensionOrMeasureSqlMatch && ["dimension", "measure"].includes(currentContext?.type || "")) {
-        const sqlContent = dimensionOrMeasureSqlMatch[1];
-        // Match any ${...} pattern
-        const fieldRefPattern = /\$\{([^}]+)\}/g;
-        let fieldMatch;
-
-        while ((fieldMatch = fieldRefPattern.exec(sqlContent)) !== null) {
-          const refStart = lines[i].indexOf(fieldMatch[0]);
-          const range = {
-            start: { line: i, character: refStart },
-            end: { line: i, character: refStart + fieldMatch[0].length },
-          };
-
-          // Just verify the ${} syntax is present
-          if (!fieldMatch[0].startsWith("${") || !fieldMatch[0].endsWith("}")) {
-            diagnostics.push({
-              severity: DiagnosticSeverity.Error,
-              range,
-              message: "Invalid field reference syntax. Use ${view_name.field_name} format",
-              source: "lookml-lsp",
-              code: DiagnosticCode.VIEW_REF_FIELD_IN_SQL
-            });
+      // Validate dimension groups
+      if (viewDetails.view.dimension_group) {
+        Object.entries(viewDetails.view.dimension_group).forEach(([dimGroupName, dimensionGroup]) => {
+          if (!dimensionGroup.sql) {
+            return;
           }
-        }
+
+          const sqlPosition = positions.dimension_group?.[dimGroupName]?.sql;
+          diagnostics.push(...this.validateSqlReferences(dimensionGroup.sql, sqlPosition));
+        });
+      }
+
+      // Validate measures
+      if (viewDetails.view.measure) {
+        Object.entries(viewDetails.view.measure).forEach(([measureName, measure]) => {
+          if (!measure.sql) {
+            return;
+          }
+
+          const sqlPosition = positions.measure?.[measureName]?.sql;
+          diagnostics.push(...this.validateSqlReferences(measure.sql, sqlPosition));
+        });
       }
     }
 
     return diagnostics;
-  }
-
-  /**
-   * Helper method to get a range for a specific word in a line
-   */
-  private getWordRange(lines: string, lineNumber: number, word: string): Range {
-    const start = lines.indexOf(word);
-    if (start === -1) {
-      // Fallback if we can't find the word
-      return Range.create(
-        Position.create(lineNumber, 0),
-        Position.create(lineNumber, lines.length)
-      );
-    }
-
-    return Range.create(
-      Position.create(lineNumber, start),
-      Position.create(lineNumber, start + word.length)
-    );
-  }
-
-  /**
-   * Utility function to parse multi-line property values that use array or block syntax
-   * @param lines All lines of the document
-   * @param startLine The line number where the property starts
-   * @param propertyName The name of the property being parsed
-   * @param openChar Opening character ('[' for arrays, '{' for blocks)
-   * @param closeChar Closing character (']' for arrays, '}' for blocks)
-   * @returns Object containing the parsed content and line information
-   */
-  private parseMultiLineProperty(
-    lines: string[],
-    startLine: number,
-    propertyName: string,
-    openChar: string = '[',
-    closeChar: string = ']'
-  ): {
-    content: string[];
-    startLineNumber: number;
-    endLineNumber: number;
-    isMultiLine: boolean;
-  } {
-    const firstLine = lines[startLine].trim();
-    const propertyMatch = firstLine.match(new RegExp(`^\\s*${propertyName}:\\s*\\${openChar}(.*)$`));
-
-    if (!propertyMatch) {
-      return {
-        content: [],
-        startLineNumber: startLine,
-        endLineNumber: startLine,
-        isMultiLine: false
-      };
-    }
-
-    let arrayContent = propertyMatch[1];
-    let foundClosingChar = arrayContent.includes(closeChar);
-    let currentLine = startLine;
-    let content: string[] = [];
-
-    // If it's a single line property
-    if (foundClosingChar) {
-      arrayContent = arrayContent.substring(0, arrayContent.indexOf(closeChar));
-      content = arrayContent.split(",").map(f => f.trim()).filter(f => f);
-      return {
-        content,
-        startLineNumber: startLine,
-        endLineNumber: startLine,
-        isMultiLine: false
-      };
-    }
-
-    // Handle multi-line property
-    while (currentLine < lines.length && !foundClosingChar) {
-      if (currentLine > startLine) {
-        const nextLine = lines[currentLine].trim();
-        if (nextLine.includes(closeChar)) {
-          arrayContent = nextLine.substring(0, nextLine.indexOf(closeChar));
-          foundClosingChar = true;
-        } else {
-          arrayContent = nextLine;
-        }
-      }
-
-      if (arrayContent) {
-        const lineContent = arrayContent.split(",").map(f => f.trim()).filter(f => f);
-        content.push(...lineContent);
-      }
-
-      currentLine++;
-    }
-
-    return {
-      content,
-      startLineNumber: startLine,
-      endLineNumber: currentLine - 1,
-      isMultiLine: true
-    };
-  }
-
-  /**
-   * Find the line and character position of a field in a range of lines
-   */
-  private findFieldPosition(
-    lines: string[],
-    startLine: number,
-    endLine: number,
-    field: string
-  ): { line: number; character: number } | null {
-    for (let searchLine = startLine; searchLine <= endLine; searchLine++) {
-      const lineContent = lines[searchLine];
-      const fieldPos = lineContent.indexOf(field);
-      if (fieldPos !== -1) {
-        return { line: searchLine, character: fieldPos };
-      }
-    }
-    return null;
   }
 
   // Then in the validation method:
@@ -891,10 +326,10 @@ export class DiagnosticsProvider {
 
           const fieldLength = fieldName.length;
 
-          if (!targetedViewDetails) {
-            const startCharacter = setFieldPosition.$p[1];
-            const endCharacter = targetedViewName ? startCharacter + targetedViewName.length : setFieldPosition.$p[3];
+          const startCharacter = setFieldPosition.$p[1];
+          const endCharacter = targetedViewName ? startCharacter + targetedViewName.length : setFieldPosition.$p[3];
 
+          if (!targetedViewDetails) {
             diagnostics.push({
               severity: DiagnosticSeverity.Error,
               message: `View ${targetedViewName} not found`,
@@ -925,10 +360,10 @@ export class DiagnosticsProvider {
             
             diagnostics.push({
               severity: DiagnosticSeverity.Error,
-              message: `Field ${fieldName} not found in view ${targetedViewName}`,
+              message: `Field "${fieldName}" not found in view "${targetedViewName}"`,
               range: {
-                start: { line: setFieldPosition.$p[0] - 1, character: setFieldPosition.$p[1] },
-                end: { line: setFieldPosition.$p[2] - 1, character: setFieldPosition.$p[1] + fieldLength }
+                start: { line: setFieldPosition.$p[0] - 1, character: startCharacter },
+                end: { line: setFieldPosition.$p[2] - 1, character: endCharacter }
               },
               source: "lookml-lsp",
               code: DiagnosticCode.DRILL_FIELDS_FIELD_NOT_FOUND
@@ -1004,9 +439,10 @@ export class DiagnosticsProvider {
             if (drillField.includes("*")) {
               const fieldWithoutAsterisk = drillField.replace("*", "");
 
-              if (!targetedViewDetails?.view?.set?.[fieldWithoutAsterisk]) {
-                const startCharater = drillFieldPosition.$p[1];
+              const startCharater = drillFieldPosition.$p[1];
                 const endCharater = targetedViewName ? startCharater + fieldWithoutAsterisk.length : drillFieldPosition.$p[3];
+
+              if (!targetedViewDetails?.view?.set?.[fieldWithoutAsterisk]) {
                 diagnostics.push({
                   severity: DiagnosticSeverity.Error,
                   range: {
@@ -1029,12 +465,11 @@ export class DiagnosticsProvider {
               targetedViewDetails = this.workspaceModel.getView(targetedViewName);
             }
 
+            const startCharater = drillFieldPosition.$p[1];
+            const endCharater = targetedViewName ? startCharater + targetedViewName.length : drillFieldPosition.$p[3];
+
             const fieldLength = fieldName.length;
-
             if (!targetedViewDetails) {
-              const startCharater = drillFieldPosition.$p[1];
-              const endCharater = targetedViewName ? startCharater + targetedViewName.length : drillFieldPosition.$p[3];
-
               diagnostics.push({
                 severity: DiagnosticSeverity.Error,
                 message: `View ${targetedViewName} not found`,
@@ -1055,10 +490,10 @@ export class DiagnosticsProvider {
             if (!viewDimensions?.[fieldName] && !viewMeasures?.[fieldName] && !viewDimensionGroups?.[fieldName]) {
               diagnostics.push({
                 severity: DiagnosticSeverity.Error,
-                message: `Field ${fieldName} not found in view ${viewDetails.view.$name}`,
+                message: `Field "${fieldName}" not found in view ${targetedViewDetails.view.$name}`,
                 range: {
-                  start: { line: drillFieldPosition.$p[0] - 1, character: drillFieldPosition.$p[1] },
-                  end: { line: drillFieldPosition.$p[2] - 1, character: drillFieldPosition.$p[1] + fieldLength }
+                  start: { line: drillFieldPosition.$p[0] - 1, character: startCharater },
+                  end: { line: drillFieldPosition.$p[2] - 1, character: endCharater }
                 },
                 source: "lookml-lsp",
                 code: DiagnosticCode.DRILL_FIELDS_FIELD_NOT_FOUND
@@ -1165,6 +600,8 @@ export class DiagnosticsProvider {
 
             const fieldLength = fieldName.length;
 
+            
+
             if (!targetedViewDetails) {
               const startCharater = drillFieldPosition.$p[1];
               const endCharater = targetedViewName ? startCharater + targetedViewName.length : drillFieldPosition.$p[3];
@@ -1187,12 +624,15 @@ export class DiagnosticsProvider {
             const viewDimensionGroups = targetedViewDetails.view.dimension_group;
 
             if (!viewDimensions?.[fieldName] && !viewMeasures?.[fieldName] && !viewDimensionGroups?.[fieldName]) {
+              const startCharater = targetedViewName  ? drillFieldPosition.$p[1] + targetedViewName.length + 1 : drillFieldPosition.$p[1];
+              const endCharater = startCharater + fieldLength;
+              
               diagnostics.push({
                 severity: DiagnosticSeverity.Error,
-                message: `Field ${fieldName} not found in view ${viewDetails.view.$name}`,
+                message: `Field "${fieldName}" not found in view "${targetedViewDetails.view.$name}"`,
                 range: {
-                  start: { line: drillFieldPosition.$p[0] - 1, character: drillFieldPosition.$p[1] },
-                  end: { line: drillFieldPosition.$p[2] - 1, character: drillFieldPosition.$p[1] + fieldLength }
+                  start: { line: drillFieldPosition.$p[0] - 1, character: startCharater },
+                  end: { line: drillFieldPosition.$p[2] - 1, character: endCharater }
                 },
                 source: "lookml-lsp",
                 code: DiagnosticCode.DRILL_FIELDS_FIELD_NOT_FOUND
@@ -1405,15 +845,29 @@ export class DiagnosticsProvider {
       Object.entries(model.model.explore).forEach(([exploreName, explore]) => {
         // Initialize available views for this explore
 
-        const exploreViewName = this.workspaceModel.getView(exploreName);
-        if (exploreViewName) return;
+        const exploreViewDetails = this.workspaceModel.getView(exploreName);
+        if (!exploreViewDetails && !explore.from) {
+          const explorePosition = model.positions.explore?.[exploreName]?.$name?.$p;
+          if (!explorePosition) {
+            throw new Error(`No position found for explore ${exploreName}`);
+          }
+
+          diagnostics.push({
+            severity: DiagnosticSeverity.Error,
+            range: {
+              start: { line: explorePosition[0] - 1, character: explorePosition[1] },
+              end: { line: explorePosition[2] - 1, character: explorePosition[3] }
+            },
+            message: `Explore "${exploreName}" must have a base view`,
+            source: "lookml-lsp",
+            code: DiagnosticCode.EXPLORE_VIEW_NOT_FOUND
+          });
+        }
 
         const availableViews = new Set<string>();
-        if (exploreViewName) {
+        if (exploreViewDetails) {
           availableViews.add(exploreName);
         };
-
-        exploreAvailableViews.set(exploreName, availableViews);
 
         // Add the base view
         if (explore.from) {
@@ -1426,18 +880,28 @@ export class DiagnosticsProvider {
             availableViews.add(joinName);
           });
         }
+
+        exploreAvailableViews.set(exploreName, availableViews);  
       });
     }
 
     // Second pass: validate references
     if (model.model.explore) {
       Object.entries(model.model.explore).forEach(([exploreName, explore]) => {
-        const availableViews = exploreAvailableViews.get(exploreName);
+        const availableViews = exploreAvailableViews.get(exploreName) ?? new Set<string>();
 
-        console.log("exploreName availableViews", exploreName, availableViews);
+        if (explore.extends) {
+          for (const extend of explore.extends) {
+            const extendAvailableViews = exploreAvailableViews.get(extend);
+            if (extendAvailableViews) {
+              extendAvailableViews.forEach(view => {
+                availableViews.add(view);
+              });
+            }
+          }
+        }
+
         if (!availableViews) return;
-
-        // Validate base view
         if (explore.from) {
           const viewName = explore.from;
           const viewDetails = this.workspaceModel.getView(viewName);
@@ -1465,9 +929,14 @@ export class DiagnosticsProvider {
           Object.entries(explore.join).forEach(([joinName, join]) => {
             const viewDetails = this.workspaceModel.getView(joinName);
             if (!viewDetails) {
+              const explorePosition = model.positions.explore?.[exploreName]?.join?.[joinName]?.$p;
+              const range = {
+                start: { line: explorePosition[0] - 1, character: explorePosition[1] },
+                end: { line: explorePosition[2] - 1, character: explorePosition[3] }
+              }
               diagnostics.push({
                 severity: DiagnosticSeverity.Error,
-                range: this.getRangeFromPositions(model.positions, exploreName, 'join', joinName),
+                range,
                 message: `Referenced view "${joinName}" not found in workspace`,
                 source: "lookml-lsp",
                 code: DiagnosticCode.JOIN_VIEW_NOT_FOUND

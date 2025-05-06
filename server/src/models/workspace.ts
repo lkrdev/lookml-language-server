@@ -174,7 +174,7 @@ export class WorkspaceModel {
           const fileName = value.$file_name;
 
           const uri = `${process.cwd()}/${filePath}`;
-          const fileViewNames = this.viewsByFile.get(uri) || [];
+          const viewsByFile = this.viewsByFile.get(uri) || [];
 
           const filePositions = project.positions.file[viewName];
 
@@ -191,12 +191,12 @@ export class WorkspaceModel {
             });
   
             
-            if (fileViewNames.includes(fileName)) {
+            if (viewsByFile.includes(key)) {
               return;
             }
 
-            fileViewNames.push(fileName);
-            this.viewsByFile.set(uri, fileViewNames);
+            viewsByFile.push(key);
+            this.viewsByFile.set(uri, viewsByFile);
           });
           break;
         }
@@ -258,6 +258,7 @@ export class WorkspaceModel {
         }
       }
     }
+    console.log("this.viewsByFile", this.viewsByFile);
   }
 
   /**
@@ -416,9 +417,7 @@ export class WorkspaceModel {
 
       for (const filePath of matchedFiles) {
         if (this.loadedFiles.has(filePath)) continue;
-
         try {
-
           // Request file content via LSP
           const viewsFromThisFile =
             this.viewsByFile.get(filePath) || [];
