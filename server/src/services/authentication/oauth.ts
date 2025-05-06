@@ -163,8 +163,6 @@ export class NodeOAuthSession extends AuthSession {
             )
         );
 
-        console.log("new token", token);
-
         if (!token.access_token || !token.token_type || !token.expires_in) {
             throw new Error('Invalid token');
         }
@@ -229,7 +227,6 @@ export class NodeOAuthSession extends AuthSession {
     async getToken() {
         if (!this.isAuthenticated()) {
             if (this.activeToken.refresh_token) {
-                console.log("using refresh token");
                 const config = this.readConfig();
                 await this.requestToken({
                     client_id: config.client_id,

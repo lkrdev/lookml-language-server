@@ -81,7 +81,7 @@ export class AuthenticationService {
 
         // Check for a valid token in the database first
         const existing = await getValidAuthToken(config.client_id, config.base_url);
-        console.log("existing", existing);
+
         if (existing) {
             // If a valid token exists, initialize the SDK and session with it
             const settings = new ApiSettings({ base_url: config.base_url });
@@ -106,7 +106,6 @@ export class AuthenticationService {
                     0,
             }
 
-            console.log("setToken", token);
             this.oauthSession.activeToken.setToken(token);
             await this.oauthSession.getToken();
             this.sdk = new Looker40SDK(this.oauthSession);

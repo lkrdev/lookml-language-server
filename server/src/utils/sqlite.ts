@@ -45,7 +45,7 @@ export async function saveAuthToken(record: AuthRecord) {
   );
 
   if (existing) {
-    const result = await db.run(
+    await db.run(
       `UPDATE auth SET
         access_token = ?,
         token_type = ?,
