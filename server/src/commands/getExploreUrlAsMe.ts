@@ -25,7 +25,7 @@ export async function handleGetExploreUrlAsMe(
   }
 
   try {
-    const sdk = await authService.getSDK();
+    const sdk = authService.getSDK();
     const url = await sdk.ok(
       sdk.create_embed_url_as_me({
         target_url: `${args.base_url}/explore/${args.model_name}/${args.explore_name}`,

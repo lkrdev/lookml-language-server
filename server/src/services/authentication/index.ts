@@ -24,7 +24,7 @@ export class AuthenticationService {
     private setupHttpServer() {
         this.server = http.createServer(async (req, res) => {
             const parsedUrl = url.parse(req.url!, true);
-            
+
             if (parsedUrl.pathname === AuthenticationService.DEFAULT_CALLBACK_PATH) {
                 try {
                     if (!this.oauthSession) {
@@ -59,7 +59,7 @@ export class AuthenticationService {
         return new Promise((resolve, reject) => {
             this.server = http.createServer();
             this.setupHttpServer();
-            
+
             this.server.listen(AuthenticationService.DEFAULT_PORT, () => {
                 resolve();
             }).on('error', (err: Error) => {
@@ -81,6 +81,7 @@ export class AuthenticationService {
 
         // Check for a valid token in the database first
         const existing = await getValidAuthToken(config.client_id, config.base_url);
+
         if (existing) {
             // If a valid token exists, initialize the SDK and session with it
             const settings = new ApiSettings({ base_url: config.base_url });
@@ -95,16 +96,22 @@ export class AuthenticationService {
                 transport: new NodeTransport(settings),
                 crypto: new NodeCryptoHash(),
             });
-            // Manually set the token
-            this.oauthSession.activeToken.access_token = existing.access_token;
-            this.oauthSession.activeToken.refresh_token = existing.refresh_token;
-            this.oauthSession.activeToken.token_type = existing.token_type;
-            if (existing.expires_at) {
-                this.oauthSession.activeToken.expiresAt = new Date(existing.expires_at);
+
+            const token = {
+                access_token: existing.access_token,
+                refresh_token: existing.refresh_token,
+                token_type: existing.token_type,
+                expires_in: existing.expires_at ?
+                    new Date(existing.expires_at).getTime() - new Date().getTime() :
+                    0,
             }
+
+            this.oauthSession.activeToken.setToken(token);
+            await this.oauthSession.getToken();
             this.sdk = new Looker40SDK(this.oauthSession);
             return "authenticated";
         }
+
         try {
             const settings = new ApiSettings({
                 base_url: config.base_url,
@@ -144,9 +151,9 @@ export class AuthenticationService {
         }
     }
 
-    public async testConnection(config: LookerOAuthConfig): Promise< AuthenticationState> {
+    public async testConnection(config: LookerOAuthConfig): Promise<AuthenticationState> {
         try {
-            const response =await this.initializeOAuth(config);
+            const response = await this.initializeOAuth(config);
             if (response === "requested") {
                 return "requested";
             }

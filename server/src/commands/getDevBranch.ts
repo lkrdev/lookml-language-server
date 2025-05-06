@@ -16,7 +16,7 @@ export async function handleGetDevBranch(
     throw new Error('Invalid arguments for getDevBranch command');
   }
   try {
-    const sdk = await authService.getSDK();
+    const sdk = authService.getSDK();
     const branch = await sdk.ok(sdk.git_branch(args.project_name));
     return { success: true, branch_name: branch?.name || '' };
   } catch (error) {

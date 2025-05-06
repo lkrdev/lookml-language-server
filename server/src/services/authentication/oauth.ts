@@ -134,21 +134,13 @@ export class NodeOAuthSession extends AuthSession {
 
     async login(code: string): Promise<any> {
         if (!this.isAuthenticated()) {
-            if (this.reentry) {
-                // do nothing
-            } else {
-                this.reentry = true;
-                // If return URL is stored, we must be coming back from an OAuth request
-                // so release the stored return url at the start of the redemption
-                this.returnUrl = null;
-                if (!this.code_verifier) {
-                    return Promise.reject(
-                        new Error('OAuth failed: expected code_verifier to be stored')
-                    );
-                }
-
-                await this.redeemAuthCode(code);
+            if (!this.code_verifier) {
+                return Promise.reject(
+                    new Error('OAuth failed: expected code_verifier to be stored')
+                );
             }
+
+            await this.redeemAuthCode(code);
             return await this.getToken();
         }
         return this.activeToken;
@@ -170,6 +162,22 @@ export class NodeOAuthSession extends AuthSession {
                 body
             )
         );
+
+        if (!token.access_token || !token.token_type || !token.expires_in) {
+            throw new Error('Invalid token');
+        }
+
+        // Save token to SQLite
+        const record: AuthRecord = {
+            instance_name: config.client_id,
+            access_token: token.access_token,
+            refresh_token: token.refresh_token,
+            token_type: token.token_type,
+            expires_at: token.expires_in ? new Date(Date.now() + token.expires_in * 1000).toISOString() : '',
+            current_instance: true,
+            base_url: config.base_url || config.looker_url || '',
+        };
+        saveAuthToken(record);
 
         return this.activeToken.setToken(token);
     }
@@ -212,31 +220,8 @@ export class NodeOAuthSession extends AuthSession {
         } as IAuthCodeGrantTypeParams;
     }
 
-    /**
-     * Convert an authCode received from server into an active auth token
-     * The app is responsible for obtaining the authCode via interactive user login
-     * via /auth front-end endpoint and URL redirect. When the authCode is received
-     * by url redirect to an app route, pass the authCode into this function to
-     * get an access_token and refresh_token.
-     * @param {string} authCode
-     * @param {string} codeVerifier
-     * @returns {Promise<AuthToken>}
-     */
     async redeemAuthCode(authCode: string, codeVerifier?: string) {
-        await this.requestToken(this.redeemAuthCodeBody(authCode, codeVerifier));
-        // Save token to SQLite
-        const config = this.readConfig();
-        const record: AuthRecord = {
-            instance_name: config.client_id,
-            access_token: this.activeToken.access_token || '',
-            refresh_token: this.activeToken.refresh_token || '',
-            refresh_expires_at: '', // Not available in AuthToken
-            token_type: this.activeToken.token_type || '',
-            expires_at: this.activeToken.expiresAt ? this.activeToken.expiresAt.toISOString() : '',
-            current_instance: true,
-            base_url: config.base_url || config.looker_url || '',
-        };
-        saveAuthToken(record);
+        return this.requestToken(this.redeemAuthCodeBody(authCode, codeVerifier));
     }
 
     async getToken() {

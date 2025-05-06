@@ -16,7 +16,7 @@ export async function handleSwitchToDev(
     throw new Error('Branch name not found');
   }
   try {
-    const sdk = await authService.getSDK();
+    const sdk = authService.getSDK();
     await sdk.update_session({
       workspace_id: 'dev',
     })
