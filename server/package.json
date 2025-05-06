@@ -1,16 +1,17 @@
 {
   "name": "lookml-language-server",
-  "description": "REPLACE_ME",
-  "version": "1.0.0",
-  "author": "REPLACE_ME",
+  "description": "LookML Language Server for Visual Studio Code",
+  "author": "rileylnapier@gmail.com",
+  "version": "0.0.0",
   "license": "MIT",
   "engines": {
     "node": "*"
   },
   "repository": {
     "type": "git",
-    "url": "REPLACE_ME"
+    "url": "https://github.com/lkrdev/lookml-language-server"
   },
+  "publisher": "lkr-dev",
   "dependencies": {
     "@looker/sdk": "^25.4.0",
     "@looker/sdk-node": "^25.4.0",
