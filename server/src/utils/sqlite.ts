@@ -28,8 +28,8 @@ async function getDb() {
 export interface AuthRecord {
   instance_name: string;
   access_token: string;
-  refresh_token: string;
-  refresh_expires_at: string;
+  refresh_token?: string;
+  refresh_expires_at?: string;
   token_type: string;
   expires_at: string;
   current_instance: boolean;
@@ -45,18 +45,14 @@ export async function saveAuthToken(record: AuthRecord) {
   );
 
   if (existing) {
-    await db.run(
+    const result = await db.run(
       `UPDATE auth SET
         access_token = ?,
-        refresh_token = ?,
-        refresh_expires_at = ?,
         token_type = ?,
         expires_at = ?,
         current_instance = ?
       WHERE id = ?`,
       record.access_token,
-      record.refresh_token,
-      record.refresh_expires_at,
       record.token_type,
       record.expires_at,
       record.current_instance ? 1 : 0,
@@ -83,7 +79,7 @@ export async function getValidAuthToken(instance_name: string, base_url: string)
   const db = await getDb();
   const now = new Date().toISOString();
   const record = await db.get(
-    `SELECT * FROM auth WHERE instance_name = ? AND base_url = ? AND expires_at > ? ORDER BY id DESC LIMIT 1`,
+    `SELECT * FROM auth WHERE instance_name = ? AND base_url = ? AND refresh_expires_at > ? ORDER BY id DESC LIMIT 1`,
     instance_name,
     base_url,
     now
