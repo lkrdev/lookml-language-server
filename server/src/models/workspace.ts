@@ -258,7 +258,6 @@ export class WorkspaceModel {
         }
       }
     }
-    console.log("this.viewsByFile", this.viewsByFile);
   }
 
   /**
