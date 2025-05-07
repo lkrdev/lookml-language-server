@@ -167,17 +167,21 @@ export class NodeOAuthSession extends AuthSession {
             throw new Error('Invalid token');
         }
 
-        // Save token to SQLite
+        const now = Date.now();
         const record: AuthRecord = {
             instance_name: config.client_id,
             access_token: token.access_token,
             refresh_token: token.refresh_token,
-            refresh_expires_at: token.refresh_token ? new Date(Date.now() + token.expires_in * 1000).toISOString() : '',
+            refresh_expires_at: token.refresh_token
+              ? new Date(now + 30 * 24 * 60 * 60 * 1000).toISOString()
+              : '',
             token_type: token.token_type,
-            expires_at: token.expires_in ? new Date(Date.now() + token.expires_in * 1000).toISOString() : '',
+            expires_at: token.expires_in
+              ? new Date(now + token.expires_in * 1000).toISOString()
+              : '',
             current_instance: true,
             base_url: config.base_url || config.looker_url || '',
-        };
+          };
         
         saveAuthToken(record);
 

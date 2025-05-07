@@ -324,8 +324,6 @@ export class DiagnosticsProvider {
             targetedViewDetails = this.workspaceModel.getView(targetedViewName);
           }
 
-          const fieldLength = fieldName.length;
-
           const startCharacter = setFieldPosition.$p[1];
           const endCharacter = targetedViewName ? startCharacter + targetedViewName.length : setFieldPosition.$p[3];
 
@@ -347,13 +345,19 @@ export class DiagnosticsProvider {
           const viewDimensionGroups = targetedViewDetails.view.dimension_group;
 
           if (!viewDimensions?.[fieldName] && !viewMeasures?.[fieldName] && !viewDimensionGroups?.[fieldName]) {
-            if (field.includes("_")) {
-              const fieldSplit = field.split("_");
-              const [dimensionGroupName, groupName] = fieldSplit;
-  
+            if (fieldName.includes("_")) {
+              const fieldSplit = fieldName.split("_");
+              const groupName = fieldSplit.pop();
+
+              if (!groupName) {
+                throw new Error(`No group name found for field ${fieldName}`);
+              }
+
+              const dimensionGroupName = fieldSplit.join("_");
               const dimensionGroup = viewDimensionGroups?.[dimensionGroupName];
               
-              if (viewDimensionGroups?.[dimensionGroupName] && dimensionGroup?.timeframes?.includes(groupName)) {
+              const timeframes = dimensionGroup?.timeframes ?? ["time", "date"];
+              if (viewDimensionGroups?.[dimensionGroupName] && timeframes.includes(groupName)) {
                 continue;
               }
             }
@@ -488,6 +492,23 @@ export class DiagnosticsProvider {
             const viewDimensionGroups = targetedViewDetails.view.dimension_group;
 
             if (!viewDimensions?.[fieldName] && !viewMeasures?.[fieldName] && !viewDimensionGroups?.[fieldName]) {
+              if (fieldName.includes("_")) {
+                const fieldSplit = fieldName.split("_");
+                const groupName = fieldSplit.pop();
+  
+                if (!groupName) {
+                  throw new Error(`No group name found for field ${fieldName}`);
+                }
+  
+                const dimensionGroupName = fieldSplit.join("_");
+                const dimensionGroup = viewDimensionGroups?.[dimensionGroupName];
+                
+                const timeframes = dimensionGroup?.timeframes ?? ["time", "date"];
+                if (viewDimensionGroups?.[dimensionGroupName] && timeframes.includes(groupName)) {
+                  continue;
+                }
+              }
+
               diagnostics.push({
                 severity: DiagnosticSeverity.Error,
                 message: `Field "${fieldName}" not found in view ${targetedViewDetails.view.$name}`,
@@ -624,6 +645,23 @@ export class DiagnosticsProvider {
             const viewDimensionGroups = targetedViewDetails.view.dimension_group;
 
             if (!viewDimensions?.[fieldName] && !viewMeasures?.[fieldName] && !viewDimensionGroups?.[fieldName]) {
+              if (fieldName.includes("_")) {
+                const fieldSplit = fieldName.split("_");
+                const groupName = fieldSplit.pop();
+  
+                if (!groupName) {
+                  throw new Error(`No group name found for field ${fieldName}`);
+                }
+  
+                const dimensionGroupName = fieldSplit.join("_");
+                const dimensionGroup = viewDimensionGroups?.[dimensionGroupName];
+                
+                const timeframes = dimensionGroup?.timeframes ?? ["time", "date"];
+                if (viewDimensionGroups?.[dimensionGroupName] && timeframes.includes(groupName)) {
+                  continue;
+                }
+              }
+
               const startCharater = targetedViewName  ? drillFieldPosition.$p[1] + targetedViewName.length + 1 : drillFieldPosition.$p[1];
               const endCharater = startCharater + fieldLength;
               
