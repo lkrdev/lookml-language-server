@@ -48,7 +48,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: |
-          find . -name "package.json" -exec sed -i "s/\"version\": \\".*\\"/\"version\": \"${{ env.TAG }}\"/" {} +
+          find . -name "package.json" -exec sed -i "s/\"version\": \".*\"/\"version\": \"${{ env.TAG }}\"/" {} +
       - uses: actions/setup-node@v4
         with:
           node-version: 18.x
