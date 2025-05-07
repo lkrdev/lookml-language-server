@@ -47,7 +47,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - run: |
+      - name: Replace version in package.json
+        run: |
           find . -name "package.json" -exec sed -i "s/\"version\": \".*\"/\"version\": \"${{ env.TAG }}\"/" {} +
       - uses: actions/setup-node@v4
         with:
