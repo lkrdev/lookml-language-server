@@ -13,6 +13,9 @@
   "engines": {
     "vscode": "^1.75.0"
   },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./client/out/extension",
   "contributes": {
     "commands": [
