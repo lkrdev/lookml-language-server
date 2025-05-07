@@ -172,11 +172,13 @@ export class NodeOAuthSession extends AuthSession {
             instance_name: config.client_id,
             access_token: token.access_token,
             refresh_token: token.refresh_token,
+            refresh_expires_at: token.refresh_token ? new Date(Date.now() + token.expires_in * 1000).toISOString() : '',
             token_type: token.token_type,
             expires_at: token.expires_in ? new Date(Date.now() + token.expires_in * 1000).toISOString() : '',
             current_instance: true,
             base_url: config.base_url || config.looker_url || '',
         };
+        
         saveAuthToken(record);
 
         return this.activeToken.setToken(token);

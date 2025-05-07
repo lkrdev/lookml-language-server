@@ -78,11 +78,13 @@ export async function saveAuthToken(record: AuthRecord) {
 export async function getValidAuthToken(instance_name: string, base_url: string): Promise<AuthRecord | null> {
   const db = await getDb();
   const now = new Date().toISOString();
+
   const record = await db.get(
     `SELECT * FROM auth WHERE instance_name = ? AND base_url = ? AND refresh_expires_at > ? ORDER BY id DESC LIMIT 1`,
     instance_name,
     base_url,
     now
   );
+
   return record || null;
 } 
