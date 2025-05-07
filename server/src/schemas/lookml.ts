@@ -13,14 +13,16 @@ const parserValues = z.object({
 });
 
 export const baseProperties = parserValues.extend({
-  label: z.string().optional(),
   description: z.string().optional(),
-  hidden: z.boolean().optional(),
-  view_label: z.string().optional(),
   group_label: z.string().optional(),
+  hidden: z.boolean().optional(),
+  html: z.string().optional(),
+  label: z.string().optional(),
+  order_by_field: z.string().optional(),
+  required_fields: z.array(z.string()).optional(),
   tags: z.array(z.string()).optional(),
   value_format_name: z.string().optional(),
-  required_fields: z.array(z.string()).optional(),
+  view_label: z.string().optional(),
 });
 
 export const linkSchema = parserValues.extend({
