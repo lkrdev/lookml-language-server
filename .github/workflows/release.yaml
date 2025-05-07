@@ -48,6 +48,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Replace version in package.json
+        shell: bash
         run: |
           if [[ "$OSTYPE" == "darwin"* ]]; then
             find . -name "package.json" -exec sed -i '' "s/\"version\": \".*\"/\"version\": \"${{ env.TAG }}\"/" {} +
@@ -62,7 +63,7 @@ jobs:
           npm_config_arch: ${{ matrix.npm_config_arch }}
       - shell: pwsh
         run: echo "target=${{ matrix.platform }}-${{ matrix.arch }}" >> $env:GITHUB_ENV
-      - run: npx vsce package --target ${{ env.target }}
+      - run: npx @vscode/vsce package --target ${{ env.target }}
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ env.target }}
