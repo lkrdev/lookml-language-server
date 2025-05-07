@@ -160,16 +160,23 @@ export const dimensionGroupSchema = baseProperties.extend({
       'day_of_week_index', 'week_start_date', 'month_name', 'quarter_name',
       'day_name'
     ])
-  ),
+  ).optional(),
   type: z.literal('time'),
 }).strict();
 
 export const measureFiltersSchema = z.union([
-  z.object({
+  // filters: { field: "foo", value: "bar", ...parser meta }
+  parserValues.extend({
     field: z.string(),
     value: z.string(),
   }),
-  z.record(z.string(), z.string())
+
+  // filters: { field1: "val1", field2: "val2", ...parser meta }
+  z.object({
+    $name: z.string().optional(),
+    $type: z.string(),
+    $strings: recursiveStringArray,
+  }).catchall(z.string())
 ]);
 
 export const measureSchema = baseProperties.extend({

@@ -22,6 +22,8 @@ async function getDb() {
       base_url TEXT
     )`);
   }
+  const db = await dbPromise;
+  await db.run(`DELETE FROM auth WHERE refresh_expires_at IS NOT NULL AND refresh_expires_at <= ?`, new Date().toISOString());
   return dbPromise;
 }
 
@@ -39,9 +41,10 @@ export interface AuthRecord {
 export async function saveAuthToken(record: AuthRecord) {
   const db = await getDb();
   const existing = await db.get(
-    'SELECT id FROM auth WHERE instance_name = ? AND base_url = ?',
+    'SELECT id FROM auth WHERE instance_name = ? AND base_url = ? AND refresh_expires_at > ?',
     record.instance_name,
-    record.base_url
+    record.base_url,
+    new Date().toISOString()
   );
 
   if (existing) {
@@ -75,7 +78,7 @@ export async function saveAuthToken(record: AuthRecord) {
   }
 }
 
-export async function getValidAuthToken(instance_name: string, base_url: string): Promise<AuthRecord | null> {
+export async function getValidAuthToken(instance_name: string, base_url: string): Promise<AuthRecord | undefined> {
   const db = await getDb();
   const now = new Date().toISOString();
 
@@ -86,5 +89,5 @@ export async function getValidAuthToken(instance_name: string, base_url: string)
     now
   );
 
-  return record || null;
+  return record;
 } 
