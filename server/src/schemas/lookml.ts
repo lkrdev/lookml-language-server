@@ -1,6 +1,5 @@
 import { z } from 'zod';
 
-
 // Base schemas for common properties
 export const recursiveStringArray: z.ZodType<unknown> = z.lazy(() =>
   z.union([z.string(), z.array(recursiveStringArray)])
@@ -58,7 +57,6 @@ const actionSchema = z.object({
   ]).optional(),
 });
 
-// Shared valid types between dimensions and measures
 export const sharedValidTypes = [
   "time", "date", "number", "string", "yesno", "zipcode",
   "date_day_of_month", "date_day_of_week", "date_day_of_week_index",
@@ -109,6 +107,19 @@ const caseSchema = parserValues.extend({
   else: z.union([z.string(), z.object({ label: z.string() })]).optional(),
 }).strict();
 
+const allowedValueSchema = z.object({
+  label: z.string(),
+  value: z.string(),
+});
+
+const parameterSchema = baseProperties.extend({
+  type: z.enum(['string', 'number', 'unquoted']),
+  default_value: z.string().optional(),
+  allowed_value: z.union([allowedValueSchema, z.array(allowedValueSchema)]).optional(),
+  value_format_name: z.string().optional(),
+  sql: z.string().optional(),
+}).strict();
+
 export const dimensionSchema = baseProperties.extend({
   action: z.union([actionSchema, z.array(actionSchema)]).optional(),
   case: caseSchema.optional(),
@@ -123,9 +134,11 @@ export const dimensionSchema = baseProperties.extend({
   sql_start: z.string().optional(),
   sql: z.string().optional(),
   style: z.enum(['integer', 'float', 'ordinal', 'interval']).optional(),
+  suggestions: z.boolean().optional(),
   tiers: z.array(z.string()).optional(),
   type: z.enum(dimensionValidTypes).optional(),
   value_format: z.string().optional(),
+  value_format_name: z.string().optional(),
 }).strict().superRefine((val, ctx) => {
   if (val.type === 'location') {
     if (!val.sql_latitude) {
@@ -165,13 +178,10 @@ export const dimensionGroupSchema = baseProperties.extend({
 }).strict();
 
 export const filtersSchema = z.union([
-  // filters: { field: "foo", value: "bar", ...parser meta }
   parserValues.extend({
     field: z.string(),
     value: z.string(),
   }),
-
-  // filters: { field1: "val1", field2: "val2", ...parser meta }
   z.object({
     $name: z.string().optional(),
     $type: z.string(),
@@ -187,6 +197,8 @@ export const measureSchema = baseProperties.extend({
   sql: z.string().optional(),
   type: z.enum(measureValidTypes),
   value_format: z.string().optional(),
+  value_format_name: z.string().optional(),
+  suggestions: z.boolean().optional(),
 }).strict();
 
 export const setSchema = parserValues.extend({
@@ -235,3 +247,5 @@ export const suggestionsSchema = z.array(
     value: z.string(),
   })
 );
+
+export const parameterFieldSchema = parameterSchema;

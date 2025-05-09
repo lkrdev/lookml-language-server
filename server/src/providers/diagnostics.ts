@@ -974,7 +974,7 @@ export class DiagnosticsProvider {
           if (!viewDetails) {
             diagnostics.push({
               severity: DiagnosticSeverity.Error,
-              range: this.getRangeFromPositions(model.positions, exploreName, 'from'),
+              range: this.getRangeFromPositions(model.positions, 'explore',exploreName, 'from'),
               message: `Referenced view "${viewName}" not found in workspace`,
               source: "lookml-lsp",
               code: DiagnosticCode.VIEW_REF_VIEW_NOT_FOUND
@@ -982,7 +982,7 @@ export class DiagnosticsProvider {
           } else if (!includedViews.has(viewName)) {
             diagnostics.push({
               severity: DiagnosticSeverity.Error,
-              range: this.getRangeFromPositions(model.positions, exploreName, 'from'),
+              range: this.getRangeFromPositions(model.positions, 'explore', exploreName, 'from'),
               message: `View "${viewName}" exists but is not included in this model`,
               source: "lookml-lsp",
               code: DiagnosticCode.VIEW_REF_VIEW_NOT_INCLUDED
@@ -1010,7 +1010,7 @@ export class DiagnosticsProvider {
             } else if (!includedViews.has(joinName)) {
               diagnostics.push({
                 severity: DiagnosticSeverity.Error,
-                range: this.getRangeFromPositions(model.positions, exploreName, 'join', joinName),
+                range: this.getRangeFromPositions(model.positions, 'explore',exploreName, 'join', joinName),
                 message: `View "${joinName}" exists but is not included in this model`,
                 source: "lookml-lsp",
                 code: DiagnosticCode.JOIN_VIEW_NOT_INCLUDED
@@ -1084,7 +1084,9 @@ export class DiagnosticsProvider {
     let current = positions;
     for (const part of path) {
       if (!current) break;
-      current = current[part];
+      if (current[part]) {
+        current = current[part];
+      }
     }
     
     if (!current || !current.$p) {
