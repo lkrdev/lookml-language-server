@@ -52,8 +52,8 @@ export class ContextDetector {
       const sqlFieldMatch = linePrefix.match(/.*sql:.*\$\{\s*([a-zA-Z0-9_]*)$/);
       if (sqlFieldMatch) {
         return {
-          type: "dimension_reference",
-          viewName: this.workspaceModel.getViewNameFromFile(document),
+          type: "field_reference",
+          viewName: this.getCurrentViewName(document, position),
           dimensionName: sqlFieldMatch[1],
           linePrefix,
         };
@@ -227,31 +227,16 @@ export class ContextDetector {
   ): string | undefined {
     const text = document.getText();
     const lines = text.split("\n");
-    let bracketLevel = 0;
 
     // Scan backwards from current line to find the block type
     for (let i = position.line; i >= 0; i--) {
       const line = lines[i].trim();
-
-      // Count closing brackets
-      const closeBrackets = (line.match(/}/g) || []).length;
-      bracketLevel -= closeBrackets;
-
-      // Check for block start (if we're not inside a nested block)
-      if (bracketLevel <= 0) {
-        const blockMatch = line.match(/^([a-zA-Z0-9_]+):\s+[a-zA-Z0-9_]+\s*\{/);
-        if (blockMatch) {
-          bracketLevel++; // We found an opening bracket
-          return blockMatch[1];
-        }
+      
+      // Look for block start
+      const blockMatch = line.match(/^([a-zA-Z0-9_]+):\s+[a-zA-Z0-9_]+\s*\{/);
+      if (blockMatch) {
+        return blockMatch[1];
       }
-
-      // Count opening brackets
-      const openBrackets = (line.match(/{/g) || []).length;
-      bracketLevel += openBrackets;
-
-      // If we've gone too far back
-      if (bracketLevel < 0) break;
     }
 
     return undefined;
@@ -266,35 +251,19 @@ export class ContextDetector {
   ): string | undefined {
     const text = document.getText();
     const lines = text.split("\n");
-    let bracketLevel = 0;
-    let viewName: string | undefined = undefined;
 
     // Scan backwards from current line
     for (let i = position.line; i >= 0; i--) {
       const line = lines[i].trim();
-
-      // Count closing brackets
-      const closeBrackets = (line.match(/}/g) || []).length;
-      bracketLevel -= closeBrackets;
-
+      
       // Look for view definition
-      if (bracketLevel <= 0) {
-        const viewMatch = line.match(/^view:\s+([a-zA-Z0-9_]+)\s*\{/);
-        if (viewMatch) {
-          viewName = viewMatch[1];
-          break;
-        }
+      const viewMatch = line.match(/^view:\s+([a-zA-Z0-9_]+)\s*\{/);
+      if (viewMatch) {
+        return viewMatch[1];
       }
-
-      // Count opening brackets
-      const openBrackets = (line.match(/{/g) || []).length;
-      bracketLevel += openBrackets;
-
-      // If we've gone too far back
-      if (bracketLevel < 0) break;
     }
 
-    return viewName;
+    return undefined;
   }
 
   /**
@@ -306,7 +275,6 @@ export class ContextDetector {
   ): { exploreName: string; joinName: string; viewName: string } | undefined {
     const text = document.getText();
     const lines = text.split("\n");
-    let bracketLevel = 0;
     let exploreName: string | undefined;
     let joinName: string | undefined;
     let viewName: string | undefined;
@@ -315,42 +283,27 @@ export class ContextDetector {
     for (let i = position.line; i >= 0; i--) {
       const line = lines[i].trim();
 
-      // Count closing brackets
-      const closeBrackets = (line.match(/}/g) || []).length;
-      bracketLevel -= closeBrackets;
-
       // Look for join definition
-      if (bracketLevel === 1) {
-        const joinMatch = line.match(/^join:\s+([a-zA-Z0-9_]+)\s*\{/);
-        if (joinMatch && !joinName) {
-          joinName = joinMatch[1];
-          viewName = joinName; // Typically join name is the view name
-          continue;
-        }
+      const joinMatch = line.match(/^join:\s+([a-zA-Z0-9_]+)\s*\{/);
+      if (joinMatch && !joinName) {
+        joinName = joinMatch[1];
+        viewName = joinName; // Typically join name is the view name
+        continue;
+      }
 
-        // Check for view_name property
-        const viewNameMatch = line.match(/^view_name:\s+([a-zA-Z0-9_]+)/);
-        if (viewNameMatch && joinName && !viewName) {
-          viewName = viewNameMatch[1];
-          continue;
-        }
+      // Check for view_name property
+      const viewNameMatch = line.match(/^view_name:\s+([a-zA-Z0-9_]+)/);
+      if (viewNameMatch && joinName && !viewName) {
+        viewName = viewNameMatch[1];
+        continue;
       }
 
       // Look for explore definition
-      if (bracketLevel === 0) {
-        const exploreMatch = line.match(/^explore:\s+([a-zA-Z0-9_]+)\s*\{/);
-        if (exploreMatch) {
-          exploreName = exploreMatch[1];
-          break;
-        }
+      const exploreMatch = line.match(/^explore:\s+([a-zA-Z0-9_]+)\s*\{/);
+      if (exploreMatch) {
+        exploreName = exploreMatch[1];
+        break;
       }
-
-      // Count opening brackets
-      const openBrackets = (line.match(/{/g) || []).length;
-      bracketLevel += openBrackets;
-
-      // If we've gone too far back
-      if (bracketLevel < 0) break;
     }
 
     if (exploreName && joinName && viewName) {

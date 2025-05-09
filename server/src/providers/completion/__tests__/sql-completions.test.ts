@@ -80,7 +80,8 @@ describe("SQLCompletionProvider", () => {
 
     describe("getFieldReferenceCompletions", () => {
         test("should return completion items for all fields in a view", () => {
-            const completions = sqlCompletionProvider.getFieldReferenceCompletions("users");
+            const context: CompletionContext = { type: "field_reference", viewName: "users" };
+            const completions = sqlCompletionProvider.getFieldReferenceCompletions(context);
 
             expect(completions).toHaveLength(3);
             expect(completions).toEqual(
@@ -120,7 +121,9 @@ describe("SQLCompletionProvider", () => {
         });
 
         test("should return empty array for non-existent view", () => {
-            const completions = sqlCompletionProvider.getFieldReferenceCompletions("non_existent");
+            const context: CompletionContext = { type: "field_reference", viewName: "non_existent" };
+
+            const completions = sqlCompletionProvider.getFieldReferenceCompletions(context);
             expect(completions).toHaveLength(0);
         });
     });

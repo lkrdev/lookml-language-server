@@ -50,7 +50,6 @@ public getTableReferenceCompletions(context: CompletionContext): CompletionItem[
     items.push({
       label: viewName,
       kind: CompletionItemKind.Class,
-      insertText: viewName, 
       detail: `View: ${viewName}`,
       data: { type: "view-ref", viewName }
     });
@@ -59,11 +58,39 @@ public getTableReferenceCompletions(context: CompletionContext): CompletionItem[
   return items;
 }
 
-public getFieldReferenceCompletions(viewName: string): CompletionItem[] {
-  const items: CompletionItem[] = [];
+public getFieldReferenceCompletions(context: CompletionContext): CompletionItem[] {
+  if (!context.viewName) {
+    return [];
+  }
+
+  const items: CompletionItem[] = [{
+    label: "TABLE",
+    kind: CompletionItemKind.Module,
+    detail: `table: ${context.viewName}`,
+    insertText: `TABLE}`,
+    data: { type: "field-ref", viewName: context.viewName, fieldName: "TABLE" }
+  }];
   
-  // Get the view by name
-  const viewDetails = this.workspaceModel.getView(viewName);
+  if (context.linePrefix?.slice(-1) === "{") {
+    // Get all views from the workspace
+    const allViews = this.workspaceModel.getViews();
+    
+    // Add all available views as completion items
+    allViews.forEach((viewDetails, name) => {
+      const view = viewDetails.view as LookMLView;
+      if (view) {
+        items.push({
+          label: name,
+          kind: CompletionItemKind.Module,
+          detail: `view: ${name}`,
+          data: { type: "field-ref", viewName: name, fieldName: name }
+        });
+      }
+    });
+  }
+
+  // Get the specific view by name for its fields
+  const viewDetails = this.workspaceModel.getView(context.viewName);
   const view = viewDetails?.view as LookMLView | undefined;
 
   if (!view) {
@@ -80,12 +107,17 @@ public getFieldReferenceCompletions(viewName: string): CompletionItem[] {
     return items;
   }
 
+  // Check if we're in sql_on context and on the left side of =
+  const isSqlOnLeftSide = context.linePrefix?.includes('sql_on:') && 
+    !context.linePrefix?.includes('=');
+
   fields.forEach((field) => {
     items.push({
-      label: field.label || field.$name || "",
+      label: field.$name,
       kind: CompletionItemKind.Field,
-      detail: `${field.type} in ${viewName}`,
-      data: { type: "field-ref", viewName, fieldName: field.$name }
+      detail: `${field.type} in ${context.viewName}`,
+      insertText: `${field.$name}}${isSqlOnLeftSide ? '' : ' ;;'}`,
+      data: { type: "field-ref", viewName: context.viewName, fieldName: field.$name }
     });
   });
   

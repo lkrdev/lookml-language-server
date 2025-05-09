@@ -164,7 +164,7 @@ export const dimensionGroupSchema = baseProperties.extend({
   type: z.literal('time'),
 }).strict();
 
-export const measureFiltersSchema = z.union([
+export const filtersSchema = z.union([
   // filters: { field: "foo", value: "bar", ...parser meta }
   parserValues.extend({
     field: z.string(),
@@ -181,7 +181,7 @@ export const measureFiltersSchema = z.union([
 
 export const measureSchema = baseProperties.extend({
   drill_fields: z.array(z.string()).optional(),
-  filters: measureFiltersSchema.optional(),
+  filters: filtersSchema.optional(),
   link: z.union([linkSchema, z.array(linkSchema)]).optional(),
   percentile: z.string().min(0).max(100).optional(),
   sql: z.string().optional(),
@@ -208,11 +208,25 @@ export const joinSchema = parserValues.extend({
   view_label: z.string().optional(),
 }).strict();
 
+export const aggregateTableSchema = baseProperties.extend({
+  query: baseProperties.extend({
+    dimensions: z.array(z.string()),
+    measures: z.array(z.string()),
+    filters: filtersSchema,
+    timezone: z.string().optional(),
+  }).strict(),
+  materialization: baseProperties.extend({
+    datagroup_trigger: z.string(),
+  }).strict(),
+}).strict();
+
 export const exploreSchema = baseProperties.extend({
   view_name: z.string().optional(),
   from: z.string().optional(),
+  fields: z.array(z.string()).optional(),
   extends: z.array(z.string()).optional(),
   join: z.record(z.string(), joinSchema).optional(),
+  aggregate_table: z.record(z.string(), aggregateTableSchema).optional(),
 }).strict();
 
 export const suggestionsSchema = z.array(
