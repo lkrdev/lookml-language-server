@@ -384,7 +384,11 @@ export class DiagnosticsProvider {
             let currentPosition: any = setPositions;
             for (const pathPart of path) {
               if (!currentPosition) break;
-              currentPosition = currentPosition[pathPart];
+              if (!currentPosition[pathPart]) {
+                continue;
+              }
+
+              currentPosition = currentPosition[pathPart]
             }
             const position = currentPosition as LookmlPosition | undefined;
 
@@ -534,7 +538,11 @@ export class DiagnosticsProvider {
             let currentPosition: any = dimensionPositions;
             for (const pathPart of path) {
               if (!currentPosition) break;
-              currentPosition = currentPosition[pathPart];
+              if (!currentPosition[pathPart]) {
+                continue;
+              }
+
+              currentPosition = currentPosition[pathPart]
             }
             const position = currentPosition as LookmlPosition | undefined;
 
@@ -690,7 +698,11 @@ export class DiagnosticsProvider {
             let currentPosition: any = measurePositions;
             for (const pathPart of path) {
               if (!currentPosition) break;
-              currentPosition = currentPosition[pathPart];
+              if (!currentPosition[pathPart]) {
+                continue;
+              }
+
+              currentPosition = currentPosition[pathPart]
             }
             const position = currentPosition as LookmlPosition | undefined;
 
@@ -741,7 +753,11 @@ export class DiagnosticsProvider {
             let currentPosition: any = dimensionGroupPositions;
             for (const pathPart of path) {
               if (!currentPosition) break;
-              currentPosition = currentPosition[pathPart];
+              if (!currentPosition[pathPart]) {
+                continue;
+              }
+
+              currentPosition = currentPosition[pathPart]
             }
             const position = currentPosition as LookmlPosition | undefined;
 
@@ -793,6 +809,15 @@ export class DiagnosticsProvider {
             try {
               exploreSchema.parse(explore);
 
+              if (explore.join) {
+                for (const [key, join] of Object.entries(explore.join)) {
+                  if (join.sql_on) {
+                    const sqlPosition = positions.explore?.[explore.$name]?.join?.[key];
+                    diagnostics.push(...this.validateSqlReferences(join.sql_on, sqlPosition));
+                  }
+                }
+              }
+
               if (explore.extends) {
                 for (const [index, view] of explore.extends.entries()) {
                   if (!modelIncludedViews?.has(view) && !modelDetails.model.explore?.[view]) {
@@ -800,7 +825,6 @@ export class DiagnosticsProvider {
                     const startCharater = positions.explore?.[explore.$name]?.extends?.[index]?.$p[1];
                     const endLine = positions.explore?.[explore.$name]?.extends?.[index]?.$p[2];
                     const endCharater = startCharater + view.length;
-
 
                     diagnostics.push({
                       severity: DiagnosticSeverity.Error,
@@ -820,14 +844,18 @@ export class DiagnosticsProvider {
                 for (const issue of error.issues) {
                   const exploreName = explore.$name;
                   const path = issue.path as string[];
-                  const fieldPositions = positions.explore as Record<string, DimensionPosition> | undefined;
-                  const explorePositions = fieldPositions?.[exploreName] as DimensionPosition | undefined;
+                  const fieldPositions = positions.explore;
+                  const explorePositions = fieldPositions?.[exploreName];
 
                   // Traverse the path to get the position
                   let currentPosition: any = explorePositions;
                   for (const pathPart of path) {
                     if (!currentPosition) break;
-                    currentPosition = currentPosition[pathPart];
+                    if (!currentPosition[pathPart]) {
+                      continue;
+                    }
+
+                    currentPosition = currentPosition[pathPart]
                   }
                   const position = currentPosition as LookmlPosition | undefined;
 

@@ -192,13 +192,21 @@ declare module "lookml-parser" {
         explore: LookmlExplore;
         uri: string;
         file: LookmlFileAttributes;
-        positions: any;
+        positions: Position;
     }
 
     export interface LookmlModelWithFileInfo {
         model: LookmlModel;
         uri: string;
-        positions: any;
+        positions: {
+            explore: Record<string, {
+                $name: Position;    
+                extends: Position[];
+                join: Record<string, Position & {
+                    sql_on: Position;
+                }>;
+            }>;
+        };
     }
 
     export interface LookmlExplore {

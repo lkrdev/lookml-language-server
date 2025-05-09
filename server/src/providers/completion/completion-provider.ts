@@ -88,10 +88,7 @@ export class CompletionProvider {
           break;
           
         case 'field_reference':
-          // When user types ${table_name. to reference fields
-          if (context.viewName) {
-            items = this.sqlCompletions.getFieldReferenceCompletions(context.viewName);
-          }
+          items = this.sqlCompletions.getFieldReferenceCompletions(context);
           break;
           
         default:
