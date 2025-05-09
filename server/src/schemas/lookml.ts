@@ -1,6 +1,5 @@
 import { z } from 'zod';
 
-
 // Base schemas for common properties
 export const recursiveStringArray: z.ZodType<unknown> = z.lazy(() =>
   z.union([z.string(), z.array(recursiveStringArray)])
@@ -58,7 +57,6 @@ const actionSchema = z.object({
   ]).optional(),
 });
 
-// Shared valid types between dimensions and measures
 export const sharedValidTypes = [
   "time", "date", "number", "string", "yesno", "zipcode",
   "date_day_of_month", "date_day_of_week", "date_day_of_week_index",
@@ -109,6 +107,19 @@ const caseSchema = parserValues.extend({
   else: z.union([z.string(), z.object({ label: z.string() })]).optional(),
 }).strict();
 
+const allowedValueSchema = z.object({
+  label: z.string(),
+  value: z.string(),
+});
+
+const parameterSchema = baseProperties.extend({
+  type: z.enum(['string', 'number', 'unquoted']),
+  default_value: z.string().optional(),
+  allowed_value: z.union([allowedValueSchema, z.array(allowedValueSchema)]).optional(),
+  value_format_name: z.string().optional(),
+  sql: z.string().optional(),
+}).strict();
+
 export const dimensionSchema = baseProperties.extend({
   action: z.union([actionSchema, z.array(actionSchema)]).optional(),
   case: caseSchema.optional(),
@@ -123,9 +134,11 @@ export const dimensionSchema = baseProperties.extend({
   sql_start: z.string().optional(),
   sql: z.string().optional(),
   style: z.enum(['integer', 'float', 'ordinal', 'interval']).optional(),
+  suggestions: z.boolean().optional(),
   tiers: z.array(z.string()).optional(),
   type: z.enum(dimensionValidTypes).optional(),
   value_format: z.string().optional(),
+  value_format_name: z.string().optional(),
 }).strict().superRefine((val, ctx) => {
   if (val.type === 'location') {
     if (!val.sql_latitude) {
@@ -164,14 +177,11 @@ export const dimensionGroupSchema = baseProperties.extend({
   type: z.literal('time'),
 }).strict();
 
-export const filtersSchema = z.union([
-  // filters: { field: "foo", value: "bar", ...parser meta }
+export const filterSchema = z.union([
   parserValues.extend({
     field: z.string(),
     value: z.string(),
   }),
-
-  // filters: { field1: "val1", field2: "val2", ...parser meta }
   z.object({
     $name: z.string().optional(),
     $type: z.string(),
@@ -181,12 +191,14 @@ export const filtersSchema = z.union([
 
 export const measureSchema = baseProperties.extend({
   drill_fields: z.array(z.string()).optional(),
-  filters: filtersSchema.optional(),
+  filters: filterSchema.optional(),
   link: z.union([linkSchema, z.array(linkSchema)]).optional(),
   percentile: z.string().min(0).max(100).optional(),
   sql: z.string().optional(),
   type: z.enum(measureValidTypes),
   value_format: z.string().optional(),
+  value_format_name: z.string().optional(),
+  suggestions: z.boolean().optional(),
 }).strict();
 
 export const setSchema = parserValues.extend({
@@ -212,7 +224,7 @@ export const aggregateTableSchema = baseProperties.extend({
   query: baseProperties.extend({
     dimensions: z.array(z.string()),
     measures: z.array(z.string()),
-    filters: filtersSchema,
+    filters: filterSchema,
     timezone: z.string().optional(),
   }).strict(),
   materialization: baseProperties.extend({
@@ -235,3 +247,57 @@ export const suggestionsSchema = z.array(
     value: z.string(),
   })
 );
+
+export const parameterFieldSchema = parameterSchema;
+
+export const LookMLField = z.object({
+  $name: z.string(),
+  type: z.string(),
+  label: z.string().optional(),
+  description: z.string().optional(),
+  sql: z.string().optional(),
+  sql_on: z.string().optional(),
+  relationship: z.string().optional(),
+  hidden: z.boolean().optional(),
+  required: z.boolean().optional(),
+  primary_key: z.boolean().optional(),
+  drill_fields: z.array(z.string()).optional(),
+  filters: z.array(z.string()).optional(),
+  extends: z.array(z.string()).optional(),
+});
+
+export const LookMLView = baseProperties.extend({
+  $name: z.string(),
+  sql_table_name: z.string().optional(),
+  drill_fields: z.array(z.string()).optional(),
+  derived_table: z.object({
+    sql: z.string().optional(),
+    explore_source: z.string().optional(),
+    for: z.string().optional(),
+    datagroup_trigger: z.string().optional(),
+  }).optional(),
+  dimension:z.record(z.string(), dimensionSchema).optional(),
+  dimension_group: z.record(z.string(), dimensionGroupSchema).optional(),
+  measure: z.record(z.string(), measureSchema).optional(),
+  set: z.record(z.string(), setSchema).optional(),
+  filter: filterSchema.optional(),
+  access_filter: z.record(z.string(), z.object({
+    $name: z.string(),
+    field: z.string(),
+    user_attribute: z.string(),
+  })).optional(),
+  extends: z.array(z.string()).optional(),
+  extends_ref: z.string().optional(),
+  label: z.string().optional(),
+  description: z.string().optional(),
+  hidden: z.boolean().optional(),
+  required: z.boolean().optional(),
+  sql_always_where: z.string().optional(),
+  sql_always_having: z.string().optional(),
+  sql_on: z.string().optional(),
+  relationship: z.string().optional(),
+  parameter: z.record(z.string(), parameterSchema).optional(),
+  timezone: z.string().optional(),
+  persist_for: z.string().optional(),
+  persist_with: z.string().optional(),
+}).strict();
