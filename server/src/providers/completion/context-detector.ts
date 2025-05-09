@@ -219,39 +219,6 @@ export class ContextDetector {
   }
 
   /**
-   * Check if a bracket is part of a SQL template literal
-   */
-  private isInSqlTemplate(line: string, bracketIndex: number): boolean {
-    // Look for ${ before the bracket
-    const beforeBracket = line.substring(0, bracketIndex);
-    const lastDollar = beforeBracket.lastIndexOf('$');
-    if (lastDollar === -1) return false;
-    
-    // Check if there's a { after the $ and before our bracket
-    const betweenDollarAndBracket = line.substring(lastDollar, bracketIndex);
-    return betweenDollarAndBracket.includes('{');
-  }
-
-  /**
-   * Count brackets in a line, ignoring those in SQL template literals
-   */
-  private countBrackets(line: string): { open: number; close: number } {
-    let open = 0;
-    let close = 0;
-
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      if (char === '{' && !this.isInSqlTemplate(line, i)) {
-        open++;
-      } else if (char === '}' && !this.isInSqlTemplate(line, i)) {
-        close++;
-      }
-    }
-
-    return { open, close };
-  }
-
-  /**
    * Determine the current block type by scanning backwards
    */
   private getCurrentBlockType(
