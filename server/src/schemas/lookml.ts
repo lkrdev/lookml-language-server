@@ -177,7 +177,7 @@ export const dimensionGroupSchema = baseProperties.extend({
   type: z.literal('time'),
 }).strict();
 
-export const filtersSchema = z.union([
+export const filterSchema = z.union([
   parserValues.extend({
     field: z.string(),
     value: z.string(),
@@ -191,7 +191,7 @@ export const filtersSchema = z.union([
 
 export const measureSchema = baseProperties.extend({
   drill_fields: z.array(z.string()).optional(),
-  filters: filtersSchema.optional(),
+  filters: filterSchema.optional(),
   link: z.union([linkSchema, z.array(linkSchema)]).optional(),
   percentile: z.string().min(0).max(100).optional(),
   sql: z.string().optional(),
@@ -224,7 +224,7 @@ export const aggregateTableSchema = baseProperties.extend({
   query: baseProperties.extend({
     dimensions: z.array(z.string()),
     measures: z.array(z.string()),
-    filters: filtersSchema,
+    filters: filterSchema,
     timezone: z.string().optional(),
   }).strict(),
   materialization: baseProperties.extend({
@@ -249,3 +249,55 @@ export const suggestionsSchema = z.array(
 );
 
 export const parameterFieldSchema = parameterSchema;
+
+export const LookMLField = z.object({
+  $name: z.string(),
+  type: z.string(),
+  label: z.string().optional(),
+  description: z.string().optional(),
+  sql: z.string().optional(),
+  sql_on: z.string().optional(),
+  relationship: z.string().optional(),
+  hidden: z.boolean().optional(),
+  required: z.boolean().optional(),
+  primary_key: z.boolean().optional(),
+  drill_fields: z.array(z.string()).optional(),
+  filters: z.array(z.string()).optional(),
+  extends: z.array(z.string()).optional(),
+});
+
+export const LookMLView = baseProperties.extend({
+  $name: z.string(),
+  sql_table_name: z.string().optional(),
+  drill_fields: z.array(z.string()).optional(),
+  derived_table: z.object({
+    sql: z.string().optional(),
+    explore_source: z.string().optional(),
+    for: z.string().optional(),
+    datagroup_trigger: z.string().optional(),
+  }).optional(),
+  dimension:z.record(z.string(), dimensionSchema).optional(),
+  dimension_group: z.record(z.string(), dimensionGroupSchema).optional(),
+  measure: z.record(z.string(), measureSchema).optional(),
+  set: z.record(z.string(), setSchema).optional(),
+  filter: filterSchema.optional(),
+  access_filter: z.record(z.string(), z.object({
+    $name: z.string(),
+    field: z.string(),
+    user_attribute: z.string(),
+  })).optional(),
+  extends: z.array(z.string()).optional(),
+  extends_ref: z.string().optional(),
+  label: z.string().optional(),
+  description: z.string().optional(),
+  hidden: z.boolean().optional(),
+  required: z.boolean().optional(),
+  sql_always_where: z.string().optional(),
+  sql_always_having: z.string().optional(),
+  sql_on: z.string().optional(),
+  relationship: z.string().optional(),
+  parameter: z.record(z.string(), parameterSchema).optional(),
+  timezone: z.string().optional(),
+  persist_for: z.string().optional(),
+  persist_with: z.string().optional(),
+}).strict();

@@ -128,6 +128,10 @@ declare module "lookml-parser" {
         set?: Record<string, LookmlSet>;
     }
 
+    export interface LookmlSet {
+        fields: string[];
+    }
+
     export interface Position {
         $p: [number, number, number, number];
     }
@@ -161,7 +165,7 @@ declare module "lookml-parser" {
         drill_fields?: ArrayPosition;
     }
 
-    export interface LookMlViewPositions {
+    export interface LookmlViewPositions {
         $type?: Position;
         $name?: Position;
         sql_table_name?: Position;
@@ -185,7 +189,7 @@ declare module "lookml-parser" {
         file: LookmlFileAttributes;
         uri: string;
         view: LookmlView;
-        positions: LookMlViewPositions;
+        positions: LookmlViewPositions;
     }
 
     export interface LookmlExploreWithFileInfo {

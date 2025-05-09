@@ -2,31 +2,26 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import {
   Diagnostic,
   DiagnosticSeverity,
-  Range,
   Position,
+  Range,
 } from "vscode-languageserver/node";
 import { WorkspaceModel } from "../models/workspace";
 import { ensureMinRangeLength } from '../utils/range';
 import {
-  DimensionPosition,
-  LookmlDimension,
   LookmlExploreWithFileInfo,
   LookmlModelWithFileInfo,
   LookmlViewWithFileInfo,
   Position as LookmlPosition,
-  MeasurePosition,
-  LookmlMeasure,
-  LookMlViewPositions,
-  LookmlExplore
+  LookmlExplore,
+  LookmlViewPositions,
+  ArrayPosition
 } from "lookml-parser";
-import { ZodError } from 'zod';
+import { ZodError, ZodIssue } from 'zod';
 import {
-  dimensionSchema,
-  dimensionGroupSchema,
-  measureSchema,
-  setSchema,
   exploreSchema,
 } from '../schemas/lookml';
+import { LookMLView } from '../schemas/lookml';
+import { LookmlView } from 'lookml-parser';
 
 export enum DiagnosticCode {
   // Syntax validation (10000-19999)
@@ -222,6 +217,110 @@ export class DiagnosticsProvider {
     return diagnostics;
   }
 
+  private validateDrillFields({
+    view,
+    drillFields,
+    viewDetails,
+    arrayPosition,
+  }: {
+    view: LookmlView,
+    drillFields: string[],
+    viewDetails: LookmlViewWithFileInfo,
+    arrayPosition?: ArrayPosition,
+  }): Diagnostic[] {
+    const diagnostics: Diagnostic[] = [];
+
+    for (const [index, drillField] of drillFields.entries()) {
+      let fieldName = drillField;
+      let targetedViewName: string | undefined = view.$name;
+      let targetedViewDetails: LookmlViewWithFileInfo | undefined = viewDetails;
+
+      const drillFieldPosition = arrayPosition?.[index];
+      if (!drillFieldPosition) {
+        throw new Error(`No position found for drill field ${drillField}`);
+      }
+
+      if (drillField.includes("*")) {
+        const fieldWithoutAsterisk = drillField.replace("*", "");
+        const startCharater = drillFieldPosition.$p[1];
+        const isReferencingADifferentView = targetedViewName !== view.$name;
+        const endCharater = isReferencingADifferentView && targetedViewName ? startCharater + fieldWithoutAsterisk.length : drillFieldPosition.$p[3];
+
+        if (!targetedViewDetails?.view?.set?.[fieldWithoutAsterisk]) {
+          diagnostics.push({
+            severity: DiagnosticSeverity.Error,
+            range: {
+              start: { line: drillFieldPosition.$p[0] - 1, character: startCharater },
+              end: { line: drillFieldPosition.$p[2] - 1, character: endCharater }
+            },
+            message: `Set "${fieldWithoutAsterisk}" not found in view "${targetedViewName}"`,
+            source: "lookml-lsp",
+            code: DiagnosticCode.DRILL_FIELDS_SET_NOT_FOUND
+          });
+        }
+        continue;
+      }
+
+      if (drillField.includes(".")) {
+        const drillFieldParts = drillField.split(".");
+        targetedViewName = drillFieldParts[0];
+        fieldName = drillFieldParts[1];
+        targetedViewDetails = this.workspaceModel.getView(targetedViewName);
+      }
+
+      const startCharater = drillFieldPosition.$p[1];
+      const isReferencingADifferentView = targetedViewName !== view.$name;
+      const endCharater = isReferencingADifferentView && targetedViewName ? startCharater + targetedViewName.length : drillFieldPosition.$p[3];
+
+      if (!targetedViewDetails) {
+        diagnostics.push({
+          severity: DiagnosticSeverity.Error,
+          message: `View ${targetedViewName} not found`,
+          range: {
+            start: { line: drillFieldPosition.$p[0] - 1, character: startCharater },
+            end: { line: drillFieldPosition.$p[2] - 1, character: endCharater }
+          },
+          source: "lookml-lsp",
+          code: DiagnosticCode.DRILL_FIELDS_VIEW_NOT_FOUND
+        });
+        continue;
+      }
+
+      const viewDimensions = targetedViewDetails.view.dimension;
+      const viewMeasures = targetedViewDetails.view.measure;
+      const viewDimensionGroups = targetedViewDetails.view.dimension_group;
+
+      if (!viewDimensions?.[fieldName] && !viewMeasures?.[fieldName] && !viewDimensionGroups?.[fieldName]) {
+        if (fieldName.includes("_")) {
+          const fieldSplit = fieldName.split("_");
+          const groupName = fieldSplit.pop();
+          if (!groupName) {
+            throw new Error(`No group name found for field ${fieldName}`);
+          }
+          const dimensionGroupName = fieldSplit.join("_");
+          const dimensionGroup = viewDimensionGroups?.[dimensionGroupName];
+          const timeframes = dimensionGroup?.timeframes ?? ["time", "date"];
+          if (viewDimensionGroups?.[dimensionGroupName] && timeframes.includes(groupName)) {
+            continue;
+          }
+        }
+
+        diagnostics.push({
+          severity: DiagnosticSeverity.Error,
+          message: `Field "${fieldName}" not found in view "${targetedViewDetails.view.$name}"`,
+          range: {
+            start: { line: drillFieldPosition.$p[0] - 1, character: startCharater },
+            end: { line: drillFieldPosition.$p[2] - 1, character: endCharater }
+          },
+          source: "lookml-lsp",
+          code: DiagnosticCode.DRILL_FIELDS_FIELD_NOT_FOUND
+        });
+      }
+    }
+
+    return diagnostics;
+  }
+
   // Then in the validation method:
   protected validateProperties(document: TextDocument): Diagnostic[] {
     let diagnostics: Diagnostic[] = [];
@@ -232,36 +331,206 @@ export class DiagnosticsProvider {
     if (parsedStructure.views.length) {
       for (const viewDetails of parsedStructure.views) {
         const positions = viewDetails.positions;
+        const view = viewDetails.view;
 
-        Object.entries(viewDetails.view).forEach(([key, value]) => {
-          switch (key) {
-            case "dimension":
-              const dimensionDiagnostics = this.validateDimension({
-                viewDetails,
-                dimensions: value
+        // Validate the view structure using Zod schema
+        const result = LookMLView.safeParse(view);
+        if (!result.success) {
+          // Add validation errors to diagnostics
+          result.error.errors.forEach((error: ZodIssue) => {
+            let currentPosition: any = positions;
+            for (const pathPart of error.path) {
+              if (!currentPosition) break;
+              if (!currentPosition[pathPart]) {
+                continue;
+              }
+
+              currentPosition = currentPosition[pathPart]
+            }
+            const position = currentPosition as LookmlPosition | undefined;
+            if (position?.$p && Array.isArray(position.$p)) {
+              diagnostics.push({
+                severity: DiagnosticSeverity.Error,
+                range: {
+                  start: { line: position.$p[0] - 1, character: position.$p[1] },
+                  end: { line: position.$p[2] - 1, character: position.$p[3] }
+                },
+                message: error.message,
+                source: "lookml-lsp"
               });
-              diagnostics = [...diagnostics, ...dimensionDiagnostics];
-              break;
-            case "dimension_group":
-              const dimensionGroupDiagnostics = this.validateDimensionGroup(value, positions);
-              diagnostics = [...diagnostics, ...dimensionGroupDiagnostics];
-              break;
-            case "measure":
-              const measureDiagnostics = this.validateMeasure({
-                measures: value,
-                viewDetails
-              });
-              diagnostics = [...diagnostics, ...measureDiagnostics];
-              break;
-            case "set":
-              const setDiagnostics = this.validateSet({
-                sets: value,
-                viewDetails
-              });
-              diagnostics = [...diagnostics, ...setDiagnostics];
-              break;
-          }
-        });
+            }
+          });
+        }
+
+        // Additional validations that can't be expressed in the schema
+        if (view.extends && 'extends_ref' in view) {
+          diagnostics.push({
+            severity: DiagnosticSeverity.Error,
+            range: this.getRangeFromPositions(positions, '$name', 'extends_ref'),
+            message: "Cannot use both 'extends' and 'extends_ref' in the same view",
+            source: "lookml-lsp"
+          });
+        }
+
+        // Validate dimensions
+        if (view.dimension) {
+          Object.entries(view.dimension).forEach(([dimName, dimension]) => {
+            // Validate drill fields
+            if (dimension.drill_fields) {
+              diagnostics.push(...this.validateDrillFields({
+                view,
+                drillFields: dimension.drill_fields,
+                viewDetails: viewDetails,
+                arrayPosition: positions.dimension?.[dimName]?.drill_fields,
+              }));
+            }
+
+            // Validate SQL references
+            if (dimension.sql) {
+              const sqlPosition = positions.dimension?.[dimName]?.sql;
+              diagnostics.push(...this.validateSqlReferences(dimension.sql, sqlPosition));
+            }
+          });
+        }
+
+        // Validate measures
+        if (view.measure) {
+          Object.entries(view.measure).forEach(([measureName, measure]) => {
+            // Validate drill fields
+            if (measure.drill_fields) {
+              diagnostics.push(...this.validateDrillFields({
+                view,
+                drillFields: measure.drill_fields,
+                viewDetails: viewDetails,
+                arrayPosition: positions.measure?.[measureName]?.drill_fields,
+              }));
+            }
+
+            // Validate SQL references
+            if (measure.sql) {
+              const sqlPosition = positions.measure?.[measureName]?.sql;
+              diagnostics.push(...this.validateSqlReferences(measure.sql, sqlPosition));
+            }
+          });
+        }
+
+        // Validate dimension groups
+        if (view.dimension_group) {
+          Object.entries(view.dimension_group).forEach(([dimGroupName, dimensionGroup]) => {
+            // Validate SQL references
+            if (dimensionGroup.sql) {
+              const sqlPosition = positions.dimension_group?.[dimGroupName]?.sql;
+              diagnostics.push(...this.validateSqlReferences(dimensionGroup.sql, sqlPosition));
+            }
+
+            // Validate timeframes
+            if (dimensionGroup.timeframes) {
+              const timeframesPosition = positions.dimension_group?.[dimGroupName]?.timeframes;
+              if (timeframesPosition) {
+                const validTimeframes = [
+                  'raw', 'time', 'date', 'week', 'month', 'quarter', 'year',
+                  'day_of_week', 'day_of_month', 'day_of_year', 'week_of_year',
+                  'month_of_year', 'quarter_of_year', 'hour', 'minute', 'second',
+                  'hour_of_day', 'minute_of_hour', 'second_of_minute', 'time_of_day',
+                  'day_of_week_index', 'week_start_date', 'month_name', 'quarter_name',
+                  'day_name'
+                ];
+
+                for (const [index, timeframe] of dimensionGroup.timeframes.entries()) {
+                  if (!validTimeframes.includes(timeframe)) {
+                    const timeframePosition = timeframesPosition[index];
+                    if (timeframePosition) {
+                      diagnostics.push({
+                        severity: DiagnosticSeverity.Error,
+                        range: {
+                          start: { line: timeframePosition.$p[0] - 1, character: timeframePosition.$p[1] },
+                          end: { line: timeframePosition.$p[2] - 1, character: timeframePosition.$p[3] }
+                        },
+                        message: `Invalid timeframe "${timeframe}" for dimension group "${dimGroupName}"`,
+                        source: "lookml-lsp",
+                        code: DiagnosticCode.PROP_INVALID_TYPE
+                      });
+                    }
+                  }
+                }
+              }
+            }
+          });
+        }
+
+        if (view.set) {
+          Object.entries(view.set).forEach(([setName, set]) => {
+            for (const [index, field] of set?.fields?.entries() ?? []) {
+              let fieldName = field;
+              let targetedViewName: string | undefined = viewDetails.view.$name;
+              let targetedViewDetails: LookmlViewWithFileInfo | undefined = viewDetails;
+    
+              const setFieldPosition = positions.set?.[setName]?.fields?.[index];
+              if (!setFieldPosition) {
+                throw new Error(`No position found for set field ${field}`);
+              }
+    
+              if (field.includes(".")) {
+                const fieldParts = field.split(".");
+                targetedViewName = fieldParts[0];
+                fieldName = fieldParts[1];
+                targetedViewDetails = this.workspaceModel.getView(targetedViewName);
+              }
+    
+              const startCharacter = setFieldPosition.$p[1];
+              const isReferencingADifferentView = targetedViewName !== viewDetails.view.$name;
+              const endCharacter = isReferencingADifferentView && targetedViewName ? startCharacter + targetedViewName.length : setFieldPosition.$p[3];
+    
+              if (!targetedViewDetails) {
+                diagnostics.push({
+                  severity: DiagnosticSeverity.Error,
+                  message: `View ${targetedViewName} not found`,
+                  range: {
+                    start: { line: setFieldPosition.$p[0] - 1, character: startCharacter },
+                    end: { line: setFieldPosition.$p[2] - 1, character: endCharacter }
+                  },
+                  source: "lookml-lsp",
+                  code: DiagnosticCode.DRILL_FIELDS_VIEW_NOT_FOUND
+                });
+                continue;
+              }
+              const viewDimensions = targetedViewDetails.view.dimension;
+              const viewMeasures = targetedViewDetails.view.measure;
+              const viewDimensionGroups = targetedViewDetails.view.dimension_group;
+    
+              if (!viewDimensions?.[fieldName] && !viewMeasures?.[fieldName] && !viewDimensionGroups?.[fieldName]) {
+                if (fieldName.includes("_")) {
+                  const fieldSplit = fieldName.split("_");
+                  const groupName = fieldSplit.pop();
+    
+                  if (!groupName) {
+                    throw new Error(`No group name found for field ${fieldName}`);
+                  }
+    
+                  const dimensionGroupName = fieldSplit.join("_");
+                  const dimensionGroup = viewDimensionGroups?.[dimensionGroupName];
+                  
+                  const timeframes = dimensionGroup?.timeframes ?? ["time", "date"];
+                  if (viewDimensionGroups?.[dimensionGroupName] && timeframes.includes(groupName)) {
+                    continue;
+                  }
+                }
+                
+                diagnostics.push({
+                  severity: DiagnosticSeverity.Error,
+                  message: `Field "${fieldName}" not found in view "${targetedViewName}"`,
+                  range: {
+                    start: { line: setFieldPosition.$p[0] - 1, character: startCharacter },
+                    end: { line: setFieldPosition.$p[2] - 1, character: endCharacter }
+                  },
+                  source: "lookml-lsp",
+                  code: DiagnosticCode.DRILL_FIELDS_FIELD_NOT_FOUND
+                });
+                continue;
+              }
+            }
+          });
+        }
       }
     }
 
@@ -294,502 +563,6 @@ export class DiagnosticsProvider {
       .filter((m): m is LookmlModelWithFileInfo => m !== undefined);
 
     return { views, explores, models };
-  }
-
-  private validateSet({ viewDetails, sets }: {
-    viewDetails: LookmlViewWithFileInfo,
-    sets: { [key: string]: { fields: string[] } }
-  }): Diagnostic[] {
-    const diagnostics: Diagnostic[] = [];
-    const positions = viewDetails.positions;
-
-    Object.entries(sets).forEach(([setName, set]) => {
-      try {
-        setSchema.parse(set);
-
-        for (const [index, field] of set.fields.entries()) {
-          let fieldName = field;
-          let targetedViewName: string | undefined = viewDetails.view.$name;
-          let targetedViewDetails: LookmlViewWithFileInfo | undefined = viewDetails;
-
-          const setFieldPosition = positions.set?.[setName]?.fields?.[index];
-          if (!setFieldPosition) {
-            throw new Error(`No position found for set field ${field}`);
-          }
-
-          if (field.includes(".")) {
-            const fieldParts = field.split(".");
-            targetedViewName = fieldParts[0];
-            fieldName = fieldParts[1];
-            targetedViewDetails = this.workspaceModel.getView(targetedViewName);
-          }
-
-          const startCharacter = setFieldPosition.$p[1];
-          const endCharacter = targetedViewName ? startCharacter + targetedViewName.length : setFieldPosition.$p[3];
-
-          if (!targetedViewDetails) {
-            diagnostics.push({
-              severity: DiagnosticSeverity.Error,
-              message: `View ${targetedViewName} not found`,
-              range: {
-                start: { line: setFieldPosition.$p[0] - 1, character: startCharacter },
-                end: { line: setFieldPosition.$p[2] - 1, character: endCharacter }
-              },
-              source: "lookml-lsp",
-              code: DiagnosticCode.DRILL_FIELDS_VIEW_NOT_FOUND
-            });
-            continue;
-          }
-          const viewDimensions = targetedViewDetails.view.dimension;
-          const viewMeasures = targetedViewDetails.view.measure;
-          const viewDimensionGroups = targetedViewDetails.view.dimension_group;
-
-          if (!viewDimensions?.[fieldName] && !viewMeasures?.[fieldName] && !viewDimensionGroups?.[fieldName]) {
-            if (fieldName.includes("_")) {
-              const fieldSplit = fieldName.split("_");
-              const groupName = fieldSplit.pop();
-
-              if (!groupName) {
-                throw new Error(`No group name found for field ${fieldName}`);
-              }
-
-              const dimensionGroupName = fieldSplit.join("_");
-              const dimensionGroup = viewDimensionGroups?.[dimensionGroupName];
-              
-              const timeframes = dimensionGroup?.timeframes ?? ["time", "date"];
-              if (viewDimensionGroups?.[dimensionGroupName] && timeframes.includes(groupName)) {
-                continue;
-              }
-            }
-            
-            diagnostics.push({
-              severity: DiagnosticSeverity.Error,
-              message: `Field "${fieldName}" not found in view "${targetedViewName}"`,
-              range: {
-                start: { line: setFieldPosition.$p[0] - 1, character: startCharacter },
-                end: { line: setFieldPosition.$p[2] - 1, character: endCharacter }
-              },
-              source: "lookml-lsp",
-              code: DiagnosticCode.DRILL_FIELDS_FIELD_NOT_FOUND
-            });
-            continue;
-          }
-        }
-      } catch (error: ZodError | unknown) {
-        if (error instanceof ZodError) {
-          for (const issue of error.issues) {
-            const path = issue.path as string[];
-            const setPositions = positions.set?.[setName] as DimensionPosition | undefined;
-
-            let currentPosition: any = setPositions;
-            for (const pathPart of path) {
-              if (!currentPosition) break;
-              if (!currentPosition[pathPart]) {
-                continue;
-              }
-
-              currentPosition = currentPosition[pathPart]
-            }
-            const position = currentPosition as LookmlPosition | undefined;
-
-            if (!position) {
-              throw new Error(`No position found for set ${setName}`);
-            }
-
-            const startLine = position.$p[0] - 1;
-            const startCharacter = position.$p[1];
-            const endLine = position.$p[2] - 1;
-            const endCharacter = position.$p[3];
-
-            diagnostics.push({
-              severity: DiagnosticSeverity.Error,
-              message: issue.message,
-              range: {
-                start: { line: startLine, character: startCharacter },
-                end: { line: endLine, character: endCharacter }
-              },
-              source: "lookml-lsp",
-              code: DiagnosticCode.PROP_INVALID_PROPERTY
-            });
-            return;
-          }
-
-          throw error;
-        }
-      }
-    });
-
-    return diagnostics;
-  }
-
-  private validateDimension({ viewDetails, dimensions }: {
-    viewDetails: LookmlViewWithFileInfo,
-    dimensions: { [key: string]: LookmlDimension },
-  }): Diagnostic[] {
-    const diagnostics: Diagnostic[] = [];
-    const positions = viewDetails.positions;
-
-    Object.values(dimensions).forEach((dimension) => {
-      try {
-        dimensionSchema.parse(dimension);
-        
-        if (dimension.drill_fields) {
-          for (const [index, drillField] of dimension.drill_fields.entries()) {
-            let fieldName = drillField;
-            let targetedViewName: string | undefined = viewDetails.view.$name;
-            let targetedViewDetails: LookmlViewWithFileInfo | undefined = viewDetails;
-
-            const drillFieldPosition = positions.dimension?.[dimension.$name]?.drill_fields?.[index];
-            if (!drillFieldPosition) {
-              throw new Error(`No position found for drill field ${drillField}`);
-            }
-
-            if (drillField.includes("*")) {
-              const fieldWithoutAsterisk = drillField.replace("*", "");
-
-              const startCharater = drillFieldPosition.$p[1];
-                const endCharater = targetedViewName ? startCharater + fieldWithoutAsterisk.length : drillFieldPosition.$p[3];
-
-              if (!targetedViewDetails?.view?.set?.[fieldWithoutAsterisk]) {
-                diagnostics.push({
-                  severity: DiagnosticSeverity.Error,
-                  range: {
-                    start: { line: drillFieldPosition.$p[0] - 1, character: startCharater },
-                    end: { line: drillFieldPosition.$p[2] - 1, character: endCharater }
-                  },
-                  message: `Set "${fieldWithoutAsterisk}" not found in view "${targetedViewName}"`,
-                  source: "lookml-lsp",
-                  code: DiagnosticCode.DRILL_FIELDS_SET_NOT_FOUND
-                });
-
-              }
-              continue;
-            }
-
-            if (drillField.includes(".")) {
-              const drillFieldParts = drillField.split(".");
-              targetedViewName = drillFieldParts[0];
-              fieldName = drillFieldParts[1];
-              targetedViewDetails = this.workspaceModel.getView(targetedViewName);
-            }
-
-            const startCharater = drillFieldPosition.$p[1];
-            const endCharater = targetedViewName ? startCharater + targetedViewName.length : drillFieldPosition.$p[3];
-
-            const fieldLength = fieldName.length;
-            if (!targetedViewDetails) {
-              diagnostics.push({
-                severity: DiagnosticSeverity.Error,
-                message: `View ${targetedViewName} not found`,
-                range: {
-                  start: { line: drillFieldPosition.$p[0] - 1, character: startCharater },
-                  end: { line: drillFieldPosition.$p[2] - 1, character: endCharater }
-                },
-                source: "lookml-lsp",
-                code: DiagnosticCode.DRILL_FIELDS_VIEW_NOT_FOUND
-              });
-              continue;
-            }
-
-            const viewDimensions = targetedViewDetails.view.dimension;
-            const viewMeasures = targetedViewDetails.view.measure;
-            const viewDimensionGroups = targetedViewDetails.view.dimension_group;
-
-            if (!viewDimensions?.[fieldName] && !viewMeasures?.[fieldName] && !viewDimensionGroups?.[fieldName]) {
-              if (fieldName.includes("_")) {
-                const fieldSplit = fieldName.split("_");
-                const groupName = fieldSplit.pop();
-  
-                if (!groupName) {
-                  throw new Error(`No group name found for field ${fieldName}`);
-                }
-  
-                const dimensionGroupName = fieldSplit.join("_");
-                const dimensionGroup = viewDimensionGroups?.[dimensionGroupName];
-                
-                const timeframes = dimensionGroup?.timeframes ?? ["time", "date"];
-                if (viewDimensionGroups?.[dimensionGroupName] && timeframes.includes(groupName)) {
-                  continue;
-                }
-              }
-
-              diagnostics.push({
-                severity: DiagnosticSeverity.Error,
-                message: `Field "${fieldName}" not found in view ${targetedViewDetails.view.$name}`,
-                range: {
-                  start: { line: drillFieldPosition.$p[0] - 1, character: startCharater },
-                  end: { line: drillFieldPosition.$p[2] - 1, character: endCharater }
-                },
-                source: "lookml-lsp",
-                code: DiagnosticCode.DRILL_FIELDS_FIELD_NOT_FOUND
-              });
-              continue;
-            }
-          }
-        }
-      } catch (error: ZodError | unknown) {
-        if (error instanceof ZodError) {
-          for (const issue of error.issues) {
-            const dimensionName = dimension.$name;
-            const path = issue.path as string[]
-            const fieldPositions = positions.dimension as Record<string, DimensionPosition> | undefined;
-            const dimensionPositions = fieldPositions?.[dimensionName] as DimensionPosition | undefined;
-
-            let currentPosition: any = dimensionPositions;
-            for (const pathPart of path) {
-              if (!currentPosition) break;
-              if (!currentPosition[pathPart]) {
-                continue;
-              }
-
-              currentPosition = currentPosition[pathPart]
-            }
-            const position = currentPosition as LookmlPosition | undefined;
-
-            if (!position) {
-              throw new Error(`No position found for dimension ${dimensionName}`);
-            }
-
-            const startLine = position.$p[0] - 1;
-            const startCharacter = position.$p[1];
-            const endLine = position.$p[2] - 1;
-            const endCharacter = position.$p[3];
-
-            diagnostics.push(
-              {
-                severity: DiagnosticSeverity.Error,
-                message: issue.message,
-                range: {
-                  start: { line: startLine, character: startCharacter },
-                  end: { line: endLine, character: endCharacter }
-                },
-                source: "lookml-lsp",
-                code: DiagnosticCode.PROP_INVALID_PROPERTY
-              }
-            );
-          }
-        } else {
-          throw error;
-        }
-      }
-    });
-
-    return diagnostics;
-  }
-
-  private validateMeasure({ viewDetails, measures }: {
-    viewDetails: LookmlViewWithFileInfo,
-    measures: { [key: string]: LookmlMeasure },
-  }): Diagnostic[] {
-    const diagnostics: Diagnostic[] = [];
-    const positions = viewDetails.positions;
-
-    Object.values(measures).forEach((measure) => {
-      try {
-        measureSchema.parse(measure);
-
-        if (measure.drill_fields) {
-          for (const [index, drillField] of measure.drill_fields.entries()) {
-            let fieldName = drillField;
-            let targetedViewName: string | undefined = viewDetails.view.$name;
-            let targetedViewDetails: LookmlViewWithFileInfo | undefined = viewDetails;
-
-            const drillFieldPosition = positions.measure?.[measure.$name]?.drill_fields?.[index];
-            if (!drillFieldPosition) {
-              throw new Error(`No position found for drill field ${drillField}`);
-            }
-
-            if (drillField.includes("*")) {
-              const fieldWithoutAsterisk = drillField.replace("*", "");
-
-              if (!targetedViewDetails?.view?.set?.[fieldWithoutAsterisk]) {
-                const startCharater = drillFieldPosition.$p[1];
-                const endCharater = targetedViewName ? startCharater + fieldWithoutAsterisk.length : drillFieldPosition.$p[3];
-                diagnostics.push({
-                  severity: DiagnosticSeverity.Error,
-                  range: {
-                    start: { line: drillFieldPosition.$p[0] - 1, character: startCharater },
-                    end: { line: drillFieldPosition.$p[2] - 1, character: endCharater }
-                  },
-                  message: `Set "${fieldWithoutAsterisk}" not found in view "${targetedViewName}"`,
-                  source: "lookml-lsp",
-                  code: DiagnosticCode.DRILL_FIELDS_SET_NOT_FOUND
-                });
-
-              }
-              continue;
-            }
-
-            if (drillField.includes(".")) {
-              const drillFieldParts = drillField.split(".");
-              targetedViewName = drillFieldParts[0];
-              fieldName = drillFieldParts[1];
-              targetedViewDetails = this.workspaceModel.getView(targetedViewName);
-            }
-
-            const fieldLength = fieldName.length;
-
-            
-
-            if (!targetedViewDetails) {
-              const startCharater = drillFieldPosition.$p[1];
-              const endCharater = targetedViewName ? startCharater + targetedViewName.length : drillFieldPosition.$p[3];
-
-              diagnostics.push({
-                severity: DiagnosticSeverity.Error,
-                message: `View ${targetedViewName} not found`,
-                range: {
-                  start: { line: drillFieldPosition.$p[0] - 1, character: startCharater },
-                  end: { line: drillFieldPosition.$p[2] - 1, character: endCharater }
-                },
-                source: "lookml-lsp",
-                code: DiagnosticCode.DRILL_FIELDS_VIEW_NOT_FOUND
-              });
-              continue;
-            }
-
-            const viewDimensions = targetedViewDetails.view.dimension;
-            const viewMeasures = targetedViewDetails.view.measure;
-            const viewDimensionGroups = targetedViewDetails.view.dimension_group;
-
-            if (!viewDimensions?.[fieldName] && !viewMeasures?.[fieldName] && !viewDimensionGroups?.[fieldName]) {
-              if (fieldName.includes("_")) {
-                const fieldSplit = fieldName.split("_");
-                const groupName = fieldSplit.pop();
-  
-                if (!groupName) {
-                  throw new Error(`No group name found for field ${fieldName}`);
-                }
-  
-                const dimensionGroupName = fieldSplit.join("_");
-                const dimensionGroup = viewDimensionGroups?.[dimensionGroupName];
-                
-                const timeframes = dimensionGroup?.timeframes ?? ["time", "date"];
-                if (viewDimensionGroups?.[dimensionGroupName] && timeframes.includes(groupName)) {
-                  continue;
-                }
-              }
-
-              const startCharater = targetedViewName  ? drillFieldPosition.$p[1] + targetedViewName.length + 1 : drillFieldPosition.$p[1];
-              const endCharater = startCharater + fieldLength;
-              
-              diagnostics.push({
-                severity: DiagnosticSeverity.Error,
-                message: `Field "${fieldName}" not found in view "${targetedViewDetails.view.$name}"`,
-                range: {
-                  start: { line: drillFieldPosition.$p[0] - 1, character: startCharater },
-                  end: { line: drillFieldPosition.$p[2] - 1, character: endCharater }
-                },
-                source: "lookml-lsp",
-                code: DiagnosticCode.DRILL_FIELDS_FIELD_NOT_FOUND
-              });
-              continue;
-            }
-          }
-        }
-      } catch (error: ZodError | unknown) {
-        if (error instanceof ZodError) {
-          for (const issue of error.issues) {
-            const measureName = measure.$name;
-            const path = issue.path as string[];
-            const fieldPositions = positions.measure as Record<string, DimensionPosition> | undefined;
-            const measurePositions = fieldPositions?.[measureName] as DimensionPosition | undefined;
-
-            let currentPosition: any = measurePositions;
-            for (const pathPart of path) {
-              if (!currentPosition) break;
-              if (!currentPosition[pathPart]) {
-                continue;
-              }
-
-              currentPosition = currentPosition[pathPart]
-            }
-            const position = currentPosition as LookmlPosition | undefined;
-
-            if (!position) {
-              throw new Error(`No position found for measure ${measureName}`);
-            }
-
-            const startLine = position.$p[0] - 1;
-            const startCharacter = position.$p[1];
-            const endLine = position.$p[2] - 1;
-            const endCharacter = position.$p[3];
-
-            diagnostics.push(
-              {
-                severity: DiagnosticSeverity.Error,
-                message: issue.message,
-                range: {
-                  start: { line: startLine, character: startCharacter },
-                  end: { line: endLine, character: endCharacter }
-                },
-                source: "lookml-lsp",
-                code: DiagnosticCode.PROP_INVALID_PROPERTY
-              }
-            );
-          }
-        } else {
-          throw error;
-        }
-      }
-    });
-    return diagnostics;
-  }
-
-  private validateDimensionGroup(dimensionGroups: { [key: string]: LookmlDimension }, positions: LookMlViewPositions): Diagnostic[] {
-    const diagnostics: Diagnostic[] = [];
-
-    Object.values(dimensionGroups).forEach((dimensionGroup) => {
-      try {
-        dimensionGroupSchema.parse(dimensionGroup);
-      } catch (error: ZodError | unknown) {
-        if (error instanceof ZodError) {
-          for (const issue of error.issues) {
-            const dimensionGroupName = dimensionGroup.$name;
-            const path = issue.path as string[];
-            const fieldPositions = positions.dimension_group as Record<string, DimensionPosition> | undefined;
-            const dimensionGroupPositions = fieldPositions?.[dimensionGroupName] as DimensionPosition | undefined;
-
-            let currentPosition: any = dimensionGroupPositions;
-            for (const pathPart of path) {
-              if (!currentPosition) break;
-              if (!currentPosition[pathPart]) {
-                continue;
-              }
-
-              currentPosition = currentPosition[pathPart]
-            }
-            const position = currentPosition as LookmlPosition | undefined;
-
-            if (!position) {
-              throw new Error(`No position found for dimension group ${dimensionGroupName}`);
-            }
-
-            const startLine = position.$p[0] - 1;
-            const startCharacter = position.$p[1];
-            const endLine = position.$p[2] - 1;
-            const endCharacter = position.$p[3];
-
-            diagnostics.push(
-              {
-                severity: DiagnosticSeverity.Error,
-                message: issue.message,
-                range: {
-                  start: { line: startLine, character: startCharacter },
-                  end: { line: endLine, character: endCharacter }
-                },
-                source: "lookml-lsp",
-                code: DiagnosticCode.PROP_INVALID_PROPERTY
-              }
-            );
-          }
-        } else {
-          throw error;
-        }
-      }
-    });
-
-    return diagnostics;
   }
 
   private validateModel(modelDetails: LookmlModelWithFileInfo): Diagnostic[] {
