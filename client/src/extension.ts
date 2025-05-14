@@ -1,89 +1,29 @@
 import * as path from "path";
 import * as vscode from "vscode";
-import { ExtensionContext, workspace } from "vscode";
+import { ExtensionContext, QuickPickItem, workspace } from "vscode";
 import {
-  LanguageClient,
-  LanguageClientOptions,
-  ServerOptions,
-  TransportKind,
+    LanguageClient,
+    LanguageClientOptions,
+    ServerOptions,
+    TransportKind,
 } from "vscode-languageclient/node";
-
-const CREDENTIALS_KEY = 'looker.credentials';
-const PROJECT_NAME_KEY = 'looker.projectName';
-
-
-
-const getCredentials = () => {
-  return vscode.workspace.getConfiguration().get(CREDENTIALS_KEY, { base_url: '', client_id: '' });
-}
+import { addInstance } from "./addInstance";
+const PROJECT_NAME_KEY = "looker.projectName";
 
 const getProjectName = () => {
-  return vscode.workspace.getConfiguration().get(PROJECT_NAME_KEY, '');
-}
+  return vscode.workspace.getConfiguration().get(PROJECT_NAME_KEY, "");
+};
 
 const setProjectName = (projectName: string) => {
-  return vscode.workspace.getConfiguration().update(PROJECT_NAME_KEY, projectName, true);
-}
+  return vscode.workspace
+    .getConfiguration()
+    .update(PROJECT_NAME_KEY, projectName, true);
+};
 
-const authLooker = async (reset?: boolean) => {
-  try {
-    // Prompt for credentials
-    let { base_url, client_id } = reset ? { base_url: '', client_id: '' } : getCredentials();
-
-    if (!base_url?.length) {
-      base_url = await vscode.window.showInputBox({
-        prompt: 'Enter Looker base URL (e.g., https://your-instance.looker.com)',
-        placeHolder: 'https://your-instance.looker.com'
-      });
-      if (!base_url.startsWith('http')) {
-        base_url = `https://${base_url}`;
-      }
-      if (base_url.endsWith('/')) {
-        base_url = base_url.slice(0, -1);
-      }
-      await vscode.workspace.getConfiguration().update(
-        CREDENTIALS_KEY,
-        { base_url, client_id },
-        true
-      );
-    }
-
-    if (!client_id?.length) {
-      client_id = await vscode.window.showInputBox({
-        prompt: 'Enter Looker client ID',
-        placeHolder: 'your_client_id'
-      });
-      await vscode.workspace.getConfiguration().update(
-        CREDENTIALS_KEY,
-        { base_url, client_id },
-        true
-      );
-    }
-
-    // Execute the server command
-    if (!(base_url?.length && client_id?.length)) {
-      vscode.window.showErrorMessage('Please enter all required credentials');
-      return;
-    }
-
-    const result = await client.sendRequest<CommandResponse>('workspace/executeCommand', {
-      command: 'looker.authenticate',
-      arguments: [base_url, client_id],
-    });
-
-    if (result.success) {
-      vscode.window.showInformationMessage(result.message);
-    } else {
-      vscode.window.showErrorMessage(result.message);
-    }
-  } catch (error) {
-    vscode.window.showErrorMessage(`Failed to authenticate: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
-
-interface CommandResponse {
+export interface CommandResponse<T = any> {
   success: boolean;
   message: string;
+  data?: T;
 }
 
 let client: LanguageClient;
@@ -131,11 +71,15 @@ export function activate(context: ExtensionContext) {
     try {
       // Validate base directory
       if (!baseDir) {
-        throw new Error('Base directory is required');
+        throw new Error("Base directory is required");
       }
 
       // Ensure pattern ends with appropriate extension
-      if (!/(\.lkml|\.lookml|\.model\.lkml|\.view\.lkml|\.explore\.lkml)$/i.test(pattern)) {
+      if (
+        !/(\.lkml|\.lookml|\.model\.lkml|\.view\.lkml|\.explore\.lkml)$/i.test(
+          pattern
+        )
+      ) {
         pattern = `${pattern}.{lkml,lookml,model.lkml,view.lkml,explore.lkml}`;
       }
 
@@ -143,16 +87,15 @@ export function activate(context: ExtensionContext) {
       if (pattern.startsWith("/")) {
         pattern = pattern.slice(1);
       }
-  
+
       // 🔥 This was missing:
       const files = await vscode.workspace.findFiles(pattern);
 
-
       const filePaths = files.map((file) => file.fsPath);
-      
+
       return filePaths;
     } catch (error) {
-      console.error(error);
+      outputChannel.appendLine(`Error finding files: ${error}`);
       throw error; // Re-throw to ensure the client knows about the error
     }
   });
@@ -180,88 +123,140 @@ export function activate(context: ExtensionContext) {
 
   // Register commands
   context.subscriptions.push(
-    vscode.commands.registerCommand('looker.showOutput', () => {
+    vscode.commands.registerCommand("looker.showOutput", () => {
       outputChannel.show();
     })
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('looker.reauthenticate', () => {
-      authLooker(true);
-    })
-  );
-  
-  context.subscriptions.push(
-    vscode.commands.registerCommand('looker.selectProject', async () => {
+    vscode.commands.registerCommand("looker.selectProject", async () => {
       const projectName = await vscode.window.showInputBox({
-        prompt: 'Enter Looker project name',
-        placeHolder: 'your_project_name'
+        prompt: "Enter Looker project name",
+        placeHolder: "your_project_name",
       });
       setProjectName(projectName);
     })
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('looker.syncBranches', async () => {
+    vscode.commands.registerCommand("looker.syncBranches", async () => {
       let projectName = getProjectName();
       if (!projectName) {
         projectName = await vscode.window.showInputBox({
-          prompt: 'Enter Looker project name',
-          placeHolder: 'your-project-name'
+          prompt: "Enter Looker project name",
+          placeHolder: "your-project-name",
         });
         setProjectName(projectName);
       }
 
-      const dev_branch = await client.sendRequest<{success: boolean, branch_name: string}>('workspace/executeCommand', {
-        command: 'looker.getDevBranch',
+      const dev_branch = await client.sendRequest<{
+        success: boolean;
+        branch_name: string;
+      }>("workspace/executeCommand", {
+        command: "looker.getDevBranch",
         arguments: [projectName],
       });
 
-      const current_branch = await client.sendRequest<{success: boolean, branch_name: string}>('workspace/executeCommand', {
-        command: 'looker.getCurrentBranch',
+      const current_branch = await client.sendRequest<{
+        success: boolean;
+        branch_name: string;
+      }>("workspace/executeCommand", {
+        command: "looker.getCurrentBranch",
       });
       if (dev_branch.branch_name !== current_branch.branch_name) {
-        const switch_to_branch_and_pull = await client.sendRequest<CommandResponse>('workspace/executeCommand', {
-          command: 'looker.switchToBranchAndPull',
-          arguments: [dev_branch.branch_name],
-        })
+        const switch_to_branch_and_pull =
+          await client.sendRequest<CommandResponse>(
+            "workspace/executeCommand",
+            {
+              command: "looker.switchToBranchAndPull",
+              arguments: [dev_branch.branch_name],
+            }
+          );
       }
     })
-  )
+  );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('looker.resetToRemote', async () => {
+    vscode.commands.registerCommand("looker.resetToRemote", async () => {
       let projectName = getProjectName();
       if (!projectName?.length) {
         projectName = await vscode.window.showInputBox({
-          prompt: 'Enter Looker project name',
-          placeHolder: 'your-project-name'
+          prompt: "Enter Looker project name associated with this repository",
+          placeHolder: "your-project-name",
         });
         await setProjectName(projectName);
       }
-      
-      const result = await client.sendRequest<CommandResponse>('workspace/executeCommand', {
-        command: 'looker.remoteReset',
-        arguments: [projectName],
-      });
+
+      const result = await client.sendRequest<CommandResponse>(
+        "workspace/executeCommand",
+        {
+          command: "looker.remoteReset",
+          arguments: [projectName],
+        }
+      );
       if (result.success) {
         vscode.window.showInformationMessage(result.message);
       } else {
         vscode.window.showErrorMessage(result.message);
       }
     })
-  )
-  
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("looker.login", async () => {
+      const new_login_label = "+ Login to a new instance";
+      const instances = await client.sendRequest<
+        CommandResponse<
+          {
+            instance_name: string;
+            base_url: string;
+            current_instance: number;
+          }[]
+        >
+      >("workspace/executeCommand", {
+        command: "looker.listInstances",
+      });
+      const currentInstances: QuickPickItem[] =
+        instances.data?.map((instance) => ({
+          label: instance.instance_name,
+          description:
+            (instance.current_instance === 1 ? "current - " : "") +
+            instance.base_url,
+          alwaysShow: instance.current_instance === 1,
+        })) || [];
+      const newInstance: QuickPickItem = {
+        label: new_login_label,
+        picked: false,
+      };
+      const instanceItems = [...currentInstances, newInstance];
+      let selectedInstance = await vscode.window.showQuickPick(instanceItems, {
+        placeHolder: "Select an instance",
+      });
+      if (selectedInstance) {
+        if (selectedInstance.label === new_login_label) {
+          try {
+            await addInstance();
+          } catch (error) {
+            vscode.window.showErrorMessage(`Failed to add instance: ${error}`);
+          }
+        } else {
+          (await client.sendRequest<CommandResponse<QuickPickItem>>(
+            "workspace/executeCommand",
+            {
+              command: "looker.switchInstance",
+              arguments: [selectedInstance.label],
+            }
+          )) as unknown as QuickPickItem;
+        }
+      } else {
+        vscode.window.showErrorMessage("No instance selected");
+      }
+    })
+  );
 
   client.start();
   // Start the client AFTER registering handlers
   context.subscriptions.push(client);
-
-  const { base_url, client_id } = getCredentials();
-  if (base_url?.length && client_id?.length) {
-    authLooker(false);
-  }
-
   // Log activation
   outputChannel.appendLine("LookML Language Server extension activated");
 }

@@ -1,4 +1,4 @@
-import { AuthenticationService } from '../services/authentication';
+import { AuthenticationService } from "../services/authentication";
 
 interface CommandResponse {
   success: boolean;
@@ -9,18 +9,18 @@ interface CommandResponse {
 export async function handleGetDevBranch(
   authService: AuthenticationService,
   args: {
-    project_name: string,
+    project_name: string;
   }
 ): Promise<CommandResponse> {
   if (!args.project_name?.length) {
-    throw new Error('Invalid arguments for getDevBranch command');
+    throw new Error("Invalid arguments for getDevBranch command");
   }
   try {
-    const sdk = authService.getSDK();
+    const sdk = await authService.getSDK();
     const branch = await sdk.ok(sdk.git_branch(args.project_name));
-    return { success: true, branch_name: branch?.name || '' };
+    return { success: true, branch_name: branch?.name || "" };
   } catch (error) {
-    console.error('Error getting dev branch:', error);
-    return { success: false, message: 'Error getting dev branch' };
+    console.error("Error getting dev branch:", error);
+    return { success: false, message: "Error getting dev branch" };
   }
-} 
+}
