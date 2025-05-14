@@ -2,10 +2,10 @@ import * as path from "path";
 import * as vscode from "vscode";
 import { ExtensionContext, QuickPickItem, workspace } from "vscode";
 import {
-    LanguageClient,
-    LanguageClientOptions,
-    ServerOptions,
-    TransportKind,
+  LanguageClient,
+  LanguageClientOptions,
+  ServerOptions,
+  TransportKind,
 } from "vscode-languageclient/node";
 import { addInstance } from "./addInstance";
 const PROJECT_NAME_KEY = "looker.projectName";
@@ -250,6 +250,54 @@ export function activate(context: ExtensionContext) {
         }
       } else {
         vscode.window.showErrorMessage("No instance selected");
+      }
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("looker.saveAllStageAllCommitAndSync", async () => {
+      let projectName = getProjectName();
+      if (!projectName?.length) {
+        projectName = await vscode.window.showInputBox({
+          prompt: "Enter Looker project name associated with this repository",
+          placeHolder: "your-project-name",
+        });
+        await setProjectName(projectName);
+      }
+      try {
+        // 1. Save all files
+        await vscode.commands.executeCommand("workbench.action.files.saveAll");
+        // sleep for 1 second
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        // 2. Stage all changes
+        await vscode.commands.executeCommand("git.stageAll");
+
+        // 3. Generate commit message (using Cursor's command if available)
+        let commitMessage = "Auto-commit";
+        try {
+          commitMessage = await vscode.commands.executeCommand<string>("cursor.generateGitCommitMessage");
+        } catch (e) {
+          // Fallback if Cursor extension is not available
+          commitMessage = await vscode.window.showInputBox({
+            prompt: "Enter a commit message",
+            value: commitMessage,
+          }) || commitMessage;
+        }
+
+        // 4. Commit all staged changes
+        await vscode.commands.executeCommand("git.commitAll", { message: commitMessage });
+
+        // 5. Push to remote
+        await vscode.commands.executeCommand("git.push");
+        // sleep for 1 second
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
+        // 6. Run Looker resetToRemote
+        await vscode.commands.executeCommand("looker.resetToRemote");
+
+        vscode.window.showInformationMessage("All changes saved, committed, pushed, and Looker reset to remote.");
+      } catch (err: any) {
+        vscode.window.showErrorMessage(`Error in saveAllStageAllCommitAndSync: ${err.message || err}`);
       }
     })
   );

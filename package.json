@@ -26,7 +26,7 @@
       },
       {
         "command": "looker.selectProject",
-        "title": "Select Project",
+        "title": "Select Projectw",
         "category": "Looker"
       },
       {
@@ -37,6 +37,11 @@
       {
         "command": "looker.login",
         "title": "Login",
+        "category": "Looker"
+      }, 
+      {
+        "command": "looker.saveAllStageAllCommitAndSync",
+        "title": "Save All, Stage All, Commit, and Sync",
         "category": "Looker"
       }
     ],
@@ -50,6 +55,13 @@
         }
       }
     },
+    "keybindings": [
+      {
+        "command": "looker.saveAllStageAllCommitAndSync",
+        "key": "alt+shift+r",
+        "when": "editorTextFocus"
+      }
+    ],
     "languages": [
       {
         "id": "lookml",

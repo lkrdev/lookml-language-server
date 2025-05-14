@@ -1,98 +1,87 @@
-# Minimum Viable VS Code Language Server Extension
+# LookML Language Server (beta)
 
-NOTE: This is heavily based on [lsp-sample from vscode-extension-samples][sample] with the goal of removing example-specific code to ease starting a new Language Server.
+This is a language server for LookML. It is used to provide autocompletion, linting, and other features for LookML files. While in its beta state we are actively working in the following areas:
+- 1:1 parity with the LookML IDE
+- Tools to sync and communicate with your development mode in Looker
+- Enhancements to live LookML validation
 
-This project aims to provide a starting point for developing a self-contained Language Server Extension for VS Code using TypeScript.
+We are actively looking for feedback and contributions from the community, please file [issues](https://github.com/lkrdev/lookml-language-server/issues).
 
-"Self-contained" in this context means that this extension bundles its own language server code rather than wrapping an existing language server executable.
+## Setting up your Looker Environment
 
-As an MVP, this omits
+The LookML Language Server uses OAuth2 to authenticate to Looker and manages the authentication lifecycle for you. A Looker Admin will need to Register a new OAuth client to communicate with the Language Server:
 
-- linting
-- testing
-- behavior in the language server itself (besides connecting and listening to document changes)
+1. Go to the Looker API Explorer for Register OAuth APp (https://<your-looker-instance>/extensions/marketplace_extension_api_explorer::api-explorer/4.0/methods/Auth/register_oauth_client_app)
+2. Enter `lkr-cli` as the client_id
+3. Enter the following payload in the body
+```
+{
+  "redirect_uri": "http://localhost:8000/callback",
+  "display_name": "LKR",
+  "description": "lkr.dev language server, MCP and CLI",
+  "enabled": true
+}
+```
+4. Check the "I Understand" box and click the Run button
 
-## Getting Started
+This only needs to be done once per instance.
 
-1. Clone this repo
-2. Replace items in `package.json` marked `REPLACE_ME` with text related to your extension
-3. Do the same for `client/package.json` and `server/package.json`
-4. Do the same in `client/src/extension.ts`
-5. Run `npm install` from the repo root.
+# Commands
 
-To make it easy to get started, this language server will run on _every_ file type by default. To target specific languages, change
+## Looker: Login
+The Looker: Login command provides the following functionality:
 
-`package.json`'s `activationEvents` to something like
+1. Open the command palette
+2. Search for "Looker: Login"
+3. Add new Looker isntance
+4. Choose between development or production mode. We recommend the development option for Language Server to use.
+5. Name your instance
+6. Your browser will open to the Looker OAuth page for the LKR client installed above
+7. Authorize the app, and close the redirected window
+
+You may login to multiple instances, but only one is active at a time. Use Looker: Login to switch between instances and development/production modes.
+
+## Looker: Sync Branches
+
+The Looker: Sync Branches command ensures your local Looker project is on the development branch and up to date. When you run this command:
+
+1. The extension checks for the current Looker project name. If it is not set, you are prompted to enter it.
+2. It retrieves the name of the development branch and the currently checked-out branch for the project.
+3. If you are not already on the development branch, the extension automatically switches to the development branch and pulls the latest changes from the remote repository.
+
+This helps keep your local LookML files in sync with the main development branch in Looker, reducing merge conflicts and ensuring you are working with the latest code.
+
+## Looker: Select Project
+
+The Looker: Select Project command allows you to set the current Looker project name. This is used when we're communicating with the Looker API to make sure we're hitting the correct project with the API calls When you run this command:
+
+1. The extension prompts you to enter the name of your Looker project.
+2. You can enter the project name directly or select it from a list of projects you have previously configured.
+
+## Looker: Reset to Remote
+
+The Looker: Reset to Remote command allows you to reset your local Looker project to the remote branch. When you run this command:
+
+1. The extension prompts you to enter the name of your Looker project.
+2. You can enter the project name directly or select it from a list of projects you have previously configured.
+
+
+## Looker: Save All, Stage All, Commit, and Sync
+
+The Looker: Save All, Stage All, Commit, and Sync command allows you to save all files, stage all changes, commit all changes, and have Looker automatically sync with the remote branch. When you run this command:
+
+1. The extension prompts you to enter the name of your Looker project if not provided.
+2. The command will save all files
+3. Stage all changes
+4. Commit all changes with autogenerated commit message or your own commit message
+5. Have Looker automatically sync with the remote branch
+
+This is a quick way to save all changes, commit them, and have Looker automatically sync with the remote branch. The extension also has a hotkey of `alt+shift+r` to run this command and can be customized in your editor settings by overriding adding the following to your `keybindings.json` file:
 
 ```
-"activationEvents": [
-  "onLanguage:plaintext"
-],
+{
+  "key": "alt+shift+r",
+  "command": "looker.saveAllStageAllCommitAndSync",
+  "when": "editorTextFocus"
+}
 ```
-
-And change the `documentSelector` in `client/src/extension.ts` to replace the `*` (e.g.)
-
-```
-documentSelector: [{ scheme: "file", language: "plaintext" }],
-```
-
-## Developing your extension
-
-To help verify everything is working properly, we've included the following code in `server.ts` after the `onInitialize` function:
-
-```typescript
-documents.onDidChangeContent((change) => {
-  connection.window.showInformationMessage(
-    "onDidChangeContent: " + change.document.uri
-  );
-});
-```
-
-From the root directory of this project, run `code .` Then in VS Code
-
-1. Build the extension (both client and server) with `⌘+shift+B` (or `ctrl+shift+B` on windows)
-2. Open the Run and Debug view and press "Launch Client" (or press `F5`). This will open a `[Extension Development Host]` VS Code window.
-3. Opening or editing a file in that window should show an information message in VS Code like you see below.
-
-   ![example information message](https://semanticart.com/misc-images/minimum-viable-vscode-language-server-extension-info-message.png)
-
-4. Edits made to your `server.ts` will be rebuilt immediately but you'll need to "Launch Client" again (`⌘-shift-F5`) from the primary VS Code window to see the impact of your changes.
-
-[Debugging instructions can be found here][debug]
-
-## Distributing your extension
-
-Read the full [Publishing Extensions doc][publish] for the full details.
-
-Note that you can package and distribute a standalone `.vsix` file without publishing it to the marketplace by following [these instructions][vsix].
-
-## Anatomy
-
-```
-.
-├── .vscode
-│   ├── launch.json         // Tells VS Code how to launch our extension
-│   └── tasks.json          // Tells VS Code how to build our extension
-├── LICENSE
-├── README.md
-├── client
-│   ├── package-lock.json   // Client dependencies lock file
-│   ├── package.json        // Client manifest
-│   ├── src
-│   │   └── extension.ts    // Code to tell VS Code how to run our language server
-│   └── tsconfig.json       // TypeScript config for the client
-├── package-lock.json       // Top-level Dependencies lock file
-├── package.json            // Top-level manifest
-├── server
-│   ├── package-lock.json   // Server dependencies lock file
-│   ├── package.json        // Server manifest
-│   ├── src
-│   │   └── server.ts       // Language server code
-│   └── tsconfig.json       // TypeScript config for the client
-└── tsconfig.json           // Top-level TypeScript config
-```
-
-[debug]: https://code.visualstudio.com/api/language-extensions/language-server-extension-guide#debugging-both-client-and-server
-[sample]: https://github.com/microsoft/vscode-extension-samples/tree/main/lsp-sample
-[publish]: https://code.visualstudio.com/api/working-with-extensions/publishing-extension
-[vsix]: https://code.visualstudio.com/api/working-with-extensions/publishing-extension#packaging-extensions
