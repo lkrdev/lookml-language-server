@@ -1,20 +1,18 @@
 import {
-  createConnection,
-  Definition,
-  DefinitionParams,
-  DocumentSymbolParams,
-  ExecuteCommandParams,
-  InitializeParams,
-  InitializeResult,
-  Position,
-  ProposedFeatures,
-  SymbolInformation,
-  TextDocuments,
-  TextDocumentSyncKind,
+    createConnection,
+    Definition,
+    DefinitionParams,
+    DocumentSymbolParams,
+    ExecuteCommandParams,
+    InitializeParams,
+    InitializeResult,
+    ProposedFeatures,
+    SymbolInformation,
+    TextDocuments,
+    TextDocumentSyncKind,
 } from "vscode-languageserver/node";
 
 import { TextDocument } from "vscode-languageserver-textdocument";
-import { URI } from "vscode-uri";
 
 // Import providers
 import { CompletionProvider } from "./providers/completion";
@@ -27,16 +25,19 @@ import { HoverProvider } from "./providers/hover";
 
 // Import models
 import {
-  getCurrentBranch,
-  handleGetDevBranch,
-  handleGetExploreUrlAsMe,
-  handleSwitchToBranchAndPull,
-  handleSwitchToDev,
+    getCurrentBranch,
+    handleGetDevBranch,
+    handleGetExploreUrlAsMe,
+    handleListInstances,
+    handleSwitchCurrentInstance,
+    handleSwitchToBranchAndPull,
+    handleSwitchToDev,
 } from "./commands";
 import { WorkspaceModel } from "./models/workspace";
-import { Logger } from "./utils/logger";
 import { DefinitionProvider } from "./providers/definition";
 import { AuthenticationService } from "./services/authentication";
+import { Logger } from "./utils/logger";
+import { AuthRecord } from "./utils/sqlite";
 
 // Create a connection for the server
 const connection = createConnection(ProposedFeatures.all);
@@ -79,8 +80,8 @@ connection.onInitialize((params: InitializeParams) => {
         openClose: true,
         change: TextDocumentSyncKind.Incremental,
         save: {
-          includeText: false
-        }
+          includeText: false,
+        },
       },
       // Completion capabilities
       completionProvider: {
@@ -103,13 +104,15 @@ connection.onInitialize((params: InitializeParams) => {
       // Execute command capability
       executeCommandProvider: {
         commands: [
-          "looker.authenticate",
           "looker.remoteReset",
           "looker.switchToBranchAndPull",
           "looker.getCurrentBranch",
           "looker.getDevBranch",
           "looker.switchToDev",
           "looker.createExploreUrlAsMe",
+          "looker.listInstances",
+          "looker.switchInstance",
+          "looker.addInstance",
         ],
       },
     },
@@ -127,60 +130,23 @@ connection.onInitialized(async () => {
 // Add command handlers
 connection.onExecuteCommand(async (params: ExecuteCommandParams) => {
   const { command, arguments: args } = params;
+  // reset the auth service in case tokens are expired
+  authService = new AuthenticationService();
   switch (command) {
-    case "looker.authenticate":
-      const [base_url, client_id] = args ?? [];
-
-      try {
-        if (!authService) {
-          authService = new AuthenticationService();
-        }
-
-        const state = await authService.testConnection(
-          {
-            base_url,
-            client_id,
-          }
-        );
-
-        switch (state) {
-          case "requested":
-            return {
-              success: true,
-              message: "Authentication requested",
-            };
-
-          case "authenticated":
-            return {
-              success: true,
-              message: "Successfully authenticated with Looker",
-            };
-
-          default:
-          case "failed":
-            return {
-              success: false,
-              message: "Failed to authenticate with Looker",
-            };
-        }
-      } catch (error) {
-        logger.error("Authentication error:", error);
-        return {
-          success: false,
-          message: `Authentication failed: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
-        };
-      }
-
     case "looker.remoteReset":
       if (!args || args.length !== 1) {
-        
         throw new Error("Invalid arguments for remoteReset command");
       }
       const project_name = args[0] as string;
-      await authService?.resetToRemote(project_name);
-      return { success: true, message: "Successfully reset to remote" };
+      try {
+        const reset_result = await authService.resetToRemote(project_name);
+        return { success: reset_result.success, message: reset_result.message };
+      } catch (error) {
+        return {
+          success: false,
+          message: `Failed to reset to remote: ${error}`,
+        };
+      }
 
     case "looker.getDevBranch":
       if (!args || args.length !== 1) {
@@ -230,6 +196,34 @@ connection.onExecuteCommand(async (params: ExecuteCommandParams) => {
         explore_name: args[2] as string,
       });
 
+    case "looker.addInstance":
+      if (!args || args.length !== 3) {
+        throw new Error("Invalid arguments for adding an instance");
+      }
+      let instance_name = args[0] as string;
+      let base_url = args[1] as string;
+      let use_production = args[2] as AuthRecord["use_production"];
+      try {
+        await authService!.newInstance(instance_name, base_url, use_production);
+        return {
+          success: true,
+          message: "Instance added",
+          data: { instance_name: instance_name, base_url: base_url },
+        };
+      } catch (error) {
+        return {
+          success: false,
+          message: `Failed to add instance: ${error}`,
+          data: { instance_name: instance_name, base_url: base_url },
+        };
+      }
+    case "looker.listInstances":
+      return await handleListInstances();
+    case "looker.switchInstance":
+      if (!args || args.length !== 1) {
+        throw new Error("Invalid arguments for switchInstance command");
+      }
+      return await handleSwitchCurrentInstance(args[0] as string);
     default:
       throw new Error(`Unknown command: ${command}`);
   }

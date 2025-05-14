@@ -20,18 +20,8 @@
   "contributes": {
     "commands": [
       {
-        "command": "looker.authenticate",
-        "title": "Authenticate",
-        "category": "Looker"
-      },
-      {
         "command": "looker.resetToRemote",
         "title": "Reset to Remote",
-        "category": "Looker"
-      },
-      {
-        "command": "looker.reauthenticate",
-        "title": "Reauthenticate",
         "category": "Looker"
       },
       {
@@ -45,23 +35,14 @@
         "category": "Looker"
       },
       {
-        "command": "looker.openExplore",
-        "title": "Open Explore",
+        "command": "looker.login",
+        "title": "Login",
         "category": "Looker"
       }
     ],
     "configuration": {
       "title": "Looker",
       "properties": {
-        "looker.credentials": {
-          "type": "object",
-          "default": {
-            "base_url": "",
-            "client_id": "",
-            "client_secret": ""
-          },
-          "description": "Looker API credentials"
-        },
         "looker.projectName": {
           "type": "string",
           "default": "",
@@ -116,6 +97,5 @@
     "ts-jest": "^29.3.2",
     "typescript": "^5.2.2",
     "vscode": "^1.1.37"
-  },
-  "dependencies": {}
+  }
 }

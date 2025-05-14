@@ -5,6 +5,21 @@
 		{
 			"type": "extensionHost",
 			"request": "launch",
+			"name": "Launch Client",
+			"runtimeExecutable": "${execPath}",
+			"outFiles": [
+				"${workspaceRoot}/client/out/**/*.js",
+				"${workspaceRoot}/server/out/**/*.js"
+			],
+			"autoAttachChildProcesses": true,
+			"preLaunchTask": {
+				"type": "npm",
+				"script": "watch"
+			}
+		},
+		{
+			"type": "extensionHost",
+			"request": "launch",
 			"name": "Launch Client (The Look)",
 			"runtimeExecutable": "${execPath}",
 			"args": [
