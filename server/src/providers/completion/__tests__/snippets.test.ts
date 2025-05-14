@@ -1,5 +1,5 @@
 import { CompletionItemKind, InsertTextFormat, MarkupKind } from "vscode-languageserver/node";
-import { SNIPPETS, createSnippet, getAllSnippets } from "../snippets";
+import { SNIPPETS, createSnippet, getAllSnippets, getSnippetsForContext } from "../snippets";
 
 describe("snippets", () => {
   describe("SNIPPETS constant", () => {
@@ -65,6 +65,14 @@ describe("snippets", () => {
         expect(item).toHaveProperty("documentation");
         expect(item).toHaveProperty("data");
       });
+    });
+  });
+
+  describe("getSnippetsForContext", () => {
+    it("should return an array of completion items for the given context", () => {
+      const snippets = getSnippetsForContext("view");
+      const allSnippets = getAllSnippets();
+      expect(snippets.map(s=>s.label)).toEqual(allSnippets.filter(s=>SNIPPETS[s.data.name].where.includes("view")).map(s=>s.label));
     });
   });
 }); 
