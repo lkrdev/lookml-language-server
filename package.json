@@ -1,6 +1,8 @@
 {
   "name": "lookml-language-server",
-  "description": "LookML Language Server for Visual Studio Code",
+  "displayName": "LookML Language Server",
+  "description": "LookML Language Server for linting, validating, formatting, and more",
+  "icon": "images/lkr-dev-logo.png",
   "author": "rileylnapier@gmail.com",
   "repository": {
     "type": "git",
@@ -97,6 +99,9 @@
   "scripts": {
     "install:client": "cd client && npm install",
     "install:server": "cd server && npm install",
+    "clean:client": "cd client && rm -rf node_modules && npm install",
+    "clean:server": "cd server && rm -rf node_modules && npm install",
+    "clean": "npm run clean:client && npm run clean:server",
     "compile": "npm run install:client && npm run install:server && tsc --build",
     "vscode:prepublish": "npm run compile",
     "watch": "tsc --build --watch",
