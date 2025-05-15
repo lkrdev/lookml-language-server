@@ -16,7 +16,7 @@
     "@looker/sdk": "^25.4.0",
     "@looker/sdk-node": "^25.4.0",
     "@vscode/sqlite3": "^5.1.8-vscode",
-    "lookml-parser": "7.0.0",
+    "lookml-parser": "7.0.1",
     "open": "^8.4.2",
     "vscode": "^1.1.37",
     "vscode-languageserver": "^8.1.0",
