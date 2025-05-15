@@ -169,10 +169,10 @@ export class WorkspaceModel {
     const entities = Object.values(project.file).reduce((acc, value) => {
       const { explore, view } = value;
       const file = {
-        name: value.$file_name,
-        path: value.$file_path,
-        rel: value.$file_rel,
-        tyoe: value.$file_type,
+        $file_name: value.$file_name,
+        $file_path: value.$file_path,
+        $file_rel: value.$file_rel,
+        $file_type: value.$file_type,
       }
 
       if (explore) {
@@ -198,7 +198,7 @@ export class WorkspaceModel {
     
     for (const { file, view } of entities.view) {
       const viewName = view.$name;
-      const filePath = file.path;
+      const filePath = file.$file_path;
 
       const uri = `${process.cwd()}/${filePath}`;
       const viewsByFile = this.viewsByFile.get(uri) || [];
@@ -223,7 +223,7 @@ export class WorkspaceModel {
 
     for (const { file, explore } of entities.explore) {
       const exploreName = explore.$name;
-      const filePath = file.path;
+      const filePath = file.$file_path;
 
       const uri = `${process.cwd()}/${filePath}`;
       const filePositions = project.positions.file[filePath.replace(".lkml", "")];

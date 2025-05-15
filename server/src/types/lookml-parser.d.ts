@@ -206,6 +206,8 @@ declare module "lookml-parser" {
             explore: Record<string, {
                 $name: Position;    
                 extends: Position[];
+                sql_always_where: Position;
+                sql_always_having: Position;
                 join: Record<string, Position & {
                     sql_on: Position;
                 }>;

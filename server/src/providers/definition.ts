@@ -196,16 +196,29 @@ export class DefinitionProvider {
         }
 
         const viewNamePosition = viewDetails.positions.$name.$p;
+        console.log("definition", {
+            uri: viewDetails.uri,
+            range: {
+                start: {
+                    line: viewNamePosition[0],
+                    character: viewNamePosition[1]
+                },
+                end: {
+                    line: viewNamePosition[2],
+                    character: viewNamePosition[3]
+                }
+            }
+        });
         return {
             uri: viewDetails.uri,
             range: {
                 start: {
-                    line: viewNamePosition[0] - 1,
-                    character: viewNamePosition[1] - 1
+                    line: viewNamePosition[0],
+                    character: viewNamePosition[1]
                 },
                 end: {
-                    line: viewNamePosition[2] - 1,
-                    character: viewNamePosition[3] - 1
+                    line: viewNamePosition[2],
+                    character: viewNamePosition[3]
                 }
             }
         };

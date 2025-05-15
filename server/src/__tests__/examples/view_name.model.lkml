@@ -13,6 +13,7 @@ explore: test_from_fail {
   sql_always_where: ${test_from_fail.foo} ;;
 }
 
+# the field references should fail
 explore: test_view_name_fail {
   from: test
   sql_always_where: ${test_view_name_fail.foo} ;;

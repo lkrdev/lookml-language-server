@@ -117,6 +117,7 @@ export class DiagnosticsProvider {
   private validateSqlReferences(
     sql: string,
     position: LookmlPosition | undefined,
+    context?: Record<string, Record<string, unknown>>,
   ): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
     if (!position) return diagnostics;
@@ -146,6 +147,25 @@ export class DiagnosticsProvider {
           source: "lookml-lsp",
           code: DiagnosticCode.VIEW_REF_FIELD_IN_SQL
         });
+      }
+
+      const sql = match[1];
+      if (sql.includes(".")) {
+        const sqlParts = sql.split(".");
+        const viewName = sqlParts[0];
+        const fieldName = sqlParts[1];
+
+        const viewDetails = context?.[viewName] ? context[viewName] : this.workspaceModel.getView(viewName);
+        if (!viewDetails) {
+          diagnostics.push({
+            severity: DiagnosticSeverity.Error,
+            range,
+            message: `View "${viewName}" not found in workspace`,
+          });
+          continue;
+        } 
+
+        // todo, validate field references
       }
     }
   
@@ -744,9 +764,6 @@ export class DiagnosticsProvider {
         if (!availableViews) return;
         if (explore.from) {
           const viewName = explore.from;
-
-          console.log("viewName", viewName);
-          console.log("includedViews", includedViews)
           const viewDetails = this.workspaceModel.getView(viewName);
           
           if (!viewDetails) {
@@ -766,6 +783,19 @@ export class DiagnosticsProvider {
               code: DiagnosticCode.VIEW_REF_VIEW_NOT_INCLUDED
             });
           }
+        }
+
+        const exploreContext = {
+          [explore.view_name ?? exploreName]: {}
+        }
+        if (explore.sql_always_where) {
+          const sqlPosition = model.positions.explore?.[exploreName]?.sql_always_where;
+          diagnostics.push(...this.validateSqlReferences(explore.sql_always_where, sqlPosition, exploreContext));
+        }
+
+        if (explore.sql_always_having) {
+          const sqlPosition = model.positions.explore?.[exploreName]?.sql_always_having;
+          diagnostics.push(...this.validateSqlReferences(explore.sql_always_having, sqlPosition));
         }
 
         // Validate joins
@@ -794,6 +824,7 @@ export class DiagnosticsProvider {
                 code: DiagnosticCode.JOIN_VIEW_NOT_INCLUDED
               });
             }
+            
 
             // Validate sql_on references
             if (join.sql_on) {
@@ -812,6 +843,25 @@ export class DiagnosticsProvider {
 
                 // Check if view exists and is available
                 const viewDetails = this.workspaceModel.getView(viewName);
+
+                const viewExtends = typeof viewDetails?.view?.extends === 'string' ? [viewDetails?.view?.extends] : viewDetails?.view?.extends;
+                const viewExtensions = viewExtends?.map((view) => {
+                  return this.workspaceModel.getView(view);
+                });
+
+                const viewHasField = (field: string) => {
+                  return Boolean(
+                    viewDetails?.view.measure?.[fieldName] ||
+                    viewDetails?.view.dimension?.[fieldName] || 
+                    viewDetails?.view.dimension_group?.[fieldName] ||
+                    viewExtensions?.some((viewDetails) => Boolean(
+                      viewDetails?.view.measure?.[fieldName] ||
+                      viewDetails?.view.dimension?.[fieldName] || 
+                      viewDetails?.view.dimension_group?.[fieldName]
+                    ))
+                  );
+                }
+                
                 if (!viewDetails) {
                   diagnostics.push({
                     severity: DiagnosticSeverity.Error,
@@ -834,9 +884,7 @@ export class DiagnosticsProvider {
                     source: "lookml-lsp",
                     code: DiagnosticCode.SQL_REF_VIEW_NOT_AVAILABLE
                   });
-                } else if (!viewDetails.view.measure?.[fieldName] && 
-                          !viewDetails.view.dimension?.[fieldName] && 
-                          !viewDetails.view.dimension_group?.[fieldName]) {
+                } else if (!viewHasField(fieldName)) {
                   diagnostics.push({
                     severity: DiagnosticSeverity.Error,
                     range: {

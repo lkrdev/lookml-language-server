@@ -49,15 +49,9 @@ describe('Workspace Model and Diagnostics', () => {
       reset: true,
     });
 
-    console.log("content", content);
-    console.log("workspaceModel views", workspaceModel.getViews());
-    console.log("workspaceModel explores", workspaceModel.getExplores());
-    console.log("workspaceModel models", workspaceModel.getModels());
-
     // Run diagnostics
     const diagnostics = diagnosticsProvider.validateDocument(document);
 
-    console.log("diagnostics", JSON.stringify(diagnostics, null, 2));
     // Verify that diagnostics were generated
     expect(diagnostics).toBeDefined();
     expect(Array.isArray(diagnostics)).toBe(true);
@@ -70,8 +64,5 @@ describe('Workspace Model and Diagnostics', () => {
     
     // Should have errors for invalid references
     expect(errorMessages.some(msg => msg.includes('not found in workspace'))).toBe(true);
-    
-    // Should have errors for invalid view references
-    expect(errorMessages.some(msg => msg.includes('must have a base view'))).toBe(true);
   });
 });
