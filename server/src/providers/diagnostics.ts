@@ -357,7 +357,6 @@ export class DiagnosticsProvider {
         if (!result.success) {
           // Add validation errors to diagnostics
           result.error.errors.forEach((error: ZodIssue) => {
-            console.log("error", error);
             let currentPosition: any = positions;
             for (const pathPart of error.path) {
               if (!currentPosition) break;
