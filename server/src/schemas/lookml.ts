@@ -304,7 +304,16 @@ export const exploreSchema = parserValues.extend({
   extends: z.array(z.string()).optional(),
   join: z.record(z.string(), joinSchema).optional(),
   aggregate_table: z.record(z.string(), aggregateTableSchema).optional(),
-}).strict();
+  sql_always_where: z.string().optional(),
+}).strict().superRefine((val, ctx) => {
+  if (val.view_name && val.from) {
+      ctx.addIssue({
+        path: ['from', 'view_name'],
+        code: z.ZodIssueCode.custom,
+        message: 'view_name and from should not both be present. `from` on an explore is rarely used.',
+    });
+  }
+});
 
 export const derivedTableSchema = z.object({
   cluster_keys: z.array(z.string()).optional(),

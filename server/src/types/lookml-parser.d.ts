@@ -226,6 +226,7 @@ declare module "lookml-parser" {
         join?: Record<string, LookmlJoin>;
         tags?: string[];
         group_label?: string;
+        view_name?: string;
     }
 
     export interface LookmlModel extends LookmlFileAttributes {

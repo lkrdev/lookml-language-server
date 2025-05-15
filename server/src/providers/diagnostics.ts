@@ -1,3 +1,12 @@
+import {
+  ArrayPosition,
+  LookmlExplore,
+  LookmlExploreWithFileInfo,
+  LookmlModelWithFileInfo,
+  Position as LookmlPosition,
+  LookmlView,
+  LookmlViewWithFileInfo
+} from "lookml-parser";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import {
   Diagnostic,
@@ -5,23 +14,13 @@ import {
   Position,
   Range,
 } from "vscode-languageserver/node";
-import { WorkspaceModel } from "../models/workspace";
-import { ensureMinRangeLength } from '../utils/range';
-import {
-  LookmlExploreWithFileInfo,
-  LookmlModelWithFileInfo,
-  LookmlViewWithFileInfo,
-  Position as LookmlPosition,
-  LookmlExplore,
-  LookmlViewPositions,
-  ArrayPosition
-} from "lookml-parser";
 import { ZodError, ZodIssue } from 'zod';
+import { WorkspaceModel } from "../models/workspace";
 import {
   exploreSchema,
+  LookMLView,
 } from '../schemas/lookml';
-import { LookMLView } from '../schemas/lookml';
-import { LookmlView } from 'lookml-parser';
+import { ensureMinRangeLength } from '../utils/range';
 
 export enum DiagnosticCode {
   // Syntax validation (10000-19999)
@@ -106,8 +105,8 @@ export class DiagnosticsProvider {
         severity: DiagnosticSeverity.Error,
         message: errorDetails.error.exception.message,
         range: ensureMinRangeLength({
-          start: { line: errorDetails.error.exception.location.start.line - 1, character: errorDetails.error.exception.location.start.column - 1 },
-          end: { line: errorDetails.error.exception.location.end.line - 1, character: errorDetails.error.exception.location.end.column - 1 },
+          start: { line: errorDetails.error.exception.location.start.line, character: errorDetails.error.exception.location.start.column },
+          end: { line: errorDetails.error.exception.location.end.line, character: errorDetails.error.exception.location.end.column },
         }),
       });
     }
@@ -129,8 +128,8 @@ export class DiagnosticsProvider {
   
     const charStart = position.$p[1];
     const charEnd = position.$p[3];
-    const lineStart = position.$p[0] - 1;
-    const lineEnd = position.$p[2] - 1;
+    const lineStart = position.$p[0];
+    const lineEnd = position.$p[2];
 
     const range = {
       start: { line: lineStart, character: charStart  },
@@ -250,8 +249,8 @@ export class DiagnosticsProvider {
           diagnostics.push({
             severity: DiagnosticSeverity.Error,
             range: {
-              start: { line: drillFieldPosition.$p[0] - 1, character: startCharater },
-              end: { line: drillFieldPosition.$p[2] - 1, character: endCharater }
+              start: { line: drillFieldPosition.$p[0], character: startCharater },
+              end: { line: drillFieldPosition.$p[2], character: endCharater }
             },
             message: `Set "${fieldWithoutAsterisk}" not found in view "${targetedViewName}"`,
             source: "lookml-lsp",
@@ -277,8 +276,8 @@ export class DiagnosticsProvider {
           severity: DiagnosticSeverity.Error,
           message: `View ${targetedViewName} not found`,
           range: {
-            start: { line: drillFieldPosition.$p[0] - 1, character: startCharater },
-            end: { line: drillFieldPosition.$p[2] - 1, character: endCharater }
+            start: { line: drillFieldPosition.$p[0], character: startCharater },
+            end: { line: drillFieldPosition.$p[2], character: endCharater }
           },
           source: "lookml-lsp",
           code: DiagnosticCode.DRILL_FIELDS_VIEW_NOT_FOUND
@@ -309,8 +308,8 @@ export class DiagnosticsProvider {
           severity: DiagnosticSeverity.Error,
           message: `Field "${fieldName}" not found in view "${targetedViewDetails.view.$name}"`,
           range: {
-            start: { line: drillFieldPosition.$p[0] - 1, character: startCharater },
-            end: { line: drillFieldPosition.$p[2] - 1, character: endCharater }
+            start: { line: drillFieldPosition.$p[0], character: startCharater },
+            end: { line: drillFieldPosition.$p[2], character: endCharater }
           },
           source: "lookml-lsp",
           code: DiagnosticCode.DRILL_FIELDS_FIELD_NOT_FOUND
@@ -352,8 +351,8 @@ export class DiagnosticsProvider {
               diagnostics.push({
                 severity: DiagnosticSeverity.Error,
                 range: {
-                  start: { line: position.$p[0] - 1, character: position.$p[1] },
-                  end: { line: position.$p[2] - 1, character: position.$p[3] }
+                  start: { line: position.$p[0], character: position.$p[1] },
+                  end: { line: position.$p[2], character: position.$p[3] }
                 },
                 message: error.message,
                 source: "lookml-lsp"
@@ -443,8 +442,8 @@ export class DiagnosticsProvider {
                       diagnostics.push({
                         severity: DiagnosticSeverity.Error,
                         range: {
-                          start: { line: timeframePosition.$p[0] - 1, character: timeframePosition.$p[1] },
-                          end: { line: timeframePosition.$p[2] - 1, character: timeframePosition.$p[3] }
+                          start: { line: timeframePosition.$p[0], character: timeframePosition.$p[1] },
+                          end: { line: timeframePosition.$p[2], character: timeframePosition.$p[3] }
                         },
                         message: `Invalid timeframe "${timeframe}" for dimension group "${dimGroupName}"`,
                         source: "lookml-lsp",
@@ -486,8 +485,8 @@ export class DiagnosticsProvider {
                   severity: DiagnosticSeverity.Error,
                   message: `View ${targetedViewName} not found`,
                   range: {
-                    start: { line: setFieldPosition.$p[0] - 1, character: startCharacter },
-                    end: { line: setFieldPosition.$p[2] - 1, character: endCharacter }
+                    start: { line: setFieldPosition.$p[0], character: startCharacter },
+                    end: { line: setFieldPosition.$p[2], character: endCharacter }
                   },
                   source: "lookml-lsp",
                   code: DiagnosticCode.DRILL_FIELDS_VIEW_NOT_FOUND
@@ -520,8 +519,8 @@ export class DiagnosticsProvider {
                   severity: DiagnosticSeverity.Error,
                   message: `Field "${fieldName}" not found in view "${targetedViewName}"`,
                   range: {
-                    start: { line: setFieldPosition.$p[0] - 1, character: startCharacter },
-                    end: { line: setFieldPosition.$p[2] - 1, character: endCharacter }
+                    start: { line: setFieldPosition.$p[0], character: startCharacter },
+                    end: { line: setFieldPosition.$p[2], character: endCharacter }
                   },
                   source: "lookml-lsp",
                   code: DiagnosticCode.DRILL_FIELDS_FIELD_NOT_FOUND
@@ -602,8 +601,8 @@ export class DiagnosticsProvider {
                     diagnostics.push({
                       severity: DiagnosticSeverity.Error,
                       range: {
-                        start: { line: startLine - 1, character: startCharater },
-                        end: { line: endLine - 1, character: endCharater }
+                        start: { line: startLine, character: startCharater },
+                        end: { line: endLine, character: endCharater }
                       },
                       message: `Extend View: "${view}" not found in model "${modelDetails.model.$file_name}"`,
                       source: "lookml-lsp",
@@ -636,9 +635,9 @@ export class DiagnosticsProvider {
                     throw new Error(`No position found for explore ${exploreName}`);
                   }
 
-                  const startLine = position.$p[0] - 1;
+                  const startLine = position.$p[0];
                   const startCharacter = position.$p[1];
-                  const endLine = position.$p[2] - 1;
+                  const endLine = position.$p[2];
                   const endCharacter = position.$p[3];
 
                   diagnostics.push(
@@ -682,10 +681,11 @@ export class DiagnosticsProvider {
     // First pass: build explore context and available views
     if (model.model.explore) {
       Object.entries(model.model.explore).forEach(([exploreName, explore]) => {
+        const explore_view = explore.view_name || explore.from || exploreName;
         // Initialize available views for this explore
 
-        const exploreViewDetails = this.workspaceModel.getView(exploreName);
-        if (!exploreViewDetails && !explore.from) {
+        const exploreViewDetails =  this.workspaceModel.getView(explore_view);
+        if (!exploreViewDetails) {
           const explorePosition = model.positions.explore?.[exploreName]?.$name?.$p;
           if (!explorePosition) {
             throw new Error(`No position found for explore ${exploreName}`);
@@ -694,8 +694,8 @@ export class DiagnosticsProvider {
           diagnostics.push({
             severity: DiagnosticSeverity.Error,
             range: {
-              start: { line: explorePosition[0] - 1, character: explorePosition[1] },
-              end: { line: explorePosition[2] - 1, character: explorePosition[3] }
+              start: { line: explorePosition[0], character: explorePosition[1] },
+              end: { line: explorePosition[2], character: explorePosition[3] }
             },
             message: `Explore "${exploreName}" must have a base view`,
             source: "lookml-lsp",
@@ -770,8 +770,8 @@ export class DiagnosticsProvider {
             if (!viewDetails) {
               const explorePosition = model.positions.explore?.[exploreName]?.join?.[joinName]?.$p;
               const range = {
-                start: { line: explorePosition[0] - 1, character: explorePosition[1] },
-                end: { line: explorePosition[2] - 1, character: explorePosition[3] }
+                start: { line: explorePosition[0], character: explorePosition[1] },
+                end: { line: explorePosition[2], character: explorePosition[3] }
               }
               diagnostics.push({
                 severity: DiagnosticSeverity.Error,
@@ -811,8 +811,8 @@ export class DiagnosticsProvider {
                   diagnostics.push({
                     severity: DiagnosticSeverity.Error,
                     range: {
-                      start: { line: startLine - 1, character: startCharater },
-                      end: { line: endLine - 1, character: endCharater }
+                      start: { line: startLine, character: startCharater },
+                      end: { line: endLine, character: endCharater }
                     },
                     message: `Referenced view "${viewName}" not found in workspace`,
                     source: "lookml-lsp",
@@ -822,8 +822,8 @@ export class DiagnosticsProvider {
                   diagnostics.push({
                     severity: DiagnosticSeverity.Error,
                     range: {
-                      start: { line: startLine - 1, character: startCharater },
-                      end: { line: endLine - 1, character: endCharater }
+                      start: { line: startLine, character: startCharater },
+                      end: { line: endLine, character: endCharater }
                     },
                     message: `View "${viewName}" is not available in this explore context. It must be joined before it can be referenced.`,
                     source: "lookml-lsp",
@@ -835,8 +835,8 @@ export class DiagnosticsProvider {
                   diagnostics.push({
                     severity: DiagnosticSeverity.Error,
                     range: {
-                      start: { line: startLine - 1, character: startCharater },
-                      end: { line: endLine - 1, character: endCharater }
+                      start: { line: startLine, character: startCharater },
+                      end: { line: endLine, character: endCharater }
                     },
                     message: `Field "${fieldName}" not found in view "${viewName}"`,
                     source: "lookml-lsp",
@@ -868,8 +868,8 @@ export class DiagnosticsProvider {
 
     const [startLine, startChar, endLine, endChar] = current.$p;
     return Range.create(
-      Position.create(startLine - 1, startChar),
-      Position.create(endLine - 1, endChar)
+      Position.create(startLine, startChar),
+      Position.create(endLine, endChar)
     );
   }
 }
