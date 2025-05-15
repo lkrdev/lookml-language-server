@@ -7,11 +7,20 @@ This is a language server for LookML. It is used to provide autocompletion, lint
 
 We are actively looking for feedback and contributions from the community, please file [issues](https://github.com/lkrdev/lookml-language-server/issues).
 
+# [Open Instructions](https://github.com/lkrdev/lookml-language-server/#readme)
+
+There are a few steps you need to follow to get the Language Server working.
+- If this if the first time you're using the Language Server, you'll need to register a new OAuth client to communicate with the Language Server [go](#looker-save-all-stage-all-commit-and-sync)
+- If you've already registered an OAuth client, you can skip that step and go to [looker-login](#looker-login)
+- Make sure you do not have uncommited changes in your LookML development mode
+- After you've opened up a LookML repository in your IDE, run the [looker-sync-branches](#looker-sync-branches) command to ensure your local LookML files are on the development branch and up to date
+- Make some LookML Changes and run the [looker-save-all-stage-all-commit-and-sync](#looker-save-all-stage-all-commit-and-sync) (hotkey `alt+shift+r`) to push your changes to Looker
+
 ## Setting up your Looker Environment
 
 The LookML Language Server uses OAuth2 to authenticate to Looker and manages the authentication lifecycle for you. A Looker Admin will need to Register a new OAuth client to communicate with the Language Server:
 
-1. Go to the Looker API Explorer for Register OAuth APp (https://<your-looker-instance>/extensions/marketplace_extension_api_explorer::api-explorer/4.0/methods/Auth/register_oauth_client_app)
+1. Go to the Looker API Explorer for Register OAuth App (https://your.looker.instance/extensions/marketplace_extension_api_explorer::api-explorer/4.0/methods/Auth/register_oauth_client_app)
 2. Enter `lkr-cli` as the client_id
 3. Enter the following payload in the body
 ```
@@ -31,13 +40,14 @@ This only needs to be done once per instance.
 ## Looker: Login
 The Looker: Login command provides the following functionality:
 
-1. Open the command palette
-2. Search for "Looker: Login"
-3. Add new Looker isntance
-4. Choose between development or production mode. We recommend the development option for Language Server to use.
-5. Name your instance
-6. Your browser will open to the Looker OAuth page for the LKR client installed above
-7. Authorize the app, and close the redirected window
+1. Navigate to a *.lookml file
+2. Open the command palette
+3. Search for "Looker: Login"
+4. Add new Looker instance
+5. Choose between development or production mode. We recommend the development option for Language Server to use.
+6. Name your instance
+7. Your browser will open to the Looker OAuth page for the LKR client installed above
+8. Authorize the app, and close the redirected window
 
 You may login to multiple instances, but only one is active at a time. Use Looker: Login to switch between instances and development/production modes.
 
