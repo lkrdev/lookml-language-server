@@ -337,6 +337,7 @@ export class DiagnosticsProvider {
         if (!result.success) {
           // Add validation errors to diagnostics
           result.error.errors.forEach((error: ZodIssue) => {
+            console.log("error", error);
             let currentPosition: any = positions;
             for (const pathPart of error.path) {
               if (!currentPosition) break;
@@ -684,8 +685,8 @@ export class DiagnosticsProvider {
         const explore_view = explore.view_name || explore.from || exploreName;
         // Initialize available views for this explore
 
-        const exploreViewDetails =  this.workspaceModel.getView(explore_view);
-        if (!exploreViewDetails) {
+        const exploreViewDetails = this.workspaceModel.getView(exploreName);
+        if (!exploreViewDetails && !explore.from &&  !explore.view_name) {
           const explorePosition = model.positions.explore?.[exploreName]?.$name?.$p;
           if (!explorePosition) {
             throw new Error(`No position found for explore ${exploreName}`);
@@ -743,7 +744,11 @@ export class DiagnosticsProvider {
         if (!availableViews) return;
         if (explore.from) {
           const viewName = explore.from;
+
+          console.log("viewName", viewName);
+          console.log("includedViews", includedViews)
           const viewDetails = this.workspaceModel.getView(viewName);
+          
           if (!viewDetails) {
             diagnostics.push({
               severity: DiagnosticSeverity.Error,

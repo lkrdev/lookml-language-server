@@ -215,17 +215,17 @@ declare module "lookml-parser" {
 
     export interface LookmlExplore {
         $name: string;
-        label?: string;
         description?: string;
-        hidden?: boolean;
-        from?: string;
         extends?: string[];
         extension?: boolean;
-        sql_always_where?: string;
-        sql_always_having?: string;
-        join?: Record<string, LookmlJoin>;
-        tags?: string[];
+        from?: string;
         group_label?: string;
+        hidden?: boolean;
+        join?: Record<string, LookmlJoin>;
+        label?: string;
+        sql_always_having?: string;
+        sql_always_where?: string;
+        tags?: string[];
         view_name?: string;
     }
 
@@ -233,6 +233,7 @@ declare module "lookml-parser" {
         label?: string;
         include?: string | string[];
         explore?: Record<string, LookmlExplore>;
+        view?: Record<string, LookmlView>;
         extension?: boolean;
         tags?: string[];
     }

@@ -16,18 +16,18 @@ const createMockDimension = (name: string): LookmlDimension => ({
     type: 'string',
   });
 
-  const createMockMeasure = (name: string): LookmlMeasure => ({
+const createMockMeasure = (name: string): LookmlMeasure => ({
     $name: name,
     type: 'count',
   });
 
-  const createMockViewWithFileInfo = (view: any): LookmlViewWithFileInfo => ({
+const createMockViewWithFileInfo = (view: any): LookmlViewWithFileInfo => ({
     file: {
       $file_name: 'test.view.lkml',
       $file_path: '/test/test.view.lkml',
       $file_type: 'view',
       $file_rel: '',
-      $strings: undefined
+      $strings: [""]
     },
     uri: 'file:///test/test.view.lkml',
     view,
@@ -38,22 +38,51 @@ const createMockDimension = (name: string): LookmlDimension => ({
 
 describe('DiagnosticsProvider', () => {
   let diagnosticsProvider: TestDiagnosticsProvider;
-  let mockWorkspaceModel = {
-    isViewFile: jest.fn().mockReturnValue(true),
-    getView: jest.fn().mockReturnValue(createMockViewWithFileInfo({
-      dimension: {
-        'test_field': createMockDimension('test_field'),
-        'id': createMockDimension('id'),
-        'name': createMockDimension('name'),
-      },
-      measure: {
-        'count': createMockMeasure('count'),
-      },
-    })),
-    getViewNameFromFile: jest.fn().mockReturnValue('test_view'),
-  } as any;
+  let mockWorkspaceModel: any;
 
   beforeEach(() => {
+    // Create a fresh mock workspace model for each test
+    mockWorkspaceModel = {
+      isViewFile: jest.fn().mockReturnValue(true),
+      getView: jest.fn().mockImplementation((viewName: unknown) => {
+        if (typeof viewName === 'string') {
+          if (viewName === 'test_view') {
+            return createMockViewWithFileInfo({
+              dimension: {
+                'id': createMockDimension('id'),
+                'name': createMockDimension('name'),
+              },
+              measure: {
+                'count': createMockMeasure('count'),
+              },
+            });
+          }
+          if (viewName === 'other_view') {
+            return createMockViewWithFileInfo({
+              dimension: {
+                'field_name': createMockDimension('field_name'),
+              },
+            });
+          }
+        }
+        return undefined;
+      }),
+      getViewNameFromFile: jest.fn().mockReturnValue('test_view'),
+      getViewsByFile: jest.fn().mockReturnValue(['test_view']),
+      getExploresByFile: jest.fn().mockReturnValue([]),
+      getModelsByFile: jest.fn().mockReturnValue([]),
+      getIncludedViewsForModel: jest.fn().mockReturnValue(new Set(['test_view'])),
+      getErrorsByFileName: jest.fn().mockReturnValue([]),
+      getModelNameFromUri: jest.fn().mockReturnValue('test_model'),
+      getModel: jest.fn().mockReturnValue({
+        model: {
+          $file_name: 'test.model.lkml',
+          include: ['test.view.lkml'],
+        },
+        positions: {},
+      }),
+    };
+
     diagnosticsProvider = new TestDiagnosticsProvider(mockWorkspaceModel);
   });
 
@@ -71,6 +100,7 @@ describe('DiagnosticsProvider', () => {
         }
       `);
       const diagnostics = diagnosticsProvider.validatePropertiesForTest(doc);
+      console.log(103, JSON.stringify(diagnostics, null, 2));
       expect(diagnostics.length).toBe(0);
     });
 
@@ -82,7 +112,8 @@ describe('DiagnosticsProvider', () => {
               id,
               name,
               count
-          ]
+            ]
+          }
         }
       `);
       const diagnostics = diagnosticsProvider.validatePropertiesForTest(doc);
@@ -180,7 +211,7 @@ describe('DiagnosticsProvider', () => {
       // Mock both views to exist
       mockWorkspaceModel.getView.mockImplementation((viewName: string): LookmlViewWithFileInfo | undefined => {
         if (viewName === 'test_view') {
-          const mockView = createMockViewWithFileInfo({
+          return createMockViewWithFileInfo({
             dimension: {
               'id': createMockDimension('id'),
             },
@@ -188,8 +219,6 @@ describe('DiagnosticsProvider', () => {
               'count': createMockMeasure('count'),
             }
           });
-
-          return mockView;
         }
         if (viewName === 'other_view') {
           return createMockViewWithFileInfo({
@@ -214,17 +243,24 @@ describe('DiagnosticsProvider', () => {
         }
       `);
       // Mock view with a set
-      mockWorkspaceModel.getView.mockReturnValue(createMockViewWithFileInfo({
-        dimension: {
-          'id': createMockDimension('id'),
-        },
-        measure: {
-          'count': createMockMeasure('count'),
-        },
-        set: {
-          'my_set': {},
+      mockWorkspaceModel.getView.mockImplementation((viewName: string): LookmlViewWithFileInfo | undefined => {
+        if (viewName === 'test_view') {
+          return createMockViewWithFileInfo({
+            dimension: {
+              'id': createMockDimension('id'),
+            },
+            measure: {
+              'count': createMockMeasure('count'),
+            },
+            set: {
+              'my_set': {
+                fields: ['id', 'count']
+              }
+            }
+          });
         }
-      }));
+        return undefined;
+      });
       
       const diagnostics = diagnosticsProvider.validatePropertiesForTest(doc);
       expect(diagnostics.length).toBe(0);
