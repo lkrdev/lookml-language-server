@@ -298,13 +298,17 @@ export const aggregateTableSchema = parserValues.extend({
 }).strict();
 
 export const exploreSchema = parserValues.extend({
-  view_name: z.string().optional(),
-  from: z.string().optional(),
-  fields: z.array(z.string()).optional(),
-  extends: z.array(z.string()).optional(),
-  join: z.record(z.string(), joinSchema).optional(),
   aggregate_table: z.record(z.string(), aggregateTableSchema).optional(),
+  extends: z.array(z.string()).optional(),
+  fields: z.array(z.string()).optional(),
+  from: z.string().optional(),
+  hidden: z.boolean().optional(),
+  join: z.record(z.string(), joinSchema).optional(),
+  label: z.string().optional(),
+  sql_always_having: z.string().optional(),
   sql_always_where: z.string().optional(),
+  view_label: z.string().optional(),
+  view_name: z.string().optional(),
 }).strict();
 
 export const derivedTableSchema = z.object({

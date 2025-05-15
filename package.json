@@ -106,7 +106,8 @@
     "vscode:prepublish": "npm run compile",
     "watch": "tsc --build --watch",
     "lint": "eslint src --ext ts",
-    "test": "jest"
+    "test": "jest",
+    "test:server": "cd server && jest"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",

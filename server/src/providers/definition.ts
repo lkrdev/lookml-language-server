@@ -200,12 +200,12 @@ export class DefinitionProvider {
             uri: viewDetails.uri,
             range: {
                 start: {
-                    line: viewNamePosition[0] - 1,
-                    character: viewNamePosition[1] - 1
+                    line: viewNamePosition[0],
+                    character: viewNamePosition[1]
                 },
                 end: {
-                    line: viewNamePosition[2] - 1,
-                    character: viewNamePosition[3] - 1
+                    line: viewNamePosition[2],
+                    character: viewNamePosition[3]
                 }
             }
         };

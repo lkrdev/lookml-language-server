@@ -71,7 +71,6 @@ describe("SQLCompletionProvider", () => {
             expect(completions[0]).toEqual({
                 label: "users",
                 kind: CompletionItemKind.Class,
-                insertText: "users",
                 detail: "View: users",
                 data: { type: "view-ref", viewName: "users" }
             });
@@ -83,48 +82,73 @@ describe("SQLCompletionProvider", () => {
             const context: CompletionContext = { type: "field_reference", viewName: "users" };
             const completions = sqlCompletionProvider.getFieldReferenceCompletions(context);
 
-            expect(completions).toHaveLength(3);
-            expect(completions).toEqual(
-                [
-                    {
-                        "data": {
-                            "fieldName": "count",
-                            "type": "field-ref",
-                            "viewName": "users",
-                        },
-                        "detail": "count in users",
-                        "kind": 5,
-                        "label": "Count",
+            expect(completions).toHaveLength(4);
+            expect(completions).toEqual([
+                {
+                    data: {
+                        fieldName: "TABLE",
+                        type: "field-ref",
+                        viewName: "users",
                     },
-                    {
-                        "data": {
-                            "fieldName": "id",
-                            "type": "field-ref",
-                            "viewName": "users",
-                        },
-                        "detail": "number in users",
-                        "kind": 5,
-                        "label": "ID",
+                    detail: "table: users",
+                    insertText: "TABLE}",
+                    kind: CompletionItemKind.Module,
+                    label: "TABLE",
+                },
+                {
+                    data: {
+                        fieldName: "count",
+                        type: "field-ref",
+                        viewName: "users",
                     },
-                    {
-                        "data": {
-                            "fieldName": "name",
-                            "type": "field-ref",
-                            "viewName": "users",
-                        },
-                        "detail": "string in users",
-                        "kind": 5,
-                        "label": "Name",
+                    detail: "count in users",
+                    insertText: "count} ;;",
+                    kind: CompletionItemKind.Field,
+                    label: "count",
+                },
+                {
+                    data: {
+                        fieldName: "id",
+                        type: "field-ref",
+                        viewName: "users",
                     },
-                ]
-            )
+                    detail: "number in users",
+                    insertText: "id} ;;",
+                    kind: CompletionItemKind.Field,
+                    label: "id",
+                },
+                {
+                    data: {
+                        fieldName: "name",
+                        type: "field-ref",
+                        viewName: "users",
+                    },
+                    detail: "string in users",
+                    insertText: "name} ;;",
+                    kind: CompletionItemKind.Field,
+                    label: "name",
+                },
+            ]);
         });
 
-        test("should return empty array for non-existent view", () => {
+        test("should return only TABLE item for non-existent view", () => {
             const context: CompletionContext = { type: "field_reference", viewName: "non_existent" };
-
+            // Reset the mock to ensure it returns undefined
+            mockWorkspaceModel.getView.mockReset();
+            mockWorkspaceModel.getView.mockReturnValue(undefined);
             const completions = sqlCompletionProvider.getFieldReferenceCompletions(context);
-            expect(completions).toHaveLength(0);
+            expect(completions).toHaveLength(1);
+            expect(completions[0]).toEqual({
+                data: {
+                    fieldName: "TABLE",
+                    type: "field-ref",
+                    viewName: "non_existent",
+                },
+                detail: "table: non_existent",
+                insertText: "TABLE}",
+                kind: CompletionItemKind.Module,
+                label: "TABLE",
+            });
         });
     });
 
@@ -138,7 +162,7 @@ describe("SQLCompletionProvider", () => {
             const completions = sqlCompletionProvider.getCompletions(context);
 
             // Should include SQL functions, keywords, and field references
-            expect(completions.length).toBeGreaterThan(0);
+            expect(completions.length).toBeGreaterThan(1);
             expect(completions.some(item => item.label === "CONCAT")).toBe(true);
             expect(completions.some(item => item.label === "SELECT")).toBe(true);
             expect(completions.some(item => item.label === "${users.id}")).toBe(true);
