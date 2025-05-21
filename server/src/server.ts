@@ -86,7 +86,7 @@ connection.onInitialize((params: InitializeParams) => {
       // Completion capabilities
       completionProvider: {
         resolveProvider: true,
-        triggerCharacters: [".", ":", "{"],
+        triggerCharacters: [".", ":", "{", " "],
       },
       // Definition capabilities
       definitionProvider: true,

@@ -136,13 +136,15 @@ export class PropertyCompletionProvider {
       return this.getPropertyCompletions(context.blockType);
     }
 
+    if (context.type === "type" || (context.type === "value" && context.propertyName === "type")) {
+      return this.getTypeCompletions(context.blockType);
+    }
+
     if (context.type === "value") {
       return this.getPropertyValueCompletions(context);
     }
 
-    if (context.type === "type") {
-      return this.getTypeCompletions(context.blockType);
-    }
+    
 
     return [];
   }
