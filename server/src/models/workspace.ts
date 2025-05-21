@@ -13,7 +13,7 @@ import { URI } from "vscode-uri";
 import {
   LookMLParser,
 } from "./lookml-parser";
-import { parseFiles, LookmlProject, LookmlViewWithFileInfo, LookmlExploreWithFileInfo, transformations, LookmlModelWithFileInfo, LookmlError, LookmlExplore, LookmlView, LookmlModel, LookmlFile, } from "lookml-parser";
+import { parseFiles, parse, LookmlProject, LookmlViewWithFileInfo, LookmlExploreWithFileInfo, transformations, LookmlModelWithFileInfo, LookmlError, LookmlExplore, LookmlView, LookmlModel, LookmlFile, } from "lookml-parser";
 
 export class WorkspaceModel {
   public connection: Connection;
@@ -120,6 +120,28 @@ export class WorkspaceModel {
     });
   }
 
+  public async parseDocument(document: TextDocument): Promise<void> {
+    const response = parse(document.getText());
+    const isModel = document.uri.includes(".model");
+    const cwd = process.cwd();
+
+    const fileRel = document.uri.replace(`file://${cwd}/`, "").split(".").slice(0, -1).join(".");
+    const project: LookmlProject = {
+      file: {
+        [fileRel]: {
+          ...response,
+          $file_name: document.uri.split("/").pop() ?? "",
+          $file_path: document.uri.replace(`file://${cwd}/`, ""),
+          $file_rel: fileRel,
+          $file_type: isModel ? "model" : "view",
+        },
+      },
+    }
+    transformations.addPositions(project as any);
+
+    await this.processProject(project);
+  }
+
   public async parseFiles({
     source,
     reset = false,
@@ -140,9 +162,10 @@ export class WorkspaceModel {
 
     if (reset) {
       this.errors = new Map<string, LookmlError[]>();
-      this.views = new Map<string, LookmlViewWithFileInfo>();
       this.explores = new Map<string, LookmlExploreWithFileInfo>();
       this.models = new Map<string, LookmlModelWithFileInfo>();
+      this.views = new Map<string, LookmlViewWithFileInfo>();
+      this.viewsByFile = new Map<DocumentUri, string[]>();
     }
 
     if (!reset) {
@@ -158,6 +181,10 @@ export class WorkspaceModel {
       }
     }
 
+    await this.processProject(project);
+  }
+
+  public async processProject(project: LookmlProject): Promise<void> {
     const initialEntries: {
       view: Array<LookmlFile["view"]>,
       explore: Array<LookmlFile["explore"]>,
@@ -203,7 +230,7 @@ export class WorkspaceModel {
       const uri = `${process.cwd()}/${filePath}`;
       const viewsByFile = this.viewsByFile.get(uri) || [];
 
-      const filePositions = project.positions.file[filePath.replace(".lkml", "")];
+      const filePositions = project?.positions?.file[filePath.replace(".lkml", "")];
 
       this.views.set(viewName, {
         file,
@@ -214,7 +241,7 @@ export class WorkspaceModel {
 
       
       if (viewsByFile.includes(viewName)) {
-        return;
+        continue;
       }
 
       viewsByFile.push(viewName);
@@ -226,7 +253,7 @@ export class WorkspaceModel {
       const filePath = file.$file_path;
 
       const uri = `${process.cwd()}/${filePath}`;
-      const filePositions = project.positions.file[filePath.replace(".lkml", "")];
+      const filePositions = project?.positions?.file[filePath.replace(".lkml", "")];
 
       this.explores.set(exploreName, {
         explore,
@@ -251,7 +278,7 @@ export class WorkspaceModel {
           this.includedViews.set(fileName, new Set<string>)
 
           const uri = `${process.cwd()}/${filePath}`;
-          const filePositions = project.positions.file[`${fileRel}.model`];
+          const filePositions = project?.positions?.file[`${fileRel}.model`];
 
           this.models.set(fileName, {
             model,
@@ -305,10 +332,26 @@ export class WorkspaceModel {
     
     const cleanUri = uri.replace(`file://${process.cwd()}/`, "");
     try {
-      await this.parseFiles({
-        source: cleanUri,
-      });
+      await this.parseDocument(document);
     } catch (error) {
+      const fileName = cleanUri.split("/").pop() ?? "";
+      const filePath = cleanUri.split("/").slice(0, -1).join("/");
+      const fileRel = filePath.split("/").pop() ?? "";
+      const fileType = fileRel.includes(".model") ? "model" : "view";
+
+      const lookmlError: LookmlError = {
+        error: error as LookmlError["error"],
+        $file_name: fileName,
+        $file_path: filePath,
+        $file_rel: fileRel,
+        $file_type: fileType,
+      }
+
+      if (lookmlError.error.exception) { 
+        const existingErrors = this.errors.get(fileName) ?? [];
+        existingErrors.push(lookmlError);
+        this.errors.set(fileName, existingErrors);
+      }
       console.error("updateDocument parse error", error);
     }
   }
@@ -346,6 +389,13 @@ export class WorkspaceModel {
       this.models.delete(modelName);
     }
     this.modelsByFile.delete(uri);
+    
+    const fileName = uri.split("/").pop() ?? "";
+
+    const errorsByFile = this.errors.get(fileName) ?? [];
+    errorsByFile.forEach((error) => {
+      this.errors.delete(fileName);
+    });
   }
 
   /**

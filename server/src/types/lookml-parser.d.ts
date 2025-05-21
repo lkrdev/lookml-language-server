@@ -1,7 +1,7 @@
 declare module "lookml-parser" {
     export type LookmlValue = string | number | boolean | LookmlValue[];
 
-    export interface LookmlFile extends LookmlFileAttributes {
+    export interface LookmlFile {
         view?: Record<string, LookmlFileAttributes & { view: { [key: string]: LookmlView } }>;
         model?: Record<string, LookmlModel >;
         explore?: Record<string, LookmlFileAttributes & { explore: { [key: string]: LookmlExplore } }>;
@@ -36,11 +36,11 @@ declare module "lookml-parser" {
         }
     }
 
-    export interface LookmlProject extends LookmlFileAttributes {
+    export interface LookmlProject {
         errors?: LookmlError[];
         file: LookmlFile;
-        model: Record<string, LookmlModel>;
-        positions: {
+        model?: Record<string, LookmlModel>;
+        positions?: {
             file: Record<string, any>;
         }
     }
