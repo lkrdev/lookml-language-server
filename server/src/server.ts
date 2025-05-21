@@ -231,6 +231,7 @@ connection.onExecuteCommand(async (params: ExecuteCommandParams) => {
 
 // Handle document content changes
 documents.onDidChangeContent(async (change) => {
+  logger.info("Document changed:", change.document.uri);
   const updatePromise = workspaceModel.updateDocument(change.document);
   documentUpdatePromises.set(change.document.uri, updatePromise);
   await updatePromise;
@@ -252,8 +253,10 @@ documents.onDidSave(async (change) => {
 
   // Update the model and validate
   await workspaceModel.initialize();
-  const diagnostics = diagnosticsProvider.validateDocument(change.document);
-  connection.sendDiagnostics({ uri: change.document.uri, diagnostics });
+  setTimeout(() => {
+    const diagnostics = diagnosticsProvider.validateDocument(change.document);
+    connection.sendDiagnostics({ uri: change.document.uri, diagnostics });
+  }, 500);
 });
 
 // Handle document closing
