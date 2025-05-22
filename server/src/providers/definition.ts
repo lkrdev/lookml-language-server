@@ -192,7 +192,7 @@ export class DefinitionProvider {
             if (!modelName) return;
 
             const includedViewsForModel = this.workspaceModel.getIncludedViewsForModel(modelName);
-            if (!includedViewsForModel?.has(viewDetails.file?.$file_name || '')) return;
+            if (!includedViewsForModel?.has(word || '')) return;
         }
 
         const viewNamePosition = viewDetails.positions.$name.$p;
