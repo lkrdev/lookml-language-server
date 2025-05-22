@@ -22,7 +22,8 @@ export interface CompletionContext {
   viewName?: string;
   exploreName?: string;
   joinName?: string;
-  linePrefix?: string;
+  linePrefix: string;
+  lineSuffix: string;
   word?: string;
   inString?: boolean;
   dimensionName?: string;
@@ -47,31 +48,34 @@ export class ContextDetector {
     const lines = text.split("\n");
     const line = lines[position.line];
     const linePrefix = line.substring(0, position.character);
+    const lineSuffix = line.substring(position.character);
 
     if (this.workspaceModel.isViewFile(document)) {
       const sqlFieldMatch = linePrefix.match(/.*sql:.*\$\{\s*([a-zA-Z0-9_]*)$/);
       if (sqlFieldMatch) {
         return {
-          type: "field_reference",
-          viewName: this.getCurrentViewName(document, position),
           dimensionName: sqlFieldMatch[1],
           linePrefix,
+          lineSuffix,
+          type: "field_reference",
+          viewName: this.getCurrentViewName(document, position),
         };
       }
     }
     // Check if we're at the beginning of a line (suggesting block types)
     if (linePrefix.trim() === "") {
-      return { type: "empty", linePrefix };
+      return { type: "empty", linePrefix, lineSuffix };
     }
 
     const sqlOnTableAfterEqual = linePrefix.match(/.*sql_on:.*=\s*\$\{\s*$/);
     if (sqlOnTableAfterEqual) {
       const joinContext = this.getJoinContext(document, position);
       return {
-        type: "table_reference",
         exploreName: joinContext?.exploreName,
         joinName: joinContext?.joinName,
         linePrefix,
+        lineSuffix,
+        type: "table_reference",
       };
     }
 
@@ -83,11 +87,12 @@ export class ContextDetector {
     if (sqlOnFieldAfterEqual) {
       const joinContext = this.getJoinContext(document, position);
       return {
-        type: "field_reference",
-        joinName: joinContext?.joinName,
-        viewName: sqlOnFieldAfterEqual[1], // The table name captured from regex
         blockType: this.getCurrentBlockType(document, position),
+        joinName: joinContext?.joinName,
         linePrefix,
+        lineSuffix,
+        type: "field_reference",
+        viewName: sqlOnFieldAfterEqual[1], // The table name captured from regex
       };
     }
 
@@ -95,10 +100,11 @@ export class ContextDetector {
     if (sqlOnTableStart) {
       const joinContext = this.getJoinContext(document, position);
       return {
-        type: "table_reference",
         exploreName: joinContext?.exploreName,
         joinName: joinContext?.joinName,
         linePrefix,
+        lineSuffix,
+        type: "table_reference",
       };
     }
 
@@ -109,29 +115,32 @@ export class ContextDetector {
 
     if (sqlOnTableField) {
       return {
-        type: "field_reference",
-        viewName: sqlOnTableField[1], // The table name captured from regex
         blockType: this.getCurrentBlockType(document, position),
         linePrefix,
+        lineSuffix,
+        type: "field_reference",
+        viewName: sqlOnTableField[1], // The table name captured from regex
       };
     }    
 
     // Check if we're providing a value to the "type:" property
     if (linePrefix.match(/^\s+type:\s*$/)) {
       return {
-        type: "type",
         blockType: this.getCurrentBlockType(document, position),
         linePrefix,
+        lineSuffix,
+        type: "type",
       };
     }
 
      // Check if we're in a relationship context
      if (linePrefix.match(/.*relationship:\s*$/)) {
       return {
-        type: "value",
-        propertyName: "relationship",
         blockType: this.getCurrentBlockType(document, position),
         linePrefix,
+        lineSuffix,
+        propertyName: "relationship",
+        type: "value",
       };
     }
 
@@ -139,10 +148,11 @@ export class ContextDetector {
     const propertyColonMatch = linePrefix.match(/^\s+([a-zA-Z0-9_]+):$/);
     if (propertyColonMatch) {
       return {
-        type: "value",
-        propertyName: propertyColonMatch[1],
         blockType: this.getCurrentBlockType(document, position),
         linePrefix,
+        lineSuffix,
+        propertyName: propertyColonMatch[1],
+        type: "value",
       };
     }
 
@@ -150,18 +160,20 @@ export class ContextDetector {
     const blockDeclaration = linePrefix.match(/^\s*([a-zA-Z0-9_]+):\s*$/);
     if (blockDeclaration) {
       return {
-        type: "block",
         blockType: blockDeclaration[1],
         linePrefix,
+        lineSuffix,
+        type: "block",
       };
     }
 
     // Check if we're in SQL context
     if (linePrefix.match(/.*sql:\s*$/)) {
       return {
+        linePrefix,
+        lineSuffix,
         type: "sql",
         viewName: this.getCurrentViewName(document, position),
-        linePrefix,
       };
     }
 
@@ -169,11 +181,12 @@ export class ContextDetector {
     if (linePrefix.match(/.*sql_on:\s*$/)) {
       const joinContext = this.getJoinContext(document, position);
       return {
-        type: "sql_on",
         exploreName: joinContext?.exploreName,
         joinName: joinContext?.joinName,
-        viewName: joinContext?.viewName,
         linePrefix,
+        lineSuffix,
+        type: "sql_on",
+        viewName: joinContext?.viewName,
       };
     }
 
@@ -181,20 +194,22 @@ export class ContextDetector {
     if (valueMatch) {
       const inString = this.isInString(linePrefix);
       return {
-        type: "value",
-        propertyName: valueMatch[1],
         blockType: this.getCurrentBlockType(document, position),
         inString,
         linePrefix,
+        lineSuffix,
+        propertyName: valueMatch[1],
+        type: "value",
       };
     }     
 
     // Default context
     return {
-      type: "empty",
       blockType: this.getCurrentBlockType(document, position),
+      linePrefix, 
+      lineSuffix,
+      type: "empty",
       viewName: this.getCurrentViewName(document, position),
-      linePrefix,
     };
   }
 
