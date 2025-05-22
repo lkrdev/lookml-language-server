@@ -209,7 +209,7 @@ export class DiagnosticsProvider {
             return;
           }
 
-          const sqlPosition = positions.dimension?.[dimName]?.sql;
+          const sqlPosition = positions?.dimension?.[dimName]?.sql;
           diagnostics.push(...this.validateSqlReferences(dimension.sql, sqlPosition));
         });
       }
@@ -221,7 +221,7 @@ export class DiagnosticsProvider {
             return;
           }
 
-          const sqlPosition = positions.dimension_group?.[dimGroupName]?.sql;
+          const sqlPosition = positions?.dimension_group?.[dimGroupName]?.sql;
           diagnostics.push(...this.validateSqlReferences(dimensionGroup.sql, sqlPosition));
         });
       }
@@ -233,7 +233,7 @@ export class DiagnosticsProvider {
             return;
           }
 
-          const sqlPosition = positions.measure?.[measureName]?.sql;
+          const sqlPosition = positions?.measure?.[measureName]?.sql;
           diagnostics.push(...this.validateSqlReferences(measure.sql, sqlPosition));
         });
       }
@@ -406,13 +406,13 @@ export class DiagnosticsProvider {
                 view,
                 drillFields: dimension.drill_fields,
                 viewDetails: viewDetails,
-                arrayPosition: positions.dimension?.[dimName]?.drill_fields,
+                arrayPosition: positions?.dimension?.[dimName]?.drill_fields,
               }));
             }
 
             // Validate SQL references
             if (dimension.sql) {
-              const sqlPosition = positions.dimension?.[dimName]?.sql;
+              const sqlPosition = positions?.dimension?.[dimName]?.sql;
               diagnostics.push(...this.validateSqlReferences(dimension.sql, sqlPosition));
             }
           });
@@ -427,13 +427,13 @@ export class DiagnosticsProvider {
                 view,
                 drillFields: measure.drill_fields,
                 viewDetails: viewDetails,
-                arrayPosition: positions.measure?.[measureName]?.drill_fields,
+                arrayPosition: positions?.measure?.[measureName]?.drill_fields,
               }));
             }
 
             // Validate SQL references
             if (measure.sql) {
-              const sqlPosition = positions.measure?.[measureName]?.sql;
+              const sqlPosition = positions?.measure?.[measureName]?.sql;
               diagnostics.push(...this.validateSqlReferences(measure.sql, sqlPosition));
             }
           });
@@ -444,13 +444,13 @@ export class DiagnosticsProvider {
           Object.entries(view.dimension_group).forEach(([dimGroupName, dimensionGroup]) => {
             // Validate SQL references
             if (dimensionGroup.sql) {
-              const sqlPosition = positions.dimension_group?.[dimGroupName]?.sql;
+              const sqlPosition = positions?.dimension_group?.[dimGroupName]?.sql;
               diagnostics.push(...this.validateSqlReferences(dimensionGroup.sql, sqlPosition));
             }
 
             // Validate timeframes
             if (dimensionGroup.timeframes) {
-              const timeframesPosition = positions.dimension_group?.[dimGroupName]?.timeframes;
+              const timeframesPosition = positions?.dimension_group?.[dimGroupName]?.timeframes;
               if (timeframesPosition) {
                 const validTimeframes = [
                   'raw', 'time', 'date', 'week', 'month', 'quarter', 'year',

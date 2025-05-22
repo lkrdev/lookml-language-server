@@ -110,13 +110,16 @@ public getFieldReferenceCompletions(context: CompletionContext): CompletionItem[
   // Check if we're in sql_on context and on the left side of =
   const isSqlOnLeftSide = context.linePrefix?.includes('sql_on:') && 
     !context.linePrefix?.includes('=');
+  
+  const semiColons = 
+    context.lineSuffix?.includes(';;') ? '' : ' ;;';
 
   fields.forEach((field) => {
     items.push({
       label: field.$name,
       kind: CompletionItemKind.Field,
       detail: `${field.type} in ${context.viewName}`,
-      insertText: `${field.$name}}${isSqlOnLeftSide ? '' : ' ;;'}`,
+      insertText: `${field.$name}}${isSqlOnLeftSide ? '' : semiColons}`,
       data: { type: "field-ref", viewName: context.viewName, fieldName: field.$name }
     });
   });

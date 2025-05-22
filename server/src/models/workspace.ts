@@ -125,18 +125,46 @@ export class WorkspaceModel {
     const isModel = document.uri.includes(".model");
     const cwd = process.cwd();
 
-    const fileRel = document.uri.replace(`file://${cwd}/`, "").split(".").slice(0, -1).join(".");
+    const filePath = document.uri.replace(`file://${cwd}/`, "")
+    const fullFileName = filePath.split("/").pop() ?? "";
+    const fileRel = filePath.split(".")[0];
+
     const project: LookmlProject = {
       file: {
-        [fileRel]: {
+        [filePath.replace(".lkml", "")]: {
           ...response,
-          $file_name: document.uri.split("/").pop() ?? "",
-          $file_path: document.uri.replace(`file://${cwd}/`, ""),
+          $file_name: fullFileName.split(".")[0],
+          $file_path: filePath,
           $file_rel: fileRel,
           $file_type: isModel ? "model" : "view",
         },
       },
     }
+
+    /*
+
+
+$file_name =
+'order_items'
+$file_path =
+'views/order_items.view.lkml'
+$file_rel =
+'views/order_items'
+$file_type =
+'view'
+
+
+
+$file_name =
+'thelook_bryan'
+$file_path =
+'thelook_bryan.model.lkml'
+$file_rel =
+'thelook_bryan'
+$file_type =
+'model'
+
+*/
     transformations.addPositions(project as any);
 
     await this.processProject(project);
@@ -226,11 +254,16 @@ export class WorkspaceModel {
     for (const { file, view } of entities.view) {
       const viewName = view.$name;
       const filePath = file.$file_path;
+      const fileName = file.$file_name;
 
       const uri = `${process.cwd()}/${filePath}`;
       const viewsByFile = this.viewsByFile.get(uri) || [];
 
       const filePositions = project?.positions?.file[filePath.replace(".lkml", "")];
+
+      if (!filePositions) {
+        console.log("filePositions not found", filePath);
+      }
 
       this.views.set(viewName, {
         file,
@@ -251,9 +284,14 @@ export class WorkspaceModel {
     for (const { file, explore } of entities.explore) {
       const exploreName = explore.$name;
       const filePath = file.$file_path;
+      const fileName = file.$file_name;
 
       const uri = `${process.cwd()}/${filePath}`;
       const filePositions = project?.positions?.file[filePath.replace(".lkml", "")];
+
+      if (!filePositions) {
+        console.log("filePositions not found", filePath);
+      }
 
       this.explores.set(exploreName, {
         explore,
@@ -279,6 +317,10 @@ export class WorkspaceModel {
 
           const uri = `${process.cwd()}/${filePath}`;
           const filePositions = project?.positions?.file[`${fileRel}.model`];
+
+          if (!filePositions) {
+            console.log("filePositions not found", filePath);
+          }
 
           this.models.set(fileName, {
             model,

@@ -159,20 +159,20 @@ export class DefinitionProvider {
             const viewDetails = this.workspaceModel.getView(viewName);
 
             if (viewDetails) {
-                const fieldPosition = viewDetails.positions.dimension?.[fieldName]?.$name?.$p ||
-                    viewDetails.positions.measure?.[fieldName]?.$name?.$p ||
-                    viewDetails.positions.dimension_group?.[fieldName]?.$name?.$p;
+                const fieldPosition = viewDetails?.positions?.dimension?.[fieldName]?.$name?.$p ||
+                    viewDetails?.positions?.measure?.[fieldName]?.$name?.$p ||
+                    viewDetails?.positions?.dimension_group?.[fieldName]?.$name?.$p;
 
                 if (fieldPosition) {
                     return {
                         uri: viewDetails.uri,
                         range: {
                             start: {
-                                line: fieldPosition[0] - 1,
+                                line: fieldPosition[0],
                                 character: fieldPosition[1]
                             },
                             end: {
-                                line: fieldPosition[2] - 1,
+                                line: fieldPosition[2],
                                 character: fieldPosition[3]
                             }
                         }

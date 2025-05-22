@@ -298,17 +298,60 @@ export const aggregateTableSchema = parserValues.extend({
 }).strict();
 
 export const exploreSchema = parserValues.extend({
-  aggregate_table: z.record(z.string(), aggregateTableSchema).optional(),
+  extension: z.boolean().optional(),
   extends: z.array(z.string()).optional(),
   fields: z.array(z.string()).optional(),
-  from: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+
+  // Display
+  description: z.string().optional(),
+  group_label: z.string().optional(),
   hidden: z.boolean().optional(),
-  join: z.record(z.string(), joinSchema).optional(),
   label: z.string().optional(),
+  query: z.record(z.unknown()).optional(),
+  view_label: z.string().optional(),
+
+  // Filter
+  access_filter: z.union([
+    z.object({
+      field: z.string(),
+      user_attribute: z.string(),
+    }),
+    z.array(z.object({
+      field: z.string(),
+      user_attribute: z.string(),
+    }))
+  ]).optional(),
+
+  always_filter: z.object({
+    filters: z.record(z.string())
+  }).optional(),
+
+  conditionally_filter: z.object({
+    filters: z.record(z.string()),
+    unless: z.array(z.string()),
+  }).optional(),
+
+  case_sensitive: z.boolean().optional(),
   sql_always_having: z.string().optional(),
   sql_always_where: z.string().optional(),
-  view_label: z.string().optional(),
+
+  // Join
+  always_join: z.array(z.string()).optional(),
+  join: z.record(z.string(), joinSchema).optional(),
+
+  // Query
+  cancel_grouping_fields: z.array(z.string()).optional(),
+  from: z.string().optional(),
+  persist_for: z.string().optional(),
+  persist_with: z.string().optional(),
+  required_access_grants: z.array(z.string()).optional(),
+  sql_table_name: z.string().optional(),
+  symmetric_aggregates: z.boolean().optional(),
   view_name: z.string().optional(),
+
+  // Aggregate Table
+  aggregate_table: z.record(z.string(), aggregateTableSchema).optional(),
 }).strict();
 
 export const derivedTableSchema = z.object({

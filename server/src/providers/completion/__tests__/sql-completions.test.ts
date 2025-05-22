@@ -64,7 +64,7 @@ describe("SQLCompletionProvider", () => {
 
     describe("getTableReferenceCompletions", () => {
         test("should return completion items for all views", () => {
-            const context: CompletionContext = { type: "table_reference" };
+            const context: CompletionContext = { type: "table_reference", linePrefix: "", lineSuffix: "" };
             const completions = sqlCompletionProvider.getTableReferenceCompletions(context);
 
             expect(completions).toHaveLength(3);
@@ -79,7 +79,7 @@ describe("SQLCompletionProvider", () => {
 
     describe("getFieldReferenceCompletions", () => {
         test("should return completion items for all fields in a view", () => {
-            const context: CompletionContext = { type: "field_reference", viewName: "users" };
+            const context: CompletionContext = { type: "field_reference", viewName: "users", linePrefix: "", lineSuffix: "" };
             const completions = sqlCompletionProvider.getFieldReferenceCompletions(context);
 
             expect(completions).toHaveLength(4);
@@ -132,7 +132,7 @@ describe("SQLCompletionProvider", () => {
         });
 
         test("should return only TABLE item for non-existent view", () => {
-            const context: CompletionContext = { type: "field_reference", viewName: "non_existent" };
+            const context: CompletionContext = { type: "field_reference", viewName: "non_existent", linePrefix: "", lineSuffix: "" };
             // Reset the mock to ensure it returns undefined
             mockWorkspaceModel.getView.mockReset();
             mockWorkspaceModel.getView.mockReturnValue(undefined);
@@ -157,7 +157,8 @@ describe("SQLCompletionProvider", () => {
             const context: CompletionContext = {
                 type: "sql",
                 viewName: "users",
-                linePrefix: "SELECT "
+                linePrefix: "SELECT ",
+                lineSuffix: ""
             };
             const completions = sqlCompletionProvider.getCompletions(context);
 
@@ -173,7 +174,8 @@ describe("SQLCompletionProvider", () => {
                 type: "sql_on",
                 exploreName: "orders",
                 joinName: "users",
-                linePrefix: "users.id = "
+                linePrefix: "users.id = ",
+                lineSuffix: ""
             };
             const completions = sqlCompletionProvider.getCompletions(context);
 
@@ -184,7 +186,7 @@ describe("SQLCompletionProvider", () => {
         });
 
         test("should return empty array for unsupported context", () => {
-            const context: CompletionContext = { type: "empty" };
+            const context: CompletionContext = { type: "empty", linePrefix: "", lineSuffix: "" };
             const completions = sqlCompletionProvider.getCompletions(context);
             expect(completions).toHaveLength(0);
         });
@@ -194,7 +196,9 @@ describe("SQLCompletionProvider", () => {
         test("should return completion items for dimensions in a view", () => {
             const context: CompletionContext = {
                 type: "dimension_reference",
-                viewName: "users"
+                viewName: "users",
+                linePrefix: "",
+                lineSuffix: ""
             };
             const completions = sqlCompletionProvider.getDimensionReferenceCompletions(context);
 
@@ -212,7 +216,7 @@ describe("SQLCompletionProvider", () => {
         });
 
         test("should return empty array when no view name is provided", () => {
-            const context: CompletionContext = { type: "dimension_reference" };
+            const context: CompletionContext = { type: "dimension_reference", linePrefix: "", lineSuffix: "" };
             const completions = sqlCompletionProvider.getDimensionReferenceCompletions(context);
             expect(completions).toHaveLength(0);
         });
