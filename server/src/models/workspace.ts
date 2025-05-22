@@ -231,6 +231,7 @@ export class WorkspaceModel {
       const filePath = file.$file_path;
       const fileName = file.$file_name;
 
+      
       const uri = `${process.cwd()}/${filePath}`;
       const viewsByFile = this.viewsByFile.get(uri) || [];
 
@@ -506,7 +507,6 @@ export class WorkspaceModel {
         baseDir,
         cleanPattern
       );
-
 
       for (const filePath of matchedFiles) {
         if (this.loadedFiles.has(filePath)) continue;
