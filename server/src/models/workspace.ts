@@ -140,31 +140,6 @@ export class WorkspaceModel {
         },
       },
     }
-
-    /*
-
-
-$file_name =
-'order_items'
-$file_path =
-'views/order_items.view.lkml'
-$file_rel =
-'views/order_items'
-$file_type =
-'view'
-
-
-
-$file_name =
-'thelook_bryan'
-$file_path =
-'thelook_bryan.model.lkml'
-$file_rel =
-'thelook_bryan'
-$file_type =
-'model'
-
-*/
     transformations.addPositions(project as any);
 
     await this.processProject(project);
@@ -262,7 +237,7 @@ $file_type =
       const filePositions = project?.positions?.file[filePath.replace(".lkml", "")];
 
       if (!filePositions) {
-        console.log("filePositions not found", filePath);
+        throw new Error(`filePositions not found for ${filePath}`);
       }
 
       this.views.set(viewName, {
@@ -290,7 +265,7 @@ $file_type =
       const filePositions = project?.positions?.file[filePath.replace(".lkml", "")];
 
       if (!filePositions) {
-        console.log("filePositions not found", filePath);
+        throw new Error(`filePositions not found for ${filePath}`);
       }
 
       this.explores.set(exploreName, {
@@ -319,7 +294,7 @@ $file_type =
           const filePositions = project?.positions?.file[`${fileRel}.model`];
 
           if (!filePositions) {
-            console.log("filePositions not found", filePath);
+            throw new Error(`filePositions not found for ${filePath}`);
           }
 
           this.models.set(fileName, {
