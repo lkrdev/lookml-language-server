@@ -29,12 +29,23 @@ export interface CompletionContext {
   dimensionName?: string;
 }
 
+export interface LineContext {
+  isPropertyCompletion: boolean;
+  currentProperty?: string;
+  path: Array<{ type: string; name: string }>;
+  blockType?: string;
+  linePrefix: string;
+  lineSuffix: string;
+}
+
 export class ContextDetector {
   private workspaceModel: WorkspaceModel;
 
   constructor(workspaceModel: WorkspaceModel) {
     this.workspaceModel = workspaceModel;
   }
+
+  
 
   /**
    * Analyze document to determine completion context
@@ -326,6 +337,71 @@ export class ContextDetector {
     }
 
     return undefined;
+  }
+}
+
+export class LineContextDetector {
+  /**
+   * Analyzes a single line to determine if we're completing a property or value
+   * and tracks the path/block hierarchy
+   */
+  public getLineContext(
+    document: TextDocument,
+    params: TextDocumentPositionParams
+  ): LineContext {
+    const text = document.getText();
+    const lines = text.split("\n");
+    const line = lines[params.position.line];
+    const linePrefix = line.substring(0, params.position.character);
+    const lineSuffix = line.substring(params.position.character);
+
+    // Determine if we're completing a property or value
+    const colonIndex = linePrefix.lastIndexOf(":");
+    const isPropertyCompletion = colonIndex === -1 || 
+      (colonIndex < params.position.character && linePrefix.substring(colonIndex + 1).trim() === "");
+
+    // Get the current property if we're completing a value
+    let currentProperty: string | undefined;
+    if (!isPropertyCompletion) {
+      const propertyMatch = linePrefix.match(/^\s*([a-zA-Z0-9_]+):/);
+      if (propertyMatch) {
+        currentProperty = propertyMatch[1];
+      }
+    }
+
+    // Build the path by scanning upwards
+    const path: Array<{ type: string; name: string }> = [];
+    let blockType: string | undefined;
+    let currentIndent = -1;
+
+    for (let i = params.position.line; i >= 0; i--) {
+      const currentLine = lines[i].trim();
+      const lineIndent = lines[i].search(/\S|$/); // Find first non-whitespace character
+      
+      // Look for block definitions
+      const blockMatch = currentLine.match(/^([a-zA-Z0-9_]+):\s+([a-zA-Z0-9_]+)\s*\{/);
+      if (blockMatch) {
+        const [_, type, name] = blockMatch;
+        
+        // Only add to path if this block is a parent (has less indentation)
+        if (currentIndent === -1 || lineIndent < currentIndent) {
+          path.unshift({ type, name });
+          currentIndent = lineIndent;
+          if (!blockType) {
+            blockType = type;
+          }
+        }
+      }
+    }
+
+    return {
+      isPropertyCompletion,
+      currentProperty,
+      path,
+      blockType,
+      linePrefix,
+      lineSuffix
+    };
   }
 }
  
