@@ -122,7 +122,7 @@ const filterTypes = [
   // 'date_hour', 'date_minute', 'date_second', 'duration_second', etc.
 ] as const;
 
-const parameterSchema = fieldProperties.extend({
+export const parameterSchema = fieldProperties.extend({
   type: z.enum(parameterTypes),
   default_value: z.string().optional(),
   allowed_value: z.array(allowedValueSchema).optional(),
