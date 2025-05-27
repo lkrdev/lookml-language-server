@@ -73,9 +73,6 @@ export class CompletionProvider {
       // Detect context at current position
       const context = this.contextDetector.getContext(document, position);
       const lineContext = this.lineContextDetector.getLineContext(document, position);
-
-      console.log("lineContext", lineContext);
-      console.log("context", context);
       
       let items: CompletionItem[] = [];
       
