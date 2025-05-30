@@ -150,6 +150,58 @@ describe("SQLCompletionProvider", () => {
                 label: "TABLE",
             });
         });
+
+        test("should not suggest self-references for views when linePrefix ends with {", () => {
+            // Specific mocks for this test
+            mockWorkspaceModel.getViews.mockReturnValue(new Map([
+                ["imdb_index", { view: { dimension: {}, measure: {} } } as MockViewWithFileInfo],
+                ["other_view", { view: { dimension: {}, measure: {} } } as MockViewWithFileInfo]
+            ]));
+            mockWorkspaceModel.getView.mockImplementation((viewName: string) => {
+                if (viewName === "imdb_index") {
+                    return {
+                        view: {
+                            dimension: { "some_dim": { $name: "some_dim", type: "string" } },
+                            measure: { "some_measure": { $name: "some_measure", type: "number" } },
+                            dimension_group: {}
+                        }
+                    } as MockViewWithFileInfo;
+                }
+                if (viewName === "other_view") {
+                    return {
+                        view: { // other_view might have its own fields, not strictly needed for this test's assertion
+                            dimension: { "another_dim": { $name: "another_dim", type: "string" } },
+                            measure: {},
+                            dimension_group: {}
+                        }
+                    } as MockViewWithFileInfo;
+                }
+                return undefined;
+            });
+
+            const context: CompletionContext = {
+                type: "field_reference",
+                viewName: "imdb_index",
+                linePrefix: "{", // Important: triggers suggesting other view names
+                lineSuffix: ""
+            };
+            const completions = sqlCompletionProvider.getFieldReferenceCompletions(context);
+            const completionLabels = completions.map(c => c.label);
+
+            // Assertions
+            expect(completionLabels).not.toContain("imdb_index"); // Current view should not be suggested as a lookup
+            expect(completionLabels).toContain("other_view");     // Other views should be suggested
+
+            // Standard completions for the current view context should still be present
+            expect(completionLabels).toContain("TABLE");          // TABLE reference for imdb_index
+            expect(completionLabels).toContain("some_dim");       // Fields from imdb_index
+            expect(completionLabels).toContain("some_measure");   // Fields from imdb_index
+
+            // Verify that 'imdb_index' was called for field lookups for the current view.
+            expect(mockWorkspaceModel.getView).toHaveBeenCalledWith("imdb_index");
+            // Verify that getViews was called to list other views.
+            expect(mockWorkspaceModel.getViews).toHaveBeenCalled();
+        });
     });
 
     describe("getCompletions", () => {

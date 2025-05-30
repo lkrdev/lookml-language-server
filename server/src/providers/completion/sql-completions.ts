@@ -77,6 +77,9 @@ public getFieldReferenceCompletions(context: CompletionContext): CompletionItem[
     
     // Add all available views as completion items
     allViews.forEach((viewDetails, name) => {
+      if (name === context.viewName) {
+        return; // continue is not allowed in forEach, use return instead
+      }
       const view = viewDetails.view as LookMLView;
       if (view) {
         items.push({
