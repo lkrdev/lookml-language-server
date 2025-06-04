@@ -1,0 +1,17 @@
+import { z } from 'zod';
+export declare const recursiveStringArray: z.ZodType<unknown>;
+export declare const fieldProperties: any;
+export declare const linkSchema: any;
+export declare const dimensionValidTypes: readonly ["bin", "date", "date_time", "date_raw", "distance", "duration", "location", "number", "string", "tier", "time", "unquoted", "yesno", "zipcode", "duration_day", "duration_hour", "duration_minute", "duration_month", "duration_quarter", "duration_second", "duration_week", "duration_year"];
+export declare const measureValidTypes: readonly ["average", "average_distinct", "count", "count_distinct", "date", "date_time", "list", "max", "median", "median_distinct", "min", "number", "percent_of_previous", "percent_of_total", "percentile", "percentile_distinct", "running_total", "period_over_period", "string", "sum", "sum_distinct", "yesno"];
+export declare const parameterSchema: any;
+export declare const filterSchema: any;
+export declare const dimensionSchema: any;
+export declare const dimensionGroupSchema: any;
+export declare const measureSchema: any;
+export declare const setSchema: any;
+export declare const joinSchema: any;
+export declare const aggregateTableSchema: any;
+export declare const exploreSchema: any;
+export declare const derivedTableSchema: any;
+export declare const LookMLView: any;
