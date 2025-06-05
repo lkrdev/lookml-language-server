@@ -40,7 +40,7 @@
         "command": "looker.login",
         "title": "Login",
         "category": "Looker"
-      }, 
+      },
       {
         "command": "looker.saveAllStageAllCommitAndSync",
         "title": "Save All, Stage All, Commit, and Sync",
@@ -99,10 +99,12 @@
   "scripts": {
     "install:client": "cd client && npm install",
     "install:server": "cd server && npm install",
+    "install:validator": "cd packages/lookml-validator && npm install",
     "clean:client": "cd client && rm -rf node_modules && npm install",
     "clean:server": "cd server && rm -rf node_modules && npm install",
     "clean": "npm run clean:client && npm run clean:server",
     "compile": "npm run install:client && npm run install:server && tsc --build",
+    "build:validator": "cd packages/lookml-validator && npm run build",
     "vscode:prepublish": "npm run compile",
     "watch": "tsc --build --watch",
     "lint": "eslint src --ext ts",
@@ -115,5 +117,9 @@
     "ts-jest": "^29.3.2",
     "typescript": "^5.2.2",
     "vscode": "^1.1.37"
-  }
+  },
+  "workspaces": [
+    "packages/*",
+    "server"
+  ]
 }
