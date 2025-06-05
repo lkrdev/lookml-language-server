@@ -100,7 +100,7 @@ jobs:
       - name: Install dependencies (lookml-validator)
         run: npm install --workspace=packages/lookml-validator
       - name: Build lookml-validator
-        run: npm run build --workspace=packages/lookml-validator
+        run: cd packages/lookml-validator && npm run build
       - name: Publish lookml-validator
         run: npm publish --workspace=packages/lookml-validator --access public
         env:
