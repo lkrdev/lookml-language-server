@@ -11,7 +11,6 @@ jobs:
   build:
     strategy:
       matrix:
-        continue-on-error: false
         include:
           - os: windows-latest
             platform: win32
