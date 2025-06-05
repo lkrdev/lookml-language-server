@@ -104,6 +104,7 @@ jobs:
             find . -name "package.json" -exec sed -i '' "s/\"@lkr-dev\/lookml-language-server\": \".*\"/\"@lkr-dev\/lookml-language-server\": \"${{ env.TAG }}\"/" {} +
           else
             find . -name "package.json" -exec sed -i "s/\"@lkr-dev\/lookml-language-server\": \".*\"/\"@lkr-dev\/lookml-language-server\": \"${{ env.TAG }}\"/" {} +
+          fi
       - name: Install dependencies (server)
         run: cd server && npm install
       - name: Install dependencies (lookml-validator)
