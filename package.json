@@ -120,7 +120,6 @@
   },
   "workspaces": [
     "packages/*",
-    "server",
-    "client"
+    "server"
   ]
 }
