@@ -1,5 +1,5 @@
 {
-  "name": "lookml-validator",
+  "name": "@lkr-dev/lookml-validator",
   "version": "0.0.0",
   "description": "Validate LookML workspaces and return diagnostics programmatically. Designed for use in npm workspaces with lookml-language-server.",
   "main": "dist/index.js",
@@ -11,7 +11,7 @@
   },
   "publisher": "lkr-dev",
   "dependencies": {
-    "lookml-language-server": "*"
+    "@lkr-dev/lookml-language-server": "*"
   },
   "devDependencies": {
     "typescript": "^5.3.3",

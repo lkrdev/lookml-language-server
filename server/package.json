@@ -1,5 +1,5 @@
 {
-  "name": "lookml-language-server",
+  "name": "@lkr-dev/lookml-language-server",
   "description": "LookML Language Server for Visual Studio Code",
   "author": "rileylnapier@gmail.com",
   "version": "0.0.0",

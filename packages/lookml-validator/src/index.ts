@@ -1,10 +1,10 @@
-import * as fs from "fs/promises";
 import {
   Diagnostic,
   DiagnosticsProvider,
   TextDocument,
   WorkspaceModel,
-} from "lookml-language-server";
+} from "@lkr-dev/lookml-language-server";
+import * as fs from "fs/promises";
 import * as path from "path";
 
 const dummyConnection = {

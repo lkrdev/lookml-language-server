@@ -1,5 +1,5 @@
 {
-  "name": "lookml-language-server-client",
+  "name": "@lkr-dev/lookml-language-server-client",
   "description": "LookML Language Server for Visual Studio Code",
   "author": "rileylnapier@gmail.com",
   "license": "MIT",
@@ -9,7 +9,6 @@
     "type": "git",
     "url": "https://github.com/lkrdev/lookml-language-server"
   },
-  "publisher": "lkr-dev",
   "engines": {
     "vscode": "^1.75.0"
   },
