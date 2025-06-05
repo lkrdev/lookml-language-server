@@ -1,0 +1,4 @@
+*.lkml
+*.test.*
+tests/
+__tests__/

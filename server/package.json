@@ -3,6 +3,8 @@
   "description": "LookML Language Server for Visual Studio Code",
   "author": "rileylnapier@gmail.com",
   "version": "0.0.0",
+  "main": "out/index.js",
+  "types": "out/index.d.ts",
   "license": "MIT",
   "engines": {
     "node": "*"
@@ -34,5 +36,8 @@
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch"
-  }
+  },
+  "files": [
+    "out/"
+  ]
 }
