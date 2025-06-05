@@ -78,3 +78,34 @@ jobs:
       - run: npx vsce publish --packagePath $(find . -iname *.vsix)
         env:
           VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
+
+  npm-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18.x
+          registry-url: "https://registry.npmjs.org/"
+      - name: Replace version in package.json
+        shell: bash
+        run: |
+          if [[ "$OSTYPE" == "darwin"* ]]; then
+            find . -name "package.json" -exec sed -i '' "s/\"version\": \".*\"/\"version\": \"${{ env.TAG }}\"/" {} +
+          else
+            find . -name "package.json" -exec sed -i "s/\"version\": \".*\"/\"version\": \"${{ env.TAG }}\"/" {} +
+          fi
+      - name: Install dependencies (server)
+        run: npm install --workspace=server
+      - name: Install dependencies (lookml-validator)
+        run: npm install --workspace=packages/lookml-validator
+      - name: Build lookml-validator
+        run: npm run build --workspace=packages/lookml-validator
+      - name: Publish lookml-validator
+        run: npm publish --workspace=packages/lookml-validator --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish lookml-language-server
+        run: npm publish --workspace=server --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

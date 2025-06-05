@@ -7,3 +7,4 @@ server/lookml-server.log
 .DS_Store
 .vscode
 tmp/
+server/packages/lookml-validator/dist/
