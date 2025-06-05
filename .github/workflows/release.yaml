@@ -95,6 +95,13 @@ jobs:
           else
             find . -name "package.json" -exec sed -i "s/\"version\": \".*\"/\"version\": \"${{ env.TAG }}\"/" {} +
           fi
+      - name: Replace lookml-language-server dependency version in lookml-validator package.json
+        shell: bash
+        run: |
+          if [[ "$OSTYPE" == "darwin"* ]]; then
+            find . -name "package.json" -exec sed -i '' "s/\"@lkr-dev\/lookml-language-server\": \".*\"/\"@lkr-dev\/lookml-language-server\": \"${{ env.TAG }}\"/" {} +
+          else
+            find . -name "package.json" -exec sed -i "s/\"@lkr-dev\/lookml-language-server\": \".*\"/\"@lkr-dev\/lookml-language-server\": \"${{ env.TAG }}\"/" {} +
       - name: Install dependencies (server)
         run: npm install --workspace=server
       - name: Install dependencies (lookml-validator)
