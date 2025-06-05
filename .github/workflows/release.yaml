@@ -95,6 +95,14 @@ jobs:
           else
             find . -name "package.json" -exec sed -i "s/\"version\": \".*\"/\"version\": \"${{ env.TAG }}\"/" {} +
           fi
+      - name: Prepend package.json names with @lkr-dev/
+        shell: bash
+        run: |
+          if [[ "$OSTYPE" == "darwin"* ]]; then
+            find . -name "package.json" -exec sed -i '' 's/"name": *"\([^"]*\)"/"name": "@lkr-dev\/\1"/' {} +
+          else
+            find . -name "package.json" -exec sed -i 's/"name": *"\([^"]*\)"/"name": "@lkr-dev\/\1"/' {} +
+          fi
       - name: Install dependencies (server)
         run: npm install --workspace=server
       - name: Install dependencies (lookml-validator)
