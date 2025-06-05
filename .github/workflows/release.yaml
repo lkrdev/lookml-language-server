@@ -11,12 +11,12 @@ jobs:
   build:
     strategy:
       matrix:
+        continue-on-error: false
         include:
           - os: windows-latest
             platform: win32
             arch: x64
             npm_config_arch: x64
-            continue-on-error: true
           - os: windows-latest
             platform: win32
             arch: arm64
@@ -46,7 +46,7 @@ jobs:
             arch: arm64
             npm_config_arch: arm64
     runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.continue-on-error }}
+    continue-on-error: ${{ matrix.continue-on-error || false }}
     steps:
       - uses: actions/checkout@v4
       - name: Replace version in package.json
