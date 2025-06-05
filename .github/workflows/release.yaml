@@ -16,6 +16,7 @@ jobs:
             platform: win32
             arch: x64
             npm_config_arch: x64
+            continue-on-error: true
           - os: windows-latest
             platform: win32
             arch: arm64
@@ -45,6 +46,7 @@ jobs:
             arch: arm64
             npm_config_arch: arm64
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.continue-on-error }}
     steps:
       - uses: actions/checkout@v4
       - name: Replace version in package.json
@@ -103,9 +105,9 @@ jobs:
           else
             find . -name "package.json" -exec sed -i "s/\"@lkr-dev\/lookml-language-server\": \".*\"/\"@lkr-dev\/lookml-language-server\": \"${{ env.TAG }}\"/" {} +
       - name: Install dependencies (server)
-        run: npm install --workspace=server
+        run: cd server && npm install
       - name: Install dependencies (lookml-validator)
-        run: npm install --workspace=packages/lookml-validator
+        run: cd packages/lookml-validator && npm install
       - name: Build lookml-validator
         run: cd packages/lookml-validator && npm run build
       - name: Publish lookml-validator
