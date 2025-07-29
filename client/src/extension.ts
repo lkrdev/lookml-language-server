@@ -30,6 +30,51 @@ let client: LanguageClient;
 const outputChannel = vscode.window.createOutputChannel("LookML");
 
 export function activate(context: ExtensionContext) {
+  // Ensure schemas are generated on extension activation
+  const { execSync } = require("child_process");
+  try {
+    execSync("npm run generate-schema", {
+      cwd: context.asAbsolutePath("server"),
+      stdio: "pipe",
+    });
+  } catch (error) {
+    // Schema generation failed, but continue with extension activation
+    console.warn("Failed to generate schemas:", error);
+  }
+
+  // Register JSON schema validation for dashboard files
+  const dashboardDocumentsSchemaPath = context.asAbsolutePath(
+    path.join("server", "generated", "lookml-dashboard-documents-schema.json")
+  );
+
+  // Register JSON schema validation
+  const dashboardDocumentsSchemaUri = vscode.Uri.file(
+    dashboardDocumentsSchemaPath
+  );
+
+  // Associate schemas with dashboard files
+  vscode.languages.setLanguageConfiguration("lookml", {
+    wordPattern:
+      /(-?\d*\.\d\w*)|([^\`\~\!\@\#\%\^\&\*\(\)\-\=\+\[\{\]\}\\\|\;\:\'\"\,\.\<\>\/\?\s]+)/g,
+  });
+
+  // Set up YAML schema validation for dashboard files
+  const workspaceConfig = vscode.workspace.getConfiguration("yaml");
+  const yamlSchemas = (workspaceConfig.get("schemas") as any) || {};
+
+  // Add our dashboard schemas to YAML configuration
+  const dashboardYamlSchemas = {
+    ...yamlSchemas,
+    [dashboardDocumentsSchemaUri.toString()]: "**/*.dashboard.lkml",
+  };
+
+  // Update the YAML schemas configuration
+  workspaceConfig.update(
+    "schemas",
+    dashboardYamlSchemas,
+    vscode.ConfigurationTarget.Workspace
+  );
+
   // The server is implemented in node
   const serverModule = context.asAbsolutePath(
     path.join("server", "out", "server.js")
@@ -50,7 +95,7 @@ export function activate(context: ExtensionContext) {
     documentSelector: [{ scheme: "file", language: "lookml" }],
     synchronize: {
       fileEvents: workspace.createFileSystemWatcher(
-        "**/*.{lkml,lookml,model.lkml,view.lkml,explore.lkml}"
+        "**/*.{lkml,lookml,model.lkml,view.lkml,explore.lkml,dashboard.lkml}"
       ),
     },
     outputChannel,
@@ -255,51 +300,65 @@ export function activate(context: ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("looker.saveAllStageAllCommitAndSync", async () => {
-      let projectName = getProjectName();
-      if (!projectName?.length) {
-        projectName = await vscode.window.showInputBox({
-          prompt: "Enter Looker project name associated with this repository",
-          placeHolder: "your-project-name",
-        });
-        await setProjectName(projectName);
-      }
-      try {
-        // 1. Save all files
-        await vscode.commands.executeCommand("workbench.action.files.saveAll");
-        // sleep for 1 second
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        // 2. Stage all changes
-        await vscode.commands.executeCommand("git.stageAll");
-
-        // 3. Generate commit message (using Cursor's command if available)
-        let commitMessage = "Auto-commit";
-        try {
-          commitMessage = await vscode.commands.executeCommand<string>("cursor.generateGitCommitMessage");
-        } catch (e) {
-          // Fallback if Cursor extension is not available
-          commitMessage = await vscode.window.showInputBox({
-            prompt: "Enter a commit message",
-            value: commitMessage,
-          }) || commitMessage;
+    vscode.commands.registerCommand(
+      "looker.saveAllStageAllCommitAndSync",
+      async () => {
+        let projectName = getProjectName();
+        if (!projectName?.length) {
+          projectName = await vscode.window.showInputBox({
+            prompt: "Enter Looker project name associated with this repository",
+            placeHolder: "your-project-name",
+          });
+          await setProjectName(projectName);
         }
+        try {
+          // 1. Save all files
+          await vscode.commands.executeCommand(
+            "workbench.action.files.saveAll"
+          );
+          // sleep for 1 second
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          // 2. Stage all changes
+          await vscode.commands.executeCommand("git.stageAll");
 
-        // 4. Commit all staged changes
-        await vscode.commands.executeCommand("git.commitAll", { message: commitMessage });
+          // 3. Generate commit message (using Cursor's command if available)
+          let commitMessage = "Auto-commit";
+          try {
+            commitMessage = await vscode.commands.executeCommand<string>(
+              "cursor.generateGitCommitMessage"
+            );
+          } catch (e) {
+            // Fallback if Cursor extension is not available
+            commitMessage =
+              (await vscode.window.showInputBox({
+                prompt: "Enter a commit message",
+                value: commitMessage,
+              })) || commitMessage;
+          }
 
-        // 5. Push to remote
-        await vscode.commands.executeCommand("git.push");
-        // sleep for 1 second
-        await new Promise((resolve) => setTimeout(resolve, 500));
+          // 4. Commit all staged changes
+          await vscode.commands.executeCommand("git.commitAll", {
+            message: commitMessage,
+          });
 
-        // 6. Run Looker resetToRemote
-        await vscode.commands.executeCommand("looker.resetToRemote");
+          // 5. Push to remote
+          await vscode.commands.executeCommand("git.push");
+          // sleep for 1 second
+          await new Promise((resolve) => setTimeout(resolve, 500));
 
-        vscode.window.showInformationMessage("All changes saved, committed, pushed, and Looker reset to remote.");
-      } catch (err: any) {
-        vscode.window.showErrorMessage(`Error in saveAllStageAllCommitAndSync: ${err.message || err}`);
+          // 6. Run Looker resetToRemote
+          await vscode.commands.executeCommand("looker.resetToRemote");
+
+          vscode.window.showInformationMessage(
+            "All changes saved, committed, pushed, and Looker reset to remote."
+          );
+        } catch (err: any) {
+          vscode.window.showErrorMessage(
+            `Error in saveAllStageAllCommitAndSync: ${err.message || err}`
+          );
+        }
       }
-    })
+    )
   );
 
   client.start();

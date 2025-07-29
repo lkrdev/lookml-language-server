@@ -7,6 +7,8 @@ client/node_modules/**
 *.ts
 *.md
 *.map
+# Keep generated schemas for YAML validation
+!server/generated/
 .vscode/
 .vscode-test/
 test/

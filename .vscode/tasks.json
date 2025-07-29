@@ -24,6 +24,16 @@
         "reveal": "never"
       },
       "problemMatcher": ["$tsc-watch"]
+    },
+    {
+      "type": "npm",
+      "script": "generate-schema",
+      "group": "build",
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "silent"
+      },
+      "problemMatcher": []
     }
   ]
 }
