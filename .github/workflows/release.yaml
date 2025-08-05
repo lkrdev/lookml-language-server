@@ -65,7 +65,7 @@ jobs:
       - name: Generate JSON schemas
         run: npm run generate-schema
       - name: Verify schemas were generated
-        run: ls -la server/generated/
+        run: ls -la server/generated/schemas/
       - shell: pwsh
         run: echo "target=${{ matrix.platform }}-${{ matrix.arch }}" >> $env:GITHUB_ENV
       - run: npx @vscode/vsce package --target ${{ env.target }}
@@ -115,7 +115,7 @@ jobs:
       - name: Generate JSON schemas
         run: npm run generate-schema
       - name: Verify schemas were generated
-        run: ls -la server/generated/
+        run: ls -la server/generated/schemas/
       - name: Build lookml-validator
         run: cd packages/lookml-validator && npm run build
       - name: Publish lookml-validator

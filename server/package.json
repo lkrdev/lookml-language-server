@@ -26,8 +26,7 @@
     "vscode-languageserver": "^8.1.0",
     "vscode-languageserver-textdocument": "^1.0.8",
     "vscode-uri": "^3.1.0",
-    "zod": "^3.24.3",
-    "zod-to-json-schema": "^3.24.6"
+    "zod": "^4.0.13"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",

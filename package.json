@@ -97,7 +97,7 @@
       }
     ],
     "yaml.schemas": {
-      "./server/generated/lookml-dashboard-documents-schema.json": "**/*.dashboard.lkml"
+      "./server/generated/schemas/lookml-dashboard-documents-schema.json": "**/*.dashboard.lkml"
     }
   },
   "scripts": {

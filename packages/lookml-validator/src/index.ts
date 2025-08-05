@@ -21,21 +21,32 @@ async function validate(folderPath?: string) {
   const lookmlGlob = "**/*.lkml";
 
   // Find all LookML files
-  async function findLookmlFiles(dir: string): Promise<string[]> {
+  async function findLookmlFiles(dir: string): Promise<{
+    files: string[];
+    dashboards: string[];
+  }> {
     const entries = await fs.readdir(dir, { withFileTypes: true });
     const files: string[] = [];
+    const dashboards: string[] = [];
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) {
-        files.push(...(await findLookmlFiles(fullPath)));
-      } else if (/\.(model|view|explore)\.lkml$/.test(entry.name)) {
+        const { files: subFiles, dashboards: subDashboards } =
+          await findLookmlFiles(fullPath);
+        files.push(...subFiles);
+        dashboards.push(...subDashboards);
+      } else if (
+        /\.(model|view|explore|test|refinement)\.lkml$/.test(entry.name)
+      ) {
         files.push(fullPath);
+      } else if (/\.dashboard\.lkml$/.test(entry.name)) {
+        dashboards.push(fullPath);
       }
     }
-    return files;
+    return { files, dashboards };
   }
 
-  const files = await findLookmlFiles(workspacePath);
+  const gathered_files = await findLookmlFiles(workspacePath);
   const workspaceModel = new WorkspaceModel({ connection: dummyConnection });
   await workspaceModel.parseFiles({
     source: path.join(workspacePath, lookmlGlob),
@@ -44,7 +55,7 @@ async function validate(folderPath?: string) {
   const diagnosticsProvider = new DiagnosticsProvider(workspaceModel);
 
   const diagnosticsList: { file: string; diagnostics: Diagnostic[] }[] = [];
-  for (const file of files) {
+  for (const file of gathered_files.files) {
     const content = await fs.readFile(file, "utf8");
     const document = TextDocument.create(
       `file://${file}`,

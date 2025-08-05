@@ -11,7 +11,7 @@
         "*.dashboard.lkml": "yaml"
     },
     "yaml.schemas": {
-        "./server/generated/lookml-dashboard-documents-schema.json": "**/*.dashboard.lkml"
+        "./server/generated/schemas/lookml-dashboard-documents-schema.json": "**/*.dashboard.lkml"
     },
     "yaml.validate": true,
     "yaml.format.enable": true

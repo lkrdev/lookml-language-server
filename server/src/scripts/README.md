@@ -32,7 +32,7 @@ The schema generation is integrated into the development workflow:
 
 ### Output
 
-The script generates the following files in the `../../generated/` directory:
+The script generates the following files in the `../../generated/schemas` directory:
 
 - `lookml-dashboard-schema.json` - JSON schema for LookML dashboard configuration
 - `lookml-dashboard-document-schema.json` - JSON schema for LookML dashboard document wrapper

@@ -20,7 +20,7 @@ The release workflow has been updated to generate and bundle JSON schemas so tha
 - name: Generate JSON schemas
   run: npm run generate-schema
 - name: Verify schemas were generated
-  run: ls -la server/generated/
+  run: ls -la server/generated/schemas
 ```
 
 ### 2. VS Code Extension Packaging
@@ -58,7 +58,7 @@ The release workflow has been updated to generate and bundle JSON schemas so tha
 npm run generate-schema
 
 # Verify schemas exist
-ls -la server/generated/
+ls -la server/generated/schemas/
 
 # Build extension locally
 npm run vscode:prepublish

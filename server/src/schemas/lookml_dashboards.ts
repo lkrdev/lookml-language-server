@@ -77,41 +77,39 @@ const DynamicFieldSchema = z.object({
 });
 
 // Base element schema with common properties
-const BaseElementSchema = z
-  .object({
-    title: z
-      .string()
-      .optional()
-      .describe("Display title for the dashboard element"),
-    name: z
-      .string()
-      .optional()
-      .describe("Internal name identifier for the element"),
-    type: z
-      .string()
-      .describe(
-        "Type of dashboard element (looker_grid, single_value, text, etc.)"
-      ),
-    row: z.number().optional().describe("Row position for grid layout"),
-    col: z.number().optional().describe("Column position for grid layout"),
-    width: z.number().optional().describe("Width of the element"),
-    height: z.number().optional().describe("Height of the element"),
-    note_state: z
-      .string()
-      .optional()
-      .describe("State of any notes attached to the element"),
-    note_display: z.string().optional().describe("Display setting for notes"),
-    note_text: z.string().optional().describe("Text content of notes"),
-    listen: z
-      .record(z.string())
-      .optional()
-      .describe("Filter listening configuration"),
-    defaults_version: z
-      .number()
-      .optional()
-      .describe("Version of default settings"),
-  })
-  .catchall(z.any()); // Allow additional properties
+const BaseElementSchema = z.object({
+  title: z
+    .string()
+    .optional()
+    .describe("Display title for the dashboard element"),
+  name: z
+    .string()
+    .optional()
+    .describe("Internal name identifier for the element"),
+  type: z
+    .string()
+    .describe(
+      "Type of dashboard element (looker_grid, single_value, text, etc.)"
+    ),
+  row: z.number().optional().describe("Row position for grid layout"),
+  col: z.number().optional().describe("Column position for grid layout"),
+  width: z.number().optional().describe("Width of the element"),
+  height: z.number().optional().describe("Height of the element"),
+  note_state: z
+    .string()
+    .optional()
+    .describe("State of any notes attached to the element"),
+  note_display: z.string().optional().describe("Display setting for notes"),
+  note_text: z.string().optional().describe("Text content of notes"),
+  listen: z
+    .record(z.string(), z.string())
+    .optional()
+    .describe("Filter listening configuration"),
+  defaults_version: z
+    .number()
+    .optional()
+    .describe("Version of default settings"),
+});
 
 // Looker Grid element schema
 const LookerGridElementSchema = BaseElementSchema.extend({
@@ -187,11 +185,11 @@ const LookerGridElementSchema = BaseElementSchema.extend({
     .optional()
     .describe("Minimum width for columns"),
   series_labels: z
-    .record(z.string())
+    .record(z.string(), z.string())
     .optional()
     .describe("Custom labels for data series"),
   series_cell_visualizations: z
-    .record(z.any())
+    .record(z.string(), z.any())
     .optional()
     .describe("Cell visualization settings for series"),
   header_font_color: z
@@ -225,7 +223,7 @@ const LookerGridElementSchema = BaseElementSchema.extend({
     .describe("Show labels for comparison data"),
   hidden_fields: z.array(z.string()).optional(),
   sorts: z.array(z.string()).optional(),
-  filters: z.record(z.string()).optional(),
+  filters: z.record(z.string(), z.string()).optional(),
   fill_fields: z.array(z.string()).optional(),
   pivots: z.array(z.string()).optional(),
   dynamic_fields: z.array(DynamicFieldSchema).optional(),
@@ -260,8 +258,8 @@ const LookerGridElementSchema = BaseElementSchema.extend({
   x_axis_zoom: z.boolean().optional(),
   y_axis_zoom: z.boolean().optional(),
   limit_displayed_rows_values: z.any().optional(),
-  hidden_pivots: z.record(z.any()).optional(),
-  series_colors: z.record(z.string()).optional(),
+  hidden_pivots: z.record(z.string(), z.any()).optional(),
+  series_colors: z.record(z.string(), z.string()).optional(),
   temperature: z.number().optional(),
   prompt: z.string().optional(),
   query: z.string().optional(),
@@ -311,7 +309,7 @@ const SingleValueElementSchema = BaseElementSchema.extend({
   header_font_size: z.union([z.string(), z.number()]).optional(),
   rows_font_size: z.union([z.string(), z.number()]).optional(),
   sorts: z.array(z.string()).optional(),
-  filters: z.record(z.string()).optional(),
+  filters: z.record(z.string(), z.string()).optional(),
   fill_fields: z.array(z.string()).optional(),
   dynamic_fields: z.array(DynamicFieldSchema).optional(),
   y_axes: z.array(z.any()).optional(),
@@ -345,8 +343,8 @@ const SingleValueElementSchema = BaseElementSchema.extend({
   x_axis_zoom: z.boolean().optional(),
   y_axis_zoom: z.boolean().optional(),
   limit_displayed_rows_values: z.any().optional(),
-  hidden_pivots: z.record(z.any()).optional(),
-  series_colors: z.record(z.string()).optional(),
+  hidden_pivots: z.record(z.string(), z.any()).optional(),
+  series_colors: z.record(z.string(), z.string()).optional(),
   temperature: z.number().optional(),
   prompt: z.string().optional(),
   query: z.string().optional(),
@@ -406,7 +404,7 @@ const LookerLineElementSchema = BaseElementSchema.extend({
   header_font_size: z.union([z.string(), z.number()]).optional(),
   rows_font_size: z.union([z.string(), z.number()]).optional(),
   sorts: z.array(z.string()).optional(),
-  filters: z.record(z.string()).optional(),
+  filters: z.record(z.string(), z.string()).optional(),
   fill_fields: z.array(z.string()).optional(),
   pivots: z.array(z.string()).optional(),
   dynamic_fields: z.array(DynamicFieldSchema).optional(),
@@ -441,8 +439,8 @@ const LookerLineElementSchema = BaseElementSchema.extend({
   x_axis_zoom: z.boolean().optional(),
   y_axis_zoom: z.boolean().optional(),
   limit_displayed_rows_values: z.any().optional(),
-  hidden_pivots: z.record(z.any()).optional(),
-  series_colors: z.record(z.string()).optional(),
+  hidden_pivots: z.record(z.string(), z.any()).optional(),
+  series_colors: z.record(z.string(), z.string()).optional(),
   temperature: z.number().optional(),
   prompt: z.string().optional(),
   query: z.string().optional(),
@@ -492,7 +490,7 @@ const LookerAreaElementSchema = BaseElementSchema.extend({
   header_font_size: z.union([z.string(), z.number()]).optional(),
   rows_font_size: z.union([z.string(), z.number()]).optional(),
   sorts: z.array(z.string()).optional(),
-  filters: z.record(z.string()).optional(),
+  filters: z.record(z.string(), z.string()).optional(),
   fill_fields: z.array(z.string()).optional(),
   pivots: z.array(z.string()).optional(),
   dynamic_fields: z.array(DynamicFieldSchema).optional(),
@@ -527,8 +525,8 @@ const LookerAreaElementSchema = BaseElementSchema.extend({
   x_axis_zoom: z.boolean().optional(),
   y_axis_zoom: z.boolean().optional(),
   limit_displayed_rows_values: z.any().optional(),
-  hidden_pivots: z.record(z.any()).optional(),
-  series_colors: z.record(z.string()).optional(),
+  hidden_pivots: z.record(z.string(), z.any()).optional(),
+  series_colors: z.record(z.string(), z.string()).optional(),
   temperature: z.number().optional(),
   prompt: z.string().optional(),
   query: z.string().optional(),
@@ -578,7 +576,7 @@ const LookerBarElementSchema = BaseElementSchema.extend({
   header_font_size: z.union([z.string(), z.number()]).optional(),
   rows_font_size: z.union([z.string(), z.number()]).optional(),
   sorts: z.array(z.string()).optional(),
-  filters: z.record(z.string()).optional(),
+  filters: z.record(z.string(), z.string()).optional(),
   fill_fields: z.array(z.string()).optional(),
   pivots: z.array(z.string()).optional(),
   dynamic_fields: z.array(DynamicFieldSchema).optional(),
@@ -613,8 +611,8 @@ const LookerBarElementSchema = BaseElementSchema.extend({
   x_axis_zoom: z.boolean().optional(),
   y_axis_zoom: z.boolean().optional(),
   limit_displayed_rows_values: z.any().optional(),
-  hidden_pivots: z.record(z.any()).optional(),
-  series_colors: z.record(z.string()).optional(),
+  hidden_pivots: z.record(z.string(), z.any()).optional(),
+  series_colors: z.record(z.string(), z.string()).optional(),
   temperature: z.number().optional(),
   prompt: z.string().optional(),
   query: z.string().optional(),
@@ -664,7 +662,7 @@ const LookerColumnElementSchema = BaseElementSchema.extend({
   header_font_size: z.union([z.string(), z.number()]).optional(),
   rows_font_size: z.union([z.string(), z.number()]).optional(),
   sorts: z.array(z.string()).optional(),
-  filters: z.record(z.string()).optional(),
+  filters: z.record(z.string(), z.string()).optional(),
   fill_fields: z.array(z.string()).optional(),
   pivots: z.array(z.string()).optional(),
   dynamic_fields: z.array(DynamicFieldSchema).optional(),
@@ -699,8 +697,8 @@ const LookerColumnElementSchema = BaseElementSchema.extend({
   x_axis_zoom: z.boolean().optional(),
   y_axis_zoom: z.boolean().optional(),
   limit_displayed_rows_values: z.any().optional(),
-  hidden_pivots: z.record(z.any()).optional(),
-  series_colors: z.record(z.string()).optional(),
+  hidden_pivots: z.record(z.string(), z.any()).optional(),
+  series_colors: z.record(z.string(), z.string()).optional(),
   temperature: z.number().optional(),
   prompt: z.string().optional(),
   query: z.string().optional(),
@@ -750,7 +748,7 @@ const LookerDonutMultiplesElementSchema = BaseElementSchema.extend({
   header_font_size: z.union([z.string(), z.number()]).optional(),
   rows_font_size: z.union([z.string(), z.number()]).optional(),
   sorts: z.array(z.string()).optional(),
-  filters: z.record(z.string()).optional(),
+  filters: z.record(z.string(), z.string()).optional(),
   fill_fields: z.array(z.string()).optional(),
   pivots: z.array(z.string()).optional(),
   dynamic_fields: z.array(DynamicFieldSchema).optional(),
@@ -785,8 +783,8 @@ const LookerDonutMultiplesElementSchema = BaseElementSchema.extend({
   x_axis_zoom: z.boolean().optional(),
   y_axis_zoom: z.boolean().optional(),
   limit_displayed_rows_values: z.any().optional(),
-  hidden_pivots: z.record(z.any()).optional(),
-  series_colors: z.record(z.string()).optional(),
+  hidden_pivots: z.record(z.string(), z.any()).optional(),
+  series_colors: z.record(z.string(), z.string()).optional(),
   temperature: z.number().optional(),
   prompt: z.string().optional(),
   query: z.string().optional(),
@@ -836,7 +834,7 @@ const LookerPieElementSchema = BaseElementSchema.extend({
   header_font_size: z.union([z.string(), z.number()]).optional(),
   rows_font_size: z.union([z.string(), z.number()]).optional(),
   sorts: z.array(z.string()).optional(),
-  filters: z.record(z.string()).optional(),
+  filters: z.record(z.string(), z.string()).optional(),
   fill_fields: z.array(z.string()).optional(),
   pivots: z.array(z.string()).optional(),
   dynamic_fields: z.array(DynamicFieldSchema).optional(),
@@ -871,8 +869,8 @@ const LookerPieElementSchema = BaseElementSchema.extend({
   x_axis_zoom: z.boolean().optional(),
   y_axis_zoom: z.boolean().optional(),
   limit_displayed_rows_values: z.any().optional(),
-  hidden_pivots: z.record(z.any()).optional(),
-  series_colors: z.record(z.string()).optional(),
+  hidden_pivots: z.record(z.string(), z.any()).optional(),
+  series_colors: z.record(z.string(), z.string()).optional(),
   temperature: z.number().optional(),
   prompt: z.string().optional(),
   query: z.string().optional(),
@@ -922,7 +920,7 @@ const LookerScatterElementSchema = BaseElementSchema.extend({
   header_font_size: z.union([z.string(), z.number()]).optional(),
   rows_font_size: z.union([z.string(), z.number()]).optional(),
   sorts: z.array(z.string()).optional(),
-  filters: z.record(z.string()).optional(),
+  filters: z.record(z.string(), z.string()).optional(),
   fill_fields: z.array(z.string()).optional(),
   pivots: z.array(z.string()).optional(),
   dynamic_fields: z.array(DynamicFieldSchema).optional(),
@@ -957,8 +955,8 @@ const LookerScatterElementSchema = BaseElementSchema.extend({
   x_axis_zoom: z.boolean().optional(),
   y_axis_zoom: z.boolean().optional(),
   limit_displayed_rows_values: z.any().optional(),
-  hidden_pivots: z.record(z.any()).optional(),
-  series_colors: z.record(z.string()).optional(),
+  hidden_pivots: z.record(z.string(), z.any()).optional(),
+  series_colors: z.record(z.string(), z.string()).optional(),
   temperature: z.number().optional(),
   prompt: z.string().optional(),
   query: z.string().optional(),
@@ -1008,7 +1006,7 @@ const LookerMapElementSchema = BaseElementSchema.extend({
   header_font_size: z.union([z.string(), z.number()]).optional(),
   rows_font_size: z.union([z.string(), z.number()]).optional(),
   sorts: z.array(z.string()).optional(),
-  filters: z.record(z.string()).optional(),
+  filters: z.record(z.string(), z.string()).optional(),
   fill_fields: z.array(z.string()).optional(),
   pivots: z.array(z.string()).optional(),
   dynamic_fields: z.array(DynamicFieldSchema).optional(),
@@ -1043,8 +1041,8 @@ const LookerMapElementSchema = BaseElementSchema.extend({
   x_axis_zoom: z.boolean().optional(),
   y_axis_zoom: z.boolean().optional(),
   limit_displayed_rows_values: z.any().optional(),
-  hidden_pivots: z.record(z.any()).optional(),
-  series_colors: z.record(z.string()).optional(),
+  hidden_pivots: z.record(z.string(), z.any()).optional(),
+  series_colors: z.record(z.string(), z.string()).optional(),
   temperature: z.number().optional(),
   prompt: z.string().optional(),
   query: z.string().optional(),
@@ -1094,7 +1092,7 @@ const LookerTimelineElementSchema = BaseElementSchema.extend({
   header_font_size: z.union([z.string(), z.number()]).optional(),
   rows_font_size: z.union([z.string(), z.number()]).optional(),
   sorts: z.array(z.string()).optional(),
-  filters: z.record(z.string()).optional(),
+  filters: z.record(z.string(), z.string()).optional(),
   fill_fields: z.array(z.string()).optional(),
   pivots: z.array(z.string()).optional(),
   dynamic_fields: z.array(DynamicFieldSchema).optional(),
@@ -1129,8 +1127,8 @@ const LookerTimelineElementSchema = BaseElementSchema.extend({
   x_axis_zoom: z.boolean().optional(),
   y_axis_zoom: z.boolean().optional(),
   limit_displayed_rows_values: z.any().optional(),
-  hidden_pivots: z.record(z.any()).optional(),
-  series_colors: z.record(z.string()).optional(),
+  hidden_pivots: z.record(z.string(), z.any()).optional(),
+  series_colors: z.record(z.string(), z.string()).optional(),
   temperature: z.number().optional(),
   prompt: z.string().optional(),
   query: z.string().optional(),
@@ -1180,7 +1178,7 @@ const LookerFunnelElementSchema = BaseElementSchema.extend({
   header_font_size: z.union([z.string(), z.number()]).optional(),
   rows_font_size: z.union([z.string(), z.number()]).optional(),
   sorts: z.array(z.string()).optional(),
-  filters: z.record(z.string()).optional(),
+  filters: z.record(z.string(), z.string()).optional(),
   fill_fields: z.array(z.string()).optional(),
   pivots: z.array(z.string()).optional(),
   dynamic_fields: z.array(DynamicFieldSchema).optional(),
@@ -1215,8 +1213,8 @@ const LookerFunnelElementSchema = BaseElementSchema.extend({
   x_axis_zoom: z.boolean().optional(),
   y_axis_zoom: z.boolean().optional(),
   limit_displayed_rows_values: z.any().optional(),
-  hidden_pivots: z.record(z.any()).optional(),
-  series_colors: z.record(z.string()).optional(),
+  hidden_pivots: z.record(z.string(), z.any()).optional(),
+  series_colors: z.record(z.string(), z.string()).optional(),
   temperature: z.number().optional(),
   prompt: z.string().optional(),
   query: z.string().optional(),
@@ -1266,7 +1264,7 @@ const LookerSingleRecordElementSchema = BaseElementSchema.extend({
   header_font_size: z.union([z.string(), z.number()]).optional(),
   rows_font_size: z.union([z.string(), z.number()]).optional(),
   sorts: z.array(z.string()).optional(),
-  filters: z.record(z.string()).optional(),
+  filters: z.record(z.string(), z.string()).optional(),
   fill_fields: z.array(z.string()).optional(),
   pivots: z.array(z.string()).optional(),
   dynamic_fields: z.array(DynamicFieldSchema).optional(),
@@ -1301,8 +1299,8 @@ const LookerSingleRecordElementSchema = BaseElementSchema.extend({
   x_axis_zoom: z.boolean().optional(),
   y_axis_zoom: z.boolean().optional(),
   limit_displayed_rows_values: z.any().optional(),
-  hidden_pivots: z.record(z.any()).optional(),
-  series_colors: z.record(z.string()).optional(),
+  hidden_pivots: z.record(z.string(), z.any()).optional(),
+  series_colors: z.record(z.string(), z.string()).optional(),
   temperature: z.number().optional(),
   prompt: z.string().optional(),
   query: z.string().optional(),
@@ -1326,25 +1324,24 @@ const ExtensionElementSchema = BaseElementSchema.extend({
 });
 
 // Union of all element types
-const DashboardElementSchema = z
-  .union([
-    LookerGridElementSchema,
-    SingleValueElementSchema,
-    TextElementSchema,
-    LookerLineElementSchema,
-    LookerAreaElementSchema,
-    LookerBarElementSchema,
-    LookerColumnElementSchema,
-    LookerDonutMultiplesElementSchema,
-    LookerPieElementSchema,
-    LookerScatterElementSchema,
-    LookerMapElementSchema,
-    LookerTimelineElementSchema,
-    LookerFunnelElementSchema,
-    LookerSingleRecordElementSchema,
-    ExtensionElementSchema,
-  ])
-  .or(z.any()); // Fallback to any for unknown element types
+// TODO: how can someone add their custom visualizations?
+const DashboardElementSchema = z.discriminatedUnion("type", [
+  LookerGridElementSchema,
+  SingleValueElementSchema,
+  TextElementSchema,
+  LookerLineElementSchema,
+  LookerAreaElementSchema,
+  LookerBarElementSchema,
+  LookerColumnElementSchema,
+  LookerDonutMultiplesElementSchema,
+  LookerPieElementSchema,
+  LookerScatterElementSchema,
+  LookerMapElementSchema,
+  LookerTimelineElementSchema,
+  LookerFunnelElementSchema,
+  LookerSingleRecordElementSchema,
+  ExtensionElementSchema,
+]);
 
 // Filter schema
 const DashboardFilterSchema = z.object({
@@ -1449,108 +1446,104 @@ const EmbedStyleSchema = z.object({
 });
 
 // Main dashboard schema
-export const LookMLDashboardSchema = z
-  .object({
-    title: z
-      .string()
-      .optional()
-      .describe("Change the way a dashboard name appears to users"),
-    layout: z
-      .string()
-      .optional()
-      .describe(
-        "Define the way that the dashboard will place elements (tile | static | grid | newspaper)"
-      ),
-    preferred_viewer: z
-      .string()
-      .optional()
-      .describe("This parameter is ignored"),
-    crossfilter_enabled: z
-      .boolean()
-      .optional()
-      .describe("Enable or disable cross-filtering for a dashboard"),
-    description: z
-      .string()
-      .optional()
-      .describe(
-        "Add a description that can be viewed in the Dashboard Details panel or in a folder set to list view"
-      ),
-    preferred_slug: z
-      .string()
-      .optional()
-      .describe("Custom URL slug for the dashboard"),
-    enable_viz_full_screen: z
-      .boolean()
-      .optional()
-      .describe(
-        "Define whether dashboard viewers can see dashboard tiles in full-screen and expanded views"
-      ),
-    extends: z
-      .string()
-      .optional()
-      .describe("Base the LookML dashboard on another LookML dashboard"),
-    extension: z
-      .boolean()
-      .optional()
-      .describe("Require that the dashboard is extended by another dashboard"),
-    rows: z
-      .array(DashboardRowSchema)
-      .optional()
-      .describe(
-        "Define the elements that should go into each row of a layout: grid dashboard"
-      ),
-    tile_size: z
-      .number()
-      .optional()
-      .describe("Define the size of a tile for a layout: tile dashboard"),
-    width: z
-      .number()
-      .optional()
-      .describe(
-        "Define the width of the dashboard for a layout: static dashboard"
-      ),
-    refresh: z
-      .string()
-      .optional()
-      .describe(
-        "Set the interval on which dashboard elements will automatically refresh (seconds | minutes | hours | days)"
-      ),
-    auto_run: z
-      .boolean()
-      .optional()
-      .describe(
-        "Determine whether dashboards run automatically when initially opened or reloaded"
-      ),
-    filters_bar_collapsed: z
-      .boolean()
-      .optional()
-      .describe(
-        "Set the dashboard filter bar as default collapsed or expanded"
-      ),
-    filters_location_top: z
-      .boolean()
-      .optional()
-      .describe("Position the filters bar at the top of the dashboard"),
-    embed_style: EmbedStyleSchema.optional().describe(
-      "Customize the appearance of an embedded dashboard"
+export const LookMLDashboardSchema = z.object({
+  title: z
+    .string()
+    .optional()
+    .describe("Change the way a dashboard name appears to users"),
+  layout: z
+    .string()
+    .optional()
+    .describe(
+      "Define the way that the dashboard will place elements (tile | static | grid | newspaper)"
     ),
-    elements: z
-      .array(DashboardElementSchema)
-      .optional()
-      .describe("Define the elements that will make up a dashboard"),
-    filters: z
-      .array(DashboardFilterSchema)
-      .optional()
-      .describe("Define dashboard filters for user interaction"),
-  })
-  .catchall(z.any()); // Allow additional properties
+  preferred_viewer: z.string().optional().describe("This parameter is ignored"),
+  crossfilter_enabled: z
+    .boolean()
+    .optional()
+    .describe("Enable or disable cross-filtering for a dashboard"),
+  description: z
+    .string()
+    .optional()
+    .describe(
+      "Add a description that can be viewed in the Dashboard Details panel or in a folder set to list view"
+    ),
+  preferred_slug: z
+    .string()
+    .optional()
+    .describe("Custom URL slug for the dashboard"),
+  enable_viz_full_screen: z
+    .boolean()
+    .optional()
+    .describe(
+      "Define whether dashboard viewers can see dashboard tiles in full-screen and expanded views"
+    ),
+  extends: z
+    .string()
+    .optional()
+    .describe("Base the LookML dashboard on another LookML dashboard"),
+  extension: z
+    .boolean()
+    .optional()
+    .describe("Require that the dashboard is extended by another dashboard"),
+  rows: z
+    .array(DashboardRowSchema)
+    .optional()
+    .describe(
+      "Define the elements that should go into each row of a layout: grid dashboard"
+    ),
+  tile_size: z
+    .number()
+    .optional()
+    .describe("Define the size of a tile for a layout: tile dashboard"),
+  width: z
+    .number()
+    .optional()
+    .describe(
+      "Define the width of the dashboard for a layout: static dashboard"
+    ),
+  refresh: z
+    .string()
+    .optional()
+    .describe(
+      "Set the interval on which dashboard elements will automatically refresh (seconds | minutes | hours | days)"
+    ),
+  auto_run: z
+    .boolean()
+    .optional()
+    .describe(
+      "Determine whether dashboards run automatically when initially opened or reloaded"
+    ),
+  filters_bar_collapsed: z
+    .boolean()
+    .optional()
+    .describe("Set the dashboard filter bar as default collapsed or expanded"),
+  filters_location_top: z
+    .boolean()
+    .optional()
+    .describe("Position the filters bar at the top of the dashboard"),
+  embed_style: EmbedStyleSchema.optional().describe(
+    "Customize the appearance of an embedded dashboard"
+  ),
+  elements: z
+    .array(DashboardElementSchema)
+    .optional()
+    .describe("Define the elements that will make up a dashboard"),
+  filters: z
+    .array(DashboardFilterSchema)
+    .optional()
+    .describe("Define dashboard filters for user interaction"),
+  query_timezone: z
+    .string()
+    .optional()
+    .describe("Set the timezone for the dashboard"),
+});
 
 // Schema for a dashboard document (the wrapper structure)
-export const LookMLDashboardDocumentSchema = z
-  .object({
-    dashboard: z.string(),
-  })
-  .and(LookMLDashboardSchema);
+export const LookMLDashboardDocumentSchema = z.object({
+  dashboard: z.string(),
+  ...LookMLDashboardSchema.shape,
+});
 
 // Schema for multiple dashboard documents
 export const LookMLDashboardDocumentsSchema = z.array(

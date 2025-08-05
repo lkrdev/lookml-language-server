@@ -1,4 +1,5 @@
 import {
+  LookmlDashboardWithFileInfo,
   LookmlError,
   LookmlExploreWithFileInfo,
   LookmlFile,
@@ -34,6 +35,7 @@ export class WorkspaceModel {
   private views: Map<string, LookmlViewWithFileInfo> = new Map();
   private explores: Map<string, LookmlExploreWithFileInfo> = new Map();
   private models: Map<string, LookmlModelWithFileInfo> = new Map();
+  private dashboards: Map<string, LookmlDashboardWithFileInfo> = new Map();
   private viewsByFile: Map<DocumentUri, string[]> = new Map();
   private includedViews: Map<string, Set<string>> = new Map();
   private exploresByFile: Map<DocumentUri, string[]> = new Map();
@@ -82,6 +84,10 @@ export class WorkspaceModel {
 
   public getModelsByFile(uri: string): string[] {
     return this.modelsByFile.get(uri) ?? [];
+  }
+
+  public getDashboards(): Map<string, LookmlDashboardWithFileInfo> {
+    return this.dashboards;
   }
 
   /**
@@ -195,6 +201,7 @@ export class WorkspaceModel {
       this.explores = new Map<string, LookmlExploreWithFileInfo>();
       this.models = new Map<string, LookmlModelWithFileInfo>();
       this.views = new Map<string, LookmlViewWithFileInfo>();
+      this.dashboards = new Map<string, LookmlDashboardWithFileInfo>();
       this.viewsByFile = new Map<DocumentUri, string[]>();
     }
 

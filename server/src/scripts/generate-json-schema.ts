@@ -2,7 +2,8 @@
 
 import { writeFileSync } from "fs";
 import { join } from "path";
-import { zodToJsonSchema } from "zod-to-json-schema";
+import { z } from "zod";
+
 import {
   LookMLDashboardDocumentSchema,
   LookMLDashboardDocumentsSchema,
@@ -10,23 +11,14 @@ import {
 } from "../schemas/lookml_dashboards";
 
 // Generate JSON schemas from Zod schemas
-const dashboardSchema = zodToJsonSchema(LookMLDashboardSchema, {
-  name: "LookMLDashboard",
-});
+const dashboardSchema = z.toJSONSchema(LookMLDashboardSchema);
 
-const dashboardDocumentSchema = zodToJsonSchema(LookMLDashboardDocumentSchema, {
-  name: "LookMLDashboardDocument",
-});
+const dashboardDocumentSchema = z.toJSONSchema(LookMLDashboardDocumentSchema);
 
-const dashboardDocumentsSchema = zodToJsonSchema(
-  LookMLDashboardDocumentsSchema,
-  {
-    name: "LookMLDashboardDocuments",
-  }
-);
+const dashboardDocumentsSchema = z.toJSONSchema(LookMLDashboardDocumentsSchema);
 
 // Create the output directory if it doesn't exist
-const outputDir = join(__dirname, "../../generated");
+const outputDir = join(__dirname, "../../generated/schemas");
 try {
   require("fs").mkdirSync(outputDir, { recursive: true });
 } catch (error) {

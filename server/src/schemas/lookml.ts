@@ -397,7 +397,7 @@ export const exploreSchema = parserValues
     group_label: z.string().optional(),
     hidden: z.boolean().optional(),
     label: z.string().optional(),
-    query: z.record(z.unknown()).optional(),
+    query: z.record(z.string(), z.unknown()).optional(),
     view_label: z.string().optional(),
 
     // Filter
@@ -418,13 +418,13 @@ export const exploreSchema = parserValues
 
     always_filter: z
       .object({
-        filters: z.record(z.string()),
+        filters: z.record(z.string(), z.string()),
       })
       .optional(),
 
     conditionally_filter: z
       .object({
-        filters: z.record(z.string()),
+        filters: z.record(z.string(), z.string()),
         unless: z.array(z.string()),
       })
       .optional(),

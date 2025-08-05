@@ -5,7 +5,7 @@ import {
   LookmlModelWithFileInfo,
   Position as LookmlPosition,
   LookmlView,
-  LookmlViewWithFileInfo
+  LookmlViewWithFileInfo,
 } from "lookml-parser";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import {
@@ -14,13 +14,10 @@ import {
   Position,
   Range,
 } from "vscode-languageserver/node";
-import { ZodError, ZodIssue } from 'zod';
+import { ZodError } from "zod";
 import { WorkspaceModel } from "../models/workspace";
-import {
-  exploreSchema,
-  LookMLView,
-} from '../schemas/lookml';
-import { ensureMinRangeLength } from '../utils/range';
+import { exploreSchema, LookMLView } from "../schemas/lookml";
+import { ensureMinRangeLength } from "../utils/range";
 
 export enum DiagnosticCode {
   // Syntax validation (10000-19999)
@@ -92,9 +89,9 @@ export class DiagnosticsProvider {
     const isView = this.workspaceModel.isViewFile(document);
     // Combine results from all validation checks
     //diagnostics.push(...this.validateSyntax(document));
-    isView ?
-      diagnostics.push(...this.validateViewReferences(document)) :
-      diagnostics.push(...this.validateModelReferences(document));
+    isView
+      ? diagnostics.push(...this.validateViewReferences(document))
+      : diagnostics.push(...this.validateModelReferences(document));
     diagnostics.push(...this.validateProperties(document));
 
     const fileName = document.uri.split("/").pop() ?? "";
@@ -105,13 +102,13 @@ export class DiagnosticsProvider {
         severity: DiagnosticSeverity.Error,
         message: errorDetails.error.exception.message,
         range: ensureMinRangeLength({
-          start: { 
-            line: errorDetails.error.exception.location.start.line - 1,  
-            character: errorDetails.error.exception.location.start.column -1   
+          start: {
+            line: errorDetails.error.exception.location.start.line - 1,
+            character: errorDetails.error.exception.location.start.column - 1,
           },
-          end: { 
-            line: errorDetails.error.exception.location.end.line - 1, 
-            character: errorDetails.error.exception.location.end.column - 1
+          end: {
+            line: errorDetails.error.exception.location.end.line - 1,
+            character: errorDetails.error.exception.location.end.column - 1,
           },
         }),
       });
@@ -123,23 +120,23 @@ export class DiagnosticsProvider {
   private validateSqlReferences(
     sql: string,
     position: LookmlPosition | undefined,
-    context?: Record<string, Record<string, unknown>>,
+    context?: Record<string, Record<string, unknown>>
   ): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
     if (!position) return diagnostics;
-  
+
     const validRefPattern = /\$\{([^}]+)\}/g;
     const invalidRefPattern = /\$[^{][^}\s]*}?|\$\{[^}]*$/g;
-  
+
     let match;
-  
+
     const charStart = position.$p[1];
     const charEnd = position.$p[3];
     const lineStart = position.$p[0];
     const lineEnd = position.$p[2];
 
     const range = {
-      start: { line: lineStart, character: charStart  },
+      start: { line: lineStart, character: charStart },
       end: { line: lineEnd, character: charEnd },
     };
 
@@ -149,9 +146,10 @@ export class DiagnosticsProvider {
         diagnostics.push({
           severity: DiagnosticSeverity.Error,
           range,
-          message: "Invalid field reference syntax. Use ${view_name.field_name}",
+          message:
+            "Invalid field reference syntax. Use ${view_name.field_name}",
           source: "lookml-lsp",
-          code: DiagnosticCode.VIEW_REF_FIELD_IN_SQL
+          code: DiagnosticCode.VIEW_REF_FIELD_IN_SQL,
         });
       }
 
@@ -161,7 +159,9 @@ export class DiagnosticsProvider {
         const viewName = sqlParts[0];
         const fieldName = sqlParts[1];
 
-        const viewDetails = context?.[viewName] ? context[viewName] : this.workspaceModel.getView(viewName);
+        const viewDetails = context?.[viewName]
+          ? context[viewName]
+          : this.workspaceModel.getView(viewName);
         if (!viewDetails) {
           diagnostics.push({
             severity: DiagnosticSeverity.Error,
@@ -169,12 +169,12 @@ export class DiagnosticsProvider {
             message: `View "${viewName}" not found in workspace`,
           });
           continue;
-        } 
+        }
 
         // todo, validate field references
       }
     }
-  
+
     // ❌ Detect malformed references (e.g. $foo, $foo}, ${bar)
     while ((match = invalidRefPattern.exec(sql)) !== null) {
       diagnostics.push({
@@ -182,10 +182,10 @@ export class DiagnosticsProvider {
         range,
         message: "Malformed LookML reference. Use full ${view.field} syntax.",
         source: "lookml-lsp",
-        code: DiagnosticCode.VIEW_REF_FIELD_IN_SQL
+        code: DiagnosticCode.VIEW_REF_FIELD_IN_SQL,
       });
     }
-  
+
     return diagnostics;
   }
 
@@ -204,38 +204,50 @@ export class DiagnosticsProvider {
 
       // Validate dimensions
       if (viewDetails.view.dimension) {
-        Object.entries(viewDetails.view.dimension).forEach(([dimName, dimension]) => {
-          if (!dimension.sql) {
-            return;
-          }
+        Object.entries(viewDetails.view.dimension).forEach(
+          ([dimName, dimension]) => {
+            if (!dimension.sql) {
+              return;
+            }
 
-          const sqlPosition = positions?.dimension?.[dimName]?.sql;
-          diagnostics.push(...this.validateSqlReferences(dimension.sql, sqlPosition));
-        });
+            const sqlPosition = positions?.dimension?.[dimName]?.sql;
+            diagnostics.push(
+              ...this.validateSqlReferences(dimension.sql, sqlPosition)
+            );
+          }
+        );
       }
 
       // Validate dimension groups
       if (viewDetails.view.dimension_group) {
-        Object.entries(viewDetails.view.dimension_group).forEach(([dimGroupName, dimensionGroup]) => {
-          if (!dimensionGroup.sql) {
-            return;
-          }
+        Object.entries(viewDetails.view.dimension_group).forEach(
+          ([dimGroupName, dimensionGroup]) => {
+            if (!dimensionGroup.sql) {
+              return;
+            }
 
-          const sqlPosition = positions?.dimension_group?.[dimGroupName]?.sql;
-          diagnostics.push(...this.validateSqlReferences(dimensionGroup.sql, sqlPosition));
-        });
+            const sqlPosition = positions?.dimension_group?.[dimGroupName]?.sql;
+            diagnostics.push(
+              ...this.validateSqlReferences(dimensionGroup.sql, sqlPosition)
+            );
+          }
+        );
       }
 
       // Validate measures
       if (viewDetails.view.measure) {
-        Object.entries(viewDetails.view.measure).forEach(([measureName, measure]) => {
-          if (!measure.sql) {
-            return;
-          }
+        Object.entries(viewDetails.view.measure).forEach(
+          ([measureName, measure]) => {
+            if (!measure.sql) {
+              return;
+            }
 
-          const sqlPosition = positions?.measure?.[measureName]?.sql;
-          diagnostics.push(...this.validateSqlReferences(measure.sql, sqlPosition));
-        });
+            const sqlPosition = positions?.measure?.[measureName]?.sql;
+            diagnostics.push(
+              ...this.validateSqlReferences(measure.sql, sqlPosition)
+            );
+          }
+        );
       }
     }
 
@@ -248,10 +260,10 @@ export class DiagnosticsProvider {
     viewDetails,
     arrayPosition,
   }: {
-    view: LookmlView,
-    drillFields: string[],
-    viewDetails: LookmlViewWithFileInfo,
-    arrayPosition?: ArrayPosition,
+    view: LookmlView;
+    drillFields: string[];
+    viewDetails: LookmlViewWithFileInfo;
+    arrayPosition?: ArrayPosition;
   }): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
 
@@ -269,18 +281,24 @@ export class DiagnosticsProvider {
         const fieldWithoutAsterisk = drillField.replace("*", "");
         const startCharater = drillFieldPosition.$p[1];
         const isReferencingADifferentView = targetedViewName !== view.$name;
-        const endCharater = isReferencingADifferentView && targetedViewName ? startCharater + fieldWithoutAsterisk.length : drillFieldPosition.$p[3];
+        const endCharater =
+          isReferencingADifferentView && targetedViewName
+            ? startCharater + fieldWithoutAsterisk.length
+            : drillFieldPosition.$p[3];
 
         if (!targetedViewDetails?.view?.set?.[fieldWithoutAsterisk]) {
           diagnostics.push({
             severity: DiagnosticSeverity.Error,
             range: {
-              start: { line: drillFieldPosition.$p[0], character: startCharater },
-              end: { line: drillFieldPosition.$p[2], character: endCharater }
+              start: {
+                line: drillFieldPosition.$p[0],
+                character: startCharater,
+              },
+              end: { line: drillFieldPosition.$p[2], character: endCharater },
             },
             message: `Set "${fieldWithoutAsterisk}" not found in view "${targetedViewName}"`,
             source: "lookml-lsp",
-            code: DiagnosticCode.DRILL_FIELDS_SET_NOT_FOUND
+            code: DiagnosticCode.DRILL_FIELDS_SET_NOT_FOUND,
           });
         }
         continue;
@@ -295,7 +313,10 @@ export class DiagnosticsProvider {
 
       const startCharater = drillFieldPosition.$p[1];
       const isReferencingADifferentView = targetedViewName !== view.$name;
-      const endCharater = isReferencingADifferentView && targetedViewName ? startCharater + targetedViewName.length : drillFieldPosition.$p[3];
+      const endCharater =
+        isReferencingADifferentView && targetedViewName
+          ? startCharater + targetedViewName.length
+          : drillFieldPosition.$p[3];
 
       if (!targetedViewDetails) {
         diagnostics.push({
@@ -303,10 +324,10 @@ export class DiagnosticsProvider {
           message: `View ${targetedViewName} not found`,
           range: {
             start: { line: drillFieldPosition.$p[0], character: startCharater },
-            end: { line: drillFieldPosition.$p[2], character: endCharater }
+            end: { line: drillFieldPosition.$p[2], character: endCharater },
           },
           source: "lookml-lsp",
-          code: DiagnosticCode.DRILL_FIELDS_VIEW_NOT_FOUND
+          code: DiagnosticCode.DRILL_FIELDS_VIEW_NOT_FOUND,
         });
         continue;
       }
@@ -315,7 +336,11 @@ export class DiagnosticsProvider {
       const viewMeasures = targetedViewDetails.view.measure;
       const viewDimensionGroups = targetedViewDetails.view.dimension_group;
 
-      if (!viewDimensions?.[fieldName] && !viewMeasures?.[fieldName] && !viewDimensionGroups?.[fieldName]) {
+      if (
+        !viewDimensions?.[fieldName] &&
+        !viewMeasures?.[fieldName] &&
+        !viewDimensionGroups?.[fieldName]
+      ) {
         if (fieldName.includes("_")) {
           const fieldSplit = fieldName.split("_");
           const groupName = fieldSplit.pop();
@@ -325,7 +350,10 @@ export class DiagnosticsProvider {
           const dimensionGroupName = fieldSplit.join("_");
           const dimensionGroup = viewDimensionGroups?.[dimensionGroupName];
           const timeframes = dimensionGroup?.timeframes ?? ["time", "date"];
-          if (viewDimensionGroups?.[dimensionGroupName] && timeframes.includes(groupName)) {
+          if (
+            viewDimensionGroups?.[dimensionGroupName] &&
+            timeframes.includes(groupName)
+          ) {
             continue;
           }
         }
@@ -335,10 +363,10 @@ export class DiagnosticsProvider {
           message: `Field "${fieldName}" not found in view "${targetedViewDetails.view.$name}"`,
           range: {
             start: { line: drillFieldPosition.$p[0], character: startCharater },
-            end: { line: drillFieldPosition.$p[2], character: endCharater }
+            end: { line: drillFieldPosition.$p[2], character: endCharater },
           },
           source: "lookml-lsp",
-          code: DiagnosticCode.DRILL_FIELDS_FIELD_NOT_FOUND
+          code: DiagnosticCode.DRILL_FIELDS_FIELD_NOT_FOUND,
         });
       }
     }
@@ -362,7 +390,7 @@ export class DiagnosticsProvider {
         const result = LookMLView.safeParse(view);
         if (!result.success) {
           // Add validation errors to diagnostics
-          result.error.errors.forEach((error: ZodIssue) => {
+          result.error.issues.forEach((error) => {
             let currentPosition: any = positions;
             for (const pathPart of error.path) {
               if (!currentPosition) break;
@@ -370,7 +398,7 @@ export class DiagnosticsProvider {
                 continue;
               }
 
-              currentPosition = currentPosition[pathPart]
+              currentPosition = currentPosition[pathPart];
             }
             const position = currentPosition as LookmlPosition | undefined;
             if (position?.$p && Array.isArray(position.$p)) {
@@ -378,22 +406,27 @@ export class DiagnosticsProvider {
                 severity: DiagnosticSeverity.Error,
                 range: {
                   start: { line: position.$p[0], character: position.$p[1] },
-                  end: { line: position.$p[2], character: position.$p[3] }
+                  end: { line: position.$p[2], character: position.$p[3] },
                 },
                 message: error.message,
-                source: "lookml-lsp"
+                source: "lookml-lsp",
               });
             }
           });
         }
 
         // Additional validations that can't be expressed in the schema
-        if (view.extends && 'extends_ref' in view) {
+        if (view.extends && "extends_ref" in view) {
           diagnostics.push({
             severity: DiagnosticSeverity.Error,
-            range: this.getRangeFromPositions(positions, '$name', 'extends_ref'),
-            message: "Cannot use both 'extends' and 'extends_ref' in the same view",
-            source: "lookml-lsp"
+            range: this.getRangeFromPositions(
+              positions,
+              "$name",
+              "extends_ref"
+            ),
+            message:
+              "Cannot use both 'extends' and 'extends_ref' in the same view",
+            source: "lookml-lsp",
           });
         }
 
@@ -402,18 +435,22 @@ export class DiagnosticsProvider {
           Object.entries(view.dimension).forEach(([dimName, dimension]) => {
             // Validate drill fields
             if (dimension.drill_fields) {
-              diagnostics.push(...this.validateDrillFields({
-                view,
-                drillFields: dimension.drill_fields,
-                viewDetails: viewDetails,
-                arrayPosition: positions?.dimension?.[dimName]?.drill_fields,
-              }));
+              diagnostics.push(
+                ...this.validateDrillFields({
+                  view,
+                  drillFields: dimension.drill_fields,
+                  viewDetails: viewDetails,
+                  arrayPosition: positions?.dimension?.[dimName]?.drill_fields,
+                })
+              );
             }
 
             // Validate SQL references
             if (dimension.sql) {
               const sqlPosition = positions?.dimension?.[dimName]?.sql;
-              diagnostics.push(...this.validateSqlReferences(dimension.sql, sqlPosition));
+              diagnostics.push(
+                ...this.validateSqlReferences(dimension.sql, sqlPosition)
+              );
             }
           });
         }
@@ -423,64 +460,103 @@ export class DiagnosticsProvider {
           Object.entries(view.measure).forEach(([measureName, measure]) => {
             // Validate drill fields
             if (measure.drill_fields) {
-              diagnostics.push(...this.validateDrillFields({
-                view,
-                drillFields: measure.drill_fields,
-                viewDetails: viewDetails,
-                arrayPosition: positions?.measure?.[measureName]?.drill_fields,
-              }));
+              diagnostics.push(
+                ...this.validateDrillFields({
+                  view,
+                  drillFields: measure.drill_fields,
+                  viewDetails: viewDetails,
+                  arrayPosition:
+                    positions?.measure?.[measureName]?.drill_fields,
+                })
+              );
             }
 
             // Validate SQL references
             if (measure.sql) {
               const sqlPosition = positions?.measure?.[measureName]?.sql;
-              diagnostics.push(...this.validateSqlReferences(measure.sql, sqlPosition));
+              diagnostics.push(
+                ...this.validateSqlReferences(measure.sql, sqlPosition)
+              );
             }
           });
         }
 
         // Validate dimension groups
         if (view.dimension_group) {
-          Object.entries(view.dimension_group).forEach(([dimGroupName, dimensionGroup]) => {
-            // Validate SQL references
-            if (dimensionGroup.sql) {
-              const sqlPosition = positions?.dimension_group?.[dimGroupName]?.sql;
-              diagnostics.push(...this.validateSqlReferences(dimensionGroup.sql, sqlPosition));
-            }
+          Object.entries(view.dimension_group).forEach(
+            ([dimGroupName, dimensionGroup]) => {
+              // Validate SQL references
+              if (dimensionGroup.sql) {
+                const sqlPosition =
+                  positions?.dimension_group?.[dimGroupName]?.sql;
+                diagnostics.push(
+                  ...this.validateSqlReferences(dimensionGroup.sql, sqlPosition)
+                );
+              }
 
-            // Validate timeframes
-            if (dimensionGroup.timeframes) {
-              const timeframesPosition = positions?.dimension_group?.[dimGroupName]?.timeframes;
-              if (timeframesPosition) {
-                const validTimeframes = [
-                  'raw', 'time', 'date', 'week', 'month', 'quarter', 'year',
-                  'day_of_week', 'day_of_month', 'day_of_year', 'week_of_year',
-                  'month_of_year', 'quarter_of_year', 'hour', 'minute', 'second',
-                  'hour_of_day', 'minute_of_hour', 'second_of_minute', 'time_of_day',
-                  'day_of_week_index', 'week_start_date', 'month_name', 'quarter_name',
-                  'day_name'
-                ];
+              // Validate timeframes
+              if (dimensionGroup.timeframes) {
+                const timeframesPosition =
+                  positions?.dimension_group?.[dimGroupName]?.timeframes;
+                if (timeframesPosition) {
+                  const validTimeframes = [
+                    "raw",
+                    "time",
+                    "date",
+                    "week",
+                    "month",
+                    "quarter",
+                    "year",
+                    "day_of_week",
+                    "day_of_month",
+                    "day_of_year",
+                    "week_of_year",
+                    "month_of_year",
+                    "quarter_of_year",
+                    "hour",
+                    "minute",
+                    "second",
+                    "hour_of_day",
+                    "minute_of_hour",
+                    "second_of_minute",
+                    "time_of_day",
+                    "day_of_week_index",
+                    "week_start_date",
+                    "month_name",
+                    "quarter_name",
+                    "day_name",
+                  ];
 
-                for (const [index, timeframe] of dimensionGroup.timeframes.entries()) {
-                  if (!validTimeframes.includes(timeframe)) {
-                    const timeframePosition = timeframesPosition[index];
-                    if (timeframePosition) {
-                      diagnostics.push({
-                        severity: DiagnosticSeverity.Error,
-                        range: {
-                          start: { line: timeframePosition.$p[0], character: timeframePosition.$p[1] },
-                          end: { line: timeframePosition.$p[2], character: timeframePosition.$p[3] }
-                        },
-                        message: `Invalid timeframe "${timeframe}" for dimension group "${dimGroupName}"`,
-                        source: "lookml-lsp",
-                        code: DiagnosticCode.PROP_INVALID_TYPE
-                      });
+                  for (const [
+                    index,
+                    timeframe,
+                  ] of dimensionGroup.timeframes.entries()) {
+                    if (!validTimeframes.includes(timeframe)) {
+                      const timeframePosition = timeframesPosition[index];
+                      if (timeframePosition) {
+                        diagnostics.push({
+                          severity: DiagnosticSeverity.Error,
+                          range: {
+                            start: {
+                              line: timeframePosition.$p[0],
+                              character: timeframePosition.$p[1],
+                            },
+                            end: {
+                              line: timeframePosition.$p[2],
+                              character: timeframePosition.$p[3],
+                            },
+                          },
+                          message: `Invalid timeframe "${timeframe}" for dimension group "${dimGroupName}"`,
+                          source: "lookml-lsp",
+                          code: DiagnosticCode.PROP_INVALID_TYPE,
+                        });
+                      }
                     }
                   }
                 }
               }
             }
-          });
+          );
         }
 
         if (view.set) {
@@ -488,68 +564,101 @@ export class DiagnosticsProvider {
             for (const [index, field] of set?.fields?.entries() ?? []) {
               let fieldName = field;
               let targetedViewName: string | undefined = viewDetails.view.$name;
-              let targetedViewDetails: LookmlViewWithFileInfo | undefined = viewDetails;
-    
-              const setFieldPosition = positions.set?.[setName]?.fields?.[index];
+              let targetedViewDetails: LookmlViewWithFileInfo | undefined =
+                viewDetails;
+
+              const setFieldPosition =
+                positions.set?.[setName]?.fields?.[index];
               if (!setFieldPosition) {
                 throw new Error(`No position found for set field ${field}`);
               }
-    
+
               if (field.includes(".")) {
                 const fieldParts = field.split(".");
                 targetedViewName = fieldParts[0];
                 fieldName = fieldParts[1];
-                targetedViewDetails = this.workspaceModel.getView(targetedViewName);
+                targetedViewDetails =
+                  this.workspaceModel.getView(targetedViewName);
               }
-    
+
               const startCharacter = setFieldPosition.$p[1];
-              const isReferencingADifferentView = targetedViewName !== viewDetails.view.$name;
-              const endCharacter = isReferencingADifferentView && targetedViewName ? startCharacter + targetedViewName.length : setFieldPosition.$p[3];
-    
+              const isReferencingADifferentView =
+                targetedViewName !== viewDetails.view.$name;
+              const endCharacter =
+                isReferencingADifferentView && targetedViewName
+                  ? startCharacter + targetedViewName.length
+                  : setFieldPosition.$p[3];
+
               if (!targetedViewDetails) {
                 diagnostics.push({
                   severity: DiagnosticSeverity.Error,
                   message: `View ${targetedViewName} not found`,
                   range: {
-                    start: { line: setFieldPosition.$p[0], character: startCharacter },
-                    end: { line: setFieldPosition.$p[2], character: endCharacter }
+                    start: {
+                      line: setFieldPosition.$p[0],
+                      character: startCharacter,
+                    },
+                    end: {
+                      line: setFieldPosition.$p[2],
+                      character: endCharacter,
+                    },
                   },
                   source: "lookml-lsp",
-                  code: DiagnosticCode.DRILL_FIELDS_VIEW_NOT_FOUND
+                  code: DiagnosticCode.DRILL_FIELDS_VIEW_NOT_FOUND,
                 });
                 continue;
               }
               const viewDimensions = targetedViewDetails.view.dimension;
               const viewMeasures = targetedViewDetails.view.measure;
-              const viewDimensionGroups = targetedViewDetails.view.dimension_group;
-    
-              if (!viewDimensions?.[fieldName] && !viewMeasures?.[fieldName] && !viewDimensionGroups?.[fieldName]) {
+              const viewDimensionGroups =
+                targetedViewDetails.view.dimension_group;
+
+              if (
+                !viewDimensions?.[fieldName] &&
+                !viewMeasures?.[fieldName] &&
+                !viewDimensionGroups?.[fieldName]
+              ) {
                 if (fieldName.includes("_")) {
                   const fieldSplit = fieldName.split("_");
                   const groupName = fieldSplit.pop();
-    
+
                   if (!groupName) {
-                    throw new Error(`No group name found for field ${fieldName}`);
+                    throw new Error(
+                      `No group name found for field ${fieldName}`
+                    );
                   }
-    
+
                   const dimensionGroupName = fieldSplit.join("_");
-                  const dimensionGroup = viewDimensionGroups?.[dimensionGroupName];
-                  
-                  const timeframes = dimensionGroup?.timeframes ?? ["time", "date"];
-                  if (viewDimensionGroups?.[dimensionGroupName] && timeframes.includes(groupName)) {
+                  const dimensionGroup =
+                    viewDimensionGroups?.[dimensionGroupName];
+
+                  const timeframes = dimensionGroup?.timeframes ?? [
+                    "time",
+                    "date",
+                  ];
+                  if (
+                    viewDimensionGroups?.[dimensionGroupName] &&
+                    timeframes.includes(groupName)
+                  ) {
                     continue;
                   }
                 }
-                
+
                 diagnostics.push({
                   severity: DiagnosticSeverity.Error,
                   message: `Field "${fieldName}" not found in view "${targetedViewName}"`,
                   range: {
-                    start: { line: setFieldPosition.$p[0], character: startCharacter },
-                    end: { line: setFieldPosition.$p[2], character: endCharacter }
+                    start: {
+                      line: setFieldPosition.$p[0],
+                      character: startCharacter,
+                    },
+                    end: {
+                      line: setFieldPosition.$p[2],
+                      character: endCharacter,
+                    },
                   },
                   source: "lookml-lsp",
-                  code: DiagnosticCode.DRILL_FIELDS_FIELD_NOT_FOUND
+                  code: DiagnosticCode.DRILL_FIELDS_FIELD_NOT_FOUND,
                 });
                 continue;
               }
@@ -576,15 +685,15 @@ export class DiagnosticsProvider {
   } {
     const uri = document.uri.replace("file://", "");
     const views = (this.workspaceModel.getViewsByFile(uri) || [])
-      .map(viewName => this.workspaceModel.getView(viewName))
+      .map((viewName) => this.workspaceModel.getView(viewName))
       .filter((v): v is LookmlViewWithFileInfo => v !== undefined);
 
     const explores = (this.workspaceModel.getExploresByFile(uri) || [])
-      .map(exploreName => this.workspaceModel.getExplore(exploreName))
+      .map((exploreName) => this.workspaceModel.getExplore(exploreName))
       .filter((e): e is LookmlExploreWithFileInfo => e !== undefined);
 
     const models = (this.workspaceModel.getModelsByFile(uri) || [])
-      .map(modelName => this.workspaceModel.getModel(modelName))
+      .map((modelName) => this.workspaceModel.getModel(modelName))
       .filter((m): m is LookmlModelWithFileInfo => m !== undefined);
 
     return { views, explores, models };
@@ -592,7 +701,9 @@ export class DiagnosticsProvider {
 
   private validateModel(modelDetails: LookmlModelWithFileInfo): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
-    const modelIncludedViews = this.workspaceModel.getIncludedViewsForModel(modelDetails.model.$file_name);
+    const modelIncludedViews = this.workspaceModel.getIncludedViewsForModel(
+      modelDetails.model.$file_name
+    );
 
     Object.entries(modelDetails.model).forEach(([key, value]) => {
       switch (key) {
@@ -600,7 +711,7 @@ export class DiagnosticsProvider {
           const positions = modelDetails.positions;
 
           const models: {
-            [key: string]: LookmlExplore
+            [key: string]: LookmlExplore;
           } = value;
 
           Object.values(models).forEach((explore) => {
@@ -610,30 +721,42 @@ export class DiagnosticsProvider {
               if (explore.join) {
                 for (const [key, join] of Object.entries(explore.join)) {
                   if (join.sql_on) {
-                    const sqlPosition = positions.explore?.[explore.$name]?.join?.[key];
-                    diagnostics.push(...this.validateSqlReferences(join.sql_on, sqlPosition));
+                    const sqlPosition =
+                      positions.explore?.[explore.$name]?.join?.[key];
+                    diagnostics.push(
+                      ...this.validateSqlReferences(join.sql_on, sqlPosition)
+                    );
                   }
                 }
               }
 
               if (explore.extends) {
                 for (const [index, view] of explore.extends.entries()) {
-                  if (!modelIncludedViews?.has(view) && !modelDetails.model.explore?.[view]) {
-                    const startLine = positions.explore?.[explore.$name]?.extends?.[index]?.$p[0];
-                    const startCharater = positions.explore?.[explore.$name]?.extends?.[index]?.$p[1];
-                    const endLine = positions.explore?.[explore.$name]?.extends?.[index]?.$p[2];
+                  if (
+                    !modelIncludedViews?.has(view) &&
+                    !modelDetails.model.explore?.[view]
+                  ) {
+                    const startLine =
+                      positions.explore?.[explore.$name]?.extends?.[index]
+                        ?.$p[0];
+                    const startCharater =
+                      positions.explore?.[explore.$name]?.extends?.[index]
+                        ?.$p[1];
+                    const endLine =
+                      positions.explore?.[explore.$name]?.extends?.[index]
+                        ?.$p[2];
                     const endCharater = startCharater + view.length;
 
                     diagnostics.push({
                       severity: DiagnosticSeverity.Error,
                       range: {
                         start: { line: startLine, character: startCharater },
-                        end: { line: endLine, character: endCharater }
+                        end: { line: endLine, character: endCharater },
                       },
                       message: `Extend View: "${view}" not found in model "${modelDetails.model.$file_name}"`,
                       source: "lookml-lsp",
-                      code: DiagnosticCode.EXPLORE_VIEW_NOT_FOUND
-                    })
+                      code: DiagnosticCode.EXPLORE_VIEW_NOT_FOUND,
+                    });
                   }
                 }
               }
@@ -653,12 +776,16 @@ export class DiagnosticsProvider {
                       continue;
                     }
 
-                    currentPosition = currentPosition[pathPart]
+                    currentPosition = currentPosition[pathPart];
                   }
-                  const position = currentPosition as LookmlPosition | undefined;
+                  const position = currentPosition as
+                    | LookmlPosition
+                    | undefined;
 
                   if (!position) {
-                    throw new Error(`No position found for explore ${exploreName}`);
+                    throw new Error(
+                      `No position found for explore ${exploreName}`
+                    );
                   }
 
                   const startLine = position.$p[0];
@@ -666,19 +793,17 @@ export class DiagnosticsProvider {
                   const endLine = position.$p[2];
                   const endCharacter = position.$p[3];
 
-                  diagnostics.push(
-                    {
-                      severity: DiagnosticSeverity.Error,
-                      message: issue.message,
-                      range: {
-                        start: { line: startLine, character: startCharacter },
-                        end: { line: endLine, character: endCharacter }
-                      },
-                      source: "lookml-lsp",
-                      code: DiagnosticCode.PROP_INVALID_PROPERTY
-                    }
-                  );
-                  return
+                  diagnostics.push({
+                    severity: DiagnosticSeverity.Error,
+                    message: issue.message,
+                    range: {
+                      start: { line: startLine, character: startCharacter },
+                      end: { line: endLine, character: endCharacter },
+                    },
+                    source: "lookml-lsp",
+                    code: DiagnosticCode.PROP_INVALID_PROPERTY,
+                  });
+                  return;
                 }
 
                 throw error;
@@ -699,7 +824,8 @@ export class DiagnosticsProvider {
     const model = this.workspaceModel.getModel(modelName);
     if (!model) return diagnostics;
 
-    const includedViews = this.workspaceModel.getIncludedViewsForModel(modelName) || new Set();
+    const includedViews =
+      this.workspaceModel.getIncludedViewsForModel(modelName) || new Set();
 
     // Track explores and their available views
     const exploreAvailableViews: Map<string, Set<string>> = new Map();
@@ -711,8 +837,9 @@ export class DiagnosticsProvider {
         // Initialize available views for this explore
 
         const exploreViewDetails = this.workspaceModel.getView(exploreName);
-        if (!exploreViewDetails && !explore.from &&  !explore.view_name) {
-          const explorePosition = model.positions.explore?.[exploreName]?.$name?.$p;
+        if (!exploreViewDetails && !explore.from && !explore.view_name) {
+          const explorePosition =
+            model.positions.explore?.[exploreName]?.$name?.$p;
           if (!explorePosition) {
             throw new Error(`No position found for explore ${exploreName}`);
           }
@@ -720,19 +847,22 @@ export class DiagnosticsProvider {
           diagnostics.push({
             severity: DiagnosticSeverity.Error,
             range: {
-              start: { line: explorePosition[0], character: explorePosition[1] },
-              end: { line: explorePosition[2], character: explorePosition[3] }
+              start: {
+                line: explorePosition[0],
+                character: explorePosition[1],
+              },
+              end: { line: explorePosition[2], character: explorePosition[3] },
             },
             message: `Explore "${exploreName}" must have a base view`,
             source: "lookml-lsp",
-            code: DiagnosticCode.EXPLORE_VIEW_NOT_FOUND
+            code: DiagnosticCode.EXPLORE_VIEW_NOT_FOUND,
           });
         }
 
         const availableViews = new Set<string>();
         if (exploreViewDetails) {
           availableViews.add(exploreName);
-        };
+        }
 
         // Add the base view
         if (explore.from) {
@@ -741,25 +871,26 @@ export class DiagnosticsProvider {
 
         // Add joined views
         if (explore.join) {
-          Object.keys(explore.join).forEach(joinName => {
+          Object.keys(explore.join).forEach((joinName) => {
             availableViews.add(joinName);
           });
         }
 
-        exploreAvailableViews.set(exploreName, availableViews);  
+        exploreAvailableViews.set(exploreName, availableViews);
       });
     }
 
     // Second pass: validate references
     if (model.model.explore) {
       Object.entries(model.model.explore).forEach(([exploreName, explore]) => {
-        const availableViews = exploreAvailableViews.get(exploreName) ?? new Set<string>();
+        const availableViews =
+          exploreAvailableViews.get(exploreName) ?? new Set<string>();
 
         if (explore.extends) {
           for (const extend of explore.extends) {
             const extendAvailableViews = exploreAvailableViews.get(extend);
             if (extendAvailableViews) {
-              extendAvailableViews.forEach(view => {
+              extendAvailableViews.forEach((view) => {
                 availableViews.add(view);
               });
             }
@@ -770,37 +901,60 @@ export class DiagnosticsProvider {
         if (explore.from) {
           const viewName = explore.from;
           const viewDetails = this.workspaceModel.getView(viewName);
-          
+
           if (!viewDetails) {
             diagnostics.push({
               severity: DiagnosticSeverity.Error,
-              range: this.getRangeFromPositions(model.positions, 'explore',exploreName, 'from'),
+              range: this.getRangeFromPositions(
+                model.positions,
+                "explore",
+                exploreName,
+                "from"
+              ),
               message: `Referenced view "${viewName}" not found in workspace`,
               source: "lookml-lsp",
-              code: DiagnosticCode.VIEW_REF_VIEW_NOT_FOUND
+              code: DiagnosticCode.VIEW_REF_VIEW_NOT_FOUND,
             });
           } else if (!includedViews.has(viewName)) {
             diagnostics.push({
               severity: DiagnosticSeverity.Error,
-              range: this.getRangeFromPositions(model.positions, 'explore', exploreName, 'from'),
+              range: this.getRangeFromPositions(
+                model.positions,
+                "explore",
+                exploreName,
+                "from"
+              ),
               message: `View "${viewName}" exists but is not included in this model`,
               source: "lookml-lsp",
-              code: DiagnosticCode.VIEW_REF_VIEW_NOT_INCLUDED
+              code: DiagnosticCode.VIEW_REF_VIEW_NOT_INCLUDED,
             });
           }
         }
 
         const exploreContext = {
-          [explore.view_name ?? exploreName]: {}
-        }
+          [explore.view_name ?? exploreName]: {},
+        };
         if (explore.sql_always_where) {
-          const sqlPosition = model.positions.explore?.[exploreName]?.sql_always_where;
-          diagnostics.push(...this.validateSqlReferences(explore.sql_always_where, sqlPosition, exploreContext));
+          const sqlPosition =
+            model.positions.explore?.[exploreName]?.sql_always_where;
+          diagnostics.push(
+            ...this.validateSqlReferences(
+              explore.sql_always_where,
+              sqlPosition,
+              exploreContext
+            )
+          );
         }
 
         if (explore.sql_always_having) {
-          const sqlPosition = model.positions.explore?.[exploreName]?.sql_always_having;
-          diagnostics.push(...this.validateSqlReferences(explore.sql_always_having, sqlPosition));
+          const sqlPosition =
+            model.positions.explore?.[exploreName]?.sql_always_having;
+          diagnostics.push(
+            ...this.validateSqlReferences(
+              explore.sql_always_having,
+              sqlPosition
+            )
+          );
         }
 
         // Validate joins
@@ -808,48 +962,67 @@ export class DiagnosticsProvider {
           Object.entries(explore.join).forEach(([joinName, join]) => {
             const viewDetails = this.workspaceModel.getView(joinName);
             if (!viewDetails) {
-              const explorePosition = model.positions.explore?.[exploreName]?.join?.[joinName]?.$p;
+              const explorePosition =
+                model.positions.explore?.[exploreName]?.join?.[joinName]?.$p;
               const range = {
-                start: { line: explorePosition[0], character: explorePosition[1] },
-                end: { line: explorePosition[2], character: explorePosition[3] }
-              }
+                start: {
+                  line: explorePosition[0],
+                  character: explorePosition[1],
+                },
+                end: {
+                  line: explorePosition[2],
+                  character: explorePosition[3],
+                },
+              };
               diagnostics.push({
                 severity: DiagnosticSeverity.Error,
                 range,
                 message: `Referenced view "${joinName}" not found in workspace`,
                 source: "lookml-lsp",
-                code: DiagnosticCode.JOIN_VIEW_NOT_FOUND
+                code: DiagnosticCode.JOIN_VIEW_NOT_FOUND,
               });
             } else if (!includedViews.has(joinName)) {
               diagnostics.push({
                 severity: DiagnosticSeverity.Error,
-                range: this.getRangeFromPositions(model.positions, 'explore',exploreName, 'join', joinName),
+                range: this.getRangeFromPositions(
+                  model.positions,
+                  "explore",
+                  exploreName,
+                  "join",
+                  joinName
+                ),
                 message: `View "${joinName}" exists but is not included in this model`,
                 source: "lookml-lsp",
-                code: DiagnosticCode.JOIN_VIEW_NOT_INCLUDED
+                code: DiagnosticCode.JOIN_VIEW_NOT_INCLUDED,
               });
             }
-            
 
             // Validate sql_on references
             if (join.sql_on) {
               const fieldRefPattern = /\$\{([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\}/g;
               let fieldMatch;
 
-              const sqlOnPosition = model.positions.explore?.[exploreName]?.join?.[joinName]?.sql_on;
+              const sqlOnPosition =
+                model.positions.explore?.[exploreName]?.join?.[joinName]
+                  ?.sql_on;
               const startLine = sqlOnPosition?.$p[0];
               const startCharater = sqlOnPosition?.$p[1];
               const endLine = sqlOnPosition?.$p[2];
               const endCharater = sqlOnPosition?.$p[3];
 
-              while ((fieldMatch = fieldRefPattern.exec(join.sql_on)) !== null) {
+              while (
+                (fieldMatch = fieldRefPattern.exec(join.sql_on)) !== null
+              ) {
                 const viewName = fieldMatch[1];
                 const fieldName = fieldMatch[2];
 
                 // Check if view exists and is available
                 const viewDetails = this.workspaceModel.getView(viewName);
 
-                const viewExtends = typeof viewDetails?.view?.extends === 'string' ? [viewDetails?.view?.extends] : viewDetails?.view?.extends;
+                const viewExtends =
+                  typeof viewDetails?.view?.extends === "string"
+                    ? [viewDetails?.view?.extends]
+                    : viewDetails?.view?.extends;
                 const viewExtensions = viewExtends?.map((view) => {
                   return this.workspaceModel.getView(view);
                 });
@@ -857,48 +1030,50 @@ export class DiagnosticsProvider {
                 const viewHasField = (field: string) => {
                   return Boolean(
                     viewDetails?.view.measure?.[fieldName] ||
-                    viewDetails?.view.dimension?.[fieldName] || 
-                    viewDetails?.view.dimension_group?.[fieldName] ||
-                    viewExtensions?.some((viewDetails) => Boolean(
-                      viewDetails?.view.measure?.[fieldName] ||
-                      viewDetails?.view.dimension?.[fieldName] || 
-                      viewDetails?.view.dimension_group?.[fieldName]
-                    ))
+                      viewDetails?.view.dimension?.[fieldName] ||
+                      viewDetails?.view.dimension_group?.[fieldName] ||
+                      viewExtensions?.some((viewDetails) =>
+                        Boolean(
+                          viewDetails?.view.measure?.[fieldName] ||
+                            viewDetails?.view.dimension?.[fieldName] ||
+                            viewDetails?.view.dimension_group?.[fieldName]
+                        )
+                      )
                   );
-                }
-                
+                };
+
                 if (!viewDetails) {
                   diagnostics.push({
                     severity: DiagnosticSeverity.Error,
                     range: {
                       start: { line: startLine, character: startCharater },
-                      end: { line: endLine, character: endCharater }
+                      end: { line: endLine, character: endCharater },
                     },
                     message: `Referenced view "${viewName}" not found in workspace`,
                     source: "lookml-lsp",
-                    code: DiagnosticCode.SQL_REF_VIEW_NOT_FOUND
+                    code: DiagnosticCode.SQL_REF_VIEW_NOT_FOUND,
                   });
                 } else if (!availableViews.has(viewName)) {
                   diagnostics.push({
                     severity: DiagnosticSeverity.Error,
                     range: {
                       start: { line: startLine, character: startCharater },
-                      end: { line: endLine, character: endCharater }
+                      end: { line: endLine, character: endCharater },
                     },
                     message: `View "${viewName}" is not available in this explore context. It must be joined before it can be referenced.`,
                     source: "lookml-lsp",
-                    code: DiagnosticCode.SQL_REF_VIEW_NOT_AVAILABLE
+                    code: DiagnosticCode.SQL_REF_VIEW_NOT_AVAILABLE,
                   });
                 } else if (!viewHasField(fieldName)) {
                   diagnostics.push({
                     severity: DiagnosticSeverity.Error,
                     range: {
                       start: { line: startLine, character: startCharater },
-                      end: { line: endLine, character: endCharater }
+                      end: { line: endLine, character: endCharater },
                     },
                     message: `Field "${fieldName}" not found in view "${viewName}"`,
                     source: "lookml-lsp",
-                    code: DiagnosticCode.SQL_REF_FIELD_NOT_FOUND
+                    code: DiagnosticCode.SQL_REF_FIELD_NOT_FOUND,
                   });
                 }
               }
@@ -919,7 +1094,7 @@ export class DiagnosticsProvider {
         current = current[part];
       }
     }
-    
+
     if (!current || !current.$p) {
       return Range.create(0, 0, 0, 0);
     }
