@@ -1,0 +1,8 @@
+{
+  "watch": ["server/src/schemas"],
+  "ext": "ts",
+  "ignore": ["server/generated/**/*"],
+  "exec": "npm run generate-schema",
+  "delay": "1000",
+  "verbose": true
+}

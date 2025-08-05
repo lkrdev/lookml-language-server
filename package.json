@@ -76,7 +76,8 @@
           ".lookml",
           ".model.lkml",
           ".view.lkml",
-          ".explore.lkml"
+          ".explore.lkml",
+          ".dashboard.lkml"
         ],
         "configuration": "./language-configuration.json"
       }
@@ -94,7 +95,10 @@
         "uiTheme": "vs-dark",
         "path": "./syntaxes/lookml.tmTheme.json"
       }
-    ]
+    ],
+    "yaml.schemas": {
+      "./server/generated/schemas/lookml-dashboard-documents-schema.json": "**/*.dashboard.lkml"
+    }
   },
   "scripts": {
     "install:client": "cd client && npm install",
@@ -103,10 +107,12 @@
     "clean:client": "cd client && rm -rf node_modules && npm install",
     "clean:server": "cd server && rm -rf node_modules && npm install",
     "clean": "npm run clean:client && npm run clean:server",
-    "compile": "npm run install:client && npm run install:server && tsc --build",
+    "compile": "npm run install:client && npm run install:server && tsc --build && npm run generate-schema",
     "build:validator": "cd packages/lookml-validator && npm run build",
     "vscode:prepublish": "npm run compile",
-    "watch": "tsc --build --watch",
+    "watch": "concurrently \"tsc --build --watch\" \"npm run watch:schemas\"",
+    "watch:schemas": "nodemon --watch server/src/schemas --ext ts --exec \"npm run generate-schema\"",
+    "generate-schema": "cd server && npm run generate-schema",
     "lint": "eslint src --ext ts",
     "test": "jest",
     "test:server": "cd server && jest"
@@ -114,6 +120,8 @@
   "devDependencies": {
     "@types/jest": "^29.5.14",
     "@types/node": "^20.17.30",
+    "concurrently": "^9.2.0",
+    "nodemon": "^3.1.10",
     "ts-jest": "^29.3.2",
     "typescript": "^5.2.2",
     "vscode": "^1.1.37"

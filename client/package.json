@@ -21,9 +21,16 @@
   },
   "contributes": {
     "configurationDefaults": {
-      "[json]": {
+      "[lookml]": {
         "editor.formatOnSave": true
       }
+    },
+    "files.associations": {
+      "*.dashboard.lkml": "yaml",
+      "*.lkml": "lookml"
+    },
+    "yaml.schemas": {
+      "./lookml-dashboard-documents-schema.json": "**/*.dashboard.lkml"
     }
   }
 }

@@ -1,15 +1,15 @@
 import {
-    createConnection,
-    Definition,
-    DefinitionParams,
-    DocumentSymbolParams,
-    ExecuteCommandParams,
-    InitializeParams,
-    InitializeResult,
-    ProposedFeatures,
-    SymbolInformation,
-    TextDocuments,
-    TextDocumentSyncKind,
+  createConnection,
+  Definition,
+  DefinitionParams,
+  DocumentSymbolParams,
+  ExecuteCommandParams,
+  InitializeParams,
+  InitializeResult,
+  ProposedFeatures,
+  SymbolInformation,
+  TextDocuments,
+  TextDocumentSyncKind,
 } from "vscode-languageserver/node";
 
 import { TextDocument } from "vscode-languageserver-textdocument";
@@ -25,13 +25,13 @@ import { HoverProvider } from "./providers/hover";
 
 // Import models
 import {
-    getCurrentBranch,
-    handleGetDevBranch,
-    handleGetExploreUrlAsMe,
-    handleListInstances,
-    handleSwitchCurrentInstance,
-    handleSwitchToBranchAndPull,
-    handleSwitchToDev,
+  getCurrentBranch,
+  handleGetDevBranch,
+  handleGetExploreUrlAsMe,
+  handleListInstances,
+  handleSwitchCurrentInstance,
+  handleSwitchToBranchAndPull,
+  handleSwitchToDev,
 } from "./commands";
 import { WorkspaceModel } from "./models/workspace";
 import { DefinitionProvider } from "./providers/definition";
