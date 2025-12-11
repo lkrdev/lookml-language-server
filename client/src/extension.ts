@@ -89,7 +89,7 @@ export function activate(context: ExtensionContext) {
       }
 
       // 🔥 This was missing:
-      const files = await vscode.workspace.findFiles(pattern);
+      const files = await vscode.workspace.findFiles(new vscode.RelativePattern(baseDir, pattern));
 
       const filePaths = files.map((file) => file.fsPath);
 
@@ -301,6 +301,25 @@ export function activate(context: ExtensionContext) {
       }
     })
   );
+
+  client.onNotification("looker/oauth", ({ url }) => {
+    const openButton = "Open";
+    const copyButton = "Copy URL";
+    vscode.window
+      .showInformationMessage(
+        `Please authenticate with Looker by opening this URL in your browser.`,
+        openButton,
+        copyButton
+      )
+      .then((selection) => {
+        if (selection === openButton) {
+          vscode.env.openExternal(vscode.Uri.parse(url));
+        } else if (selection === copyButton) {
+          vscode.env.clipboard.writeText(url);
+          vscode.window.showInformationMessage("URL copied to clipboard.");
+        }
+      });
+  });
 
   client.start();
   // Start the client AFTER registering handlers
