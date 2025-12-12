@@ -4,6 +4,10 @@ on:
   release:
     types: [created]
 
+permissions:
+  id-token: write
+  contents: read
+
 env:
   TAG: ${{ github.event.release.tag_name }}
 
