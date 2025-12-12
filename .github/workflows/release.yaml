@@ -62,6 +62,10 @@ jobs:
       - run: npm install
         env:
           npm_config_arch: ${{ matrix.npm_config_arch }}
+      - name: Generate JSON schemas
+        run: npm run generate-schema
+      - name: Verify schemas were generated
+        run: ls -la server/generated/schemas/
       - shell: pwsh
         run: echo "target=${{ matrix.platform }}-${{ matrix.arch }}" >> $env:GITHUB_ENV
       - run: npx @vscode/vsce package --target ${{ env.target }}
@@ -76,9 +80,12 @@ jobs:
     if: success() && startsWith(github.ref, 'refs/tags/')
     steps:
       - uses: actions/download-artifact@v4
-      - run: npx vsce publish --packagePath $(find . -iname *.vsix)
+      - name: Publish VS Code Marketplace
+        run: npx vsce publish --packagePath $(find . -iname *.vsix)
         env:
           VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
+      - name: Publish OVSX
+        run: npx ovsx publish $(find . -iname *.vsix) -p ${{ secrets.OVSX_PAT }}
 
   npm-publish:
     runs-on: ubuntu-latest
