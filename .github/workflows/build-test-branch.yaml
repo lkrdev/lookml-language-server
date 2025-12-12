@@ -1,0 +1,61 @@
+name: Release Docker Image
+
+on:
+  push:
+    branches:
+      - build-test-branch
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            platform: win32
+            arch: x64
+            npm_config_arch: x64
+          - os: windows-latest
+            platform: win32
+            arch: arm64
+            npm_config_arch: arm64 # CHANGED: arm -> arm64
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+            npm_config_arch: x64
+          - os: ubuntu-latest
+            platform: linux
+            arch: arm64
+            npm_config_arch: arm64
+          - os: ubuntu-latest
+            platform: linux
+            arch: armhf
+            npm_config_arch: arm # Correct for armhf (32-bit)
+          - os: ubuntu-latest
+            platform: alpine
+            arch: x64
+            npm_config_arch: x64 # Warning: Builds on glibc (Ubuntu), might fail on Alpine if native deps exist
+          - os: macos-latest
+            platform: darwin
+            arch: x64
+            npm_config_arch: x64
+          - os: macos-latest
+            platform: darwin
+            arch: arm64
+            npm_config_arch: arm64
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.continue-on-error || false }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+      - run: npm install
+        env:
+          npm_config_arch: ${{ matrix.npm_config_arch }}
+      - shell: pwsh
+        run: echo "target=${{ matrix.platform }}-${{ matrix.arch }}" >> $env:GITHUB_ENV
+      - run: npx @vscode/vsce@2.31.1 package --target ${{ env.target }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.target }}
+          path: "*.vsix"
