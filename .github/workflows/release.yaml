@@ -1,4 +1,4 @@
-name: Release Docker Image
+name: Release Packages
 
 on:
   release:
@@ -119,9 +119,5 @@ jobs:
         run: cd packages/lookml-validator && npm run build
       - name: Publish lookml-validator
         run: npm publish --workspace=packages/lookml-validator --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Publish lookml-language-server
         run: npm publish --workspace=server --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
