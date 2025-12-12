@@ -83,6 +83,9 @@ jobs:
       - run: npx vsce publish --packagePath $(find . -iname *.vsix)
         env:
           VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
+      - name: Publish OVSX
+        run: npx ovsx publish $(find . -iname *.vsix) -p ${{ secrets.OVSX_PAT }}
+
 
   npm-publish:
     runs-on: ubuntu-latest
@@ -126,3 +129,4 @@ jobs:
         run: npm publish --workspace=server --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        
