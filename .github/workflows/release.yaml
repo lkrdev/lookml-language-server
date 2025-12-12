@@ -19,7 +19,7 @@ jobs:
           - os: windows-latest
             platform: win32
             arch: arm64
-            npm_config_arch: arm
+            npm_config_arch: arm64  # CHANGED: arm -> arm64
           - os: ubuntu-latest
             platform: linux
             arch: x64
@@ -31,11 +31,11 @@ jobs:
           - os: ubuntu-latest
             platform: linux
             arch: armhf
-            npm_config_arch: arm
+            npm_config_arch: arm    # Correct for armhf (32-bit)
           - os: ubuntu-latest
             platform: alpine
             arch: x64
-            npm_config_arch: x64
+            npm_config_arch: x64    # Warning: Builds on glibc (Ubuntu), might fail on Alpine if native deps exist
           - os: macos-latest
             platform: darwin
             arch: x64
