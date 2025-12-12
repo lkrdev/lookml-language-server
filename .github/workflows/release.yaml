@@ -62,10 +62,6 @@ jobs:
       - run: npm install
         env:
           npm_config_arch: ${{ matrix.npm_config_arch }}
-      - name: Generate JSON schemas
-        run: npm run generate-schema
-      - name: Verify schemas were generated
-        run: ls -la server/generated/schemas/
       - shell: pwsh
         run: echo "target=${{ matrix.platform }}-${{ matrix.arch }}" >> $env:GITHUB_ENV
       - run: npx @vscode/vsce package --target ${{ env.target }}
