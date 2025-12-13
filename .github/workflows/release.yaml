@@ -4,10 +4,6 @@ on:
   release:
     types: [created]
 
-permissions:
-  id-token: write
-  contents: read
-
 env:
   TAG: ${{ github.event.release.tag_name }}
 
@@ -88,6 +84,9 @@ jobs:
         run: npx ovsx publish --packagePath $(find . -iname *.vsix) -p ${{ secrets.OVSX_PAT }}
 
   npm-publish:
+    permissions:
+      id-token: write
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
