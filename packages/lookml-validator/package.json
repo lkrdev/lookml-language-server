@@ -7,7 +7,7 @@
   "readme": "README.md",
   "repository": {
     "type": "git",
-    "url": "https://github.com/lkrdev/lookml-language-server"
+    "url": "git+https://github.com/lkrdev/lookml-language-server.git"
   },
   "publisher": "lkr-dev",
   "dependencies": {
