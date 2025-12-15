@@ -229,6 +229,7 @@ declare module "lookml-parser" {
         sql_always_where?: string;
         tags?: string[];
         view_name?: string;
+        sql_preamble?: string;
     }
 
     export interface LookmlModel extends LookmlFileAttributes {
