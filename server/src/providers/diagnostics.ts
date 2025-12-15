@@ -123,7 +123,7 @@ export class DiagnosticsProvider {
   private validateSqlReferences(
     sql: string,
     position: LookmlPosition | undefined,
-    context?: Record<string, Record<string, unknown>>,
+    context?: Record<string, any>,
   ): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
     if (!position) return diagnostics;
@@ -607,11 +607,20 @@ export class DiagnosticsProvider {
             try {
               exploreSchema.parse(explore);
 
+              const exploreContext: Record<string, any> = {};
+              const baseViewName = explore.from || explore.view_name || explore.$name;
+              exploreContext[explore.$name] = this.workspaceModel.getView(baseViewName);
+
               if (explore.join) {
+                for (const [joinName, join] of Object.entries(explore.join)) {
+                  const joinViewName = join.from || joinName;
+                  exploreContext[joinName] = this.workspaceModel.getView(joinViewName);
+                }
+
                 for (const [key, join] of Object.entries(explore.join)) {
                   if (join.sql_on) {
                     const sqlPosition = positions.explore?.[explore.$name]?.join?.[key];
-                    diagnostics.push(...this.validateSqlReferences(join.sql_on, sqlPosition));
+                    diagnostics.push(...this.validateSqlReferences(join.sql_on, sqlPosition, exploreContext));
                   }
                 }
               }
@@ -806,7 +815,8 @@ export class DiagnosticsProvider {
         // Validate joins
         if (explore.join) {
           Object.entries(explore.join).forEach(([joinName, join]) => {
-            const viewDetails = this.workspaceModel.getView(joinName);
+            const viewNameToValidate = join.from || joinName;
+            const viewDetails = this.workspaceModel.getView(viewNameToValidate);
             if (!viewDetails) {
               const explorePosition = model.positions.explore?.[exploreName]?.join?.[joinName]?.$p;
               const range = {
@@ -816,15 +826,15 @@ export class DiagnosticsProvider {
               diagnostics.push({
                 severity: DiagnosticSeverity.Error,
                 range,
-                message: `Referenced view "${joinName}" not found in workspace`,
+                message: `Referenced view "${viewNameToValidate}" not found in workspace`,
                 source: "lookml-lsp",
                 code: DiagnosticCode.JOIN_VIEW_NOT_FOUND
               });
-            } else if (!includedViews.has(joinName)) {
+            } else if (!includedViews.has(viewNameToValidate)) {
               diagnostics.push({
                 severity: DiagnosticSeverity.Error,
                 range: this.getRangeFromPositions(model.positions, 'explore',exploreName, 'join', joinName),
-                message: `View "${joinName}" exists but is not included in this model`,
+                message: `View "${viewNameToValidate}" exists but is not included in this model`,
                 source: "lookml-lsp",
                 code: DiagnosticCode.JOIN_VIEW_NOT_INCLUDED
               });
@@ -843,11 +853,20 @@ export class DiagnosticsProvider {
               const endCharater = sqlOnPosition?.$p[3];
 
               while ((fieldMatch = fieldRefPattern.exec(join.sql_on)) !== null) {
-                const viewName = fieldMatch[1];
+                const referenceName = fieldMatch[1];
                 const fieldName = fieldMatch[2];
 
-                // Check if view exists and is available
-                const viewDetails = this.workspaceModel.getView(viewName);
+                let viewNameToFind: string;
+                const exploreBaseView = explore.from || explore.view_name || exploreName;
+                if (referenceName === exploreBaseView || referenceName === exploreName) {
+                    viewNameToFind = exploreBaseView;
+                } else if (explore.join && explore.join[referenceName]) {
+                    viewNameToFind = explore.join[referenceName].from || referenceName;
+                } else {
+                    viewNameToFind = referenceName;
+                }
+                
+                const viewDetails = this.workspaceModel.getView(viewNameToFind);
 
                 const viewExtends = typeof viewDetails?.view?.extends === 'string' ? [viewDetails?.view?.extends] : viewDetails?.view?.extends;
                 const viewExtensions = viewExtends?.map((view) => {
@@ -874,18 +893,18 @@ export class DiagnosticsProvider {
                       start: { line: startLine, character: startCharater },
                       end: { line: endLine, character: endCharater }
                     },
-                    message: `Referenced view "${viewName}" not found in workspace`,
+                    message: `Referenced view "${referenceName}" not found in workspace`,
                     source: "lookml-lsp",
                     code: DiagnosticCode.SQL_REF_VIEW_NOT_FOUND
                   });
-                } else if (!availableViews.has(viewName)) {
+                } else if (!availableViews.has(referenceName)) {
                   diagnostics.push({
                     severity: DiagnosticSeverity.Error,
                     range: {
                       start: { line: startLine, character: startCharater },
                       end: { line: endLine, character: endCharater }
                     },
-                    message: `View "${viewName}" is not available in this explore context. It must be joined before it can be referenced.`,
+                    message: `View "${referenceName}" is not available in this explore context. It must be joined before it can be referenced.`,
                     source: "lookml-lsp",
                     code: DiagnosticCode.SQL_REF_VIEW_NOT_AVAILABLE
                   });
@@ -896,7 +915,7 @@ export class DiagnosticsProvider {
                       start: { line: startLine, character: startCharater },
                       end: { line: endLine, character: endCharater }
                     },
-                    message: `Field "${fieldName}" not found in view "${viewName}"`,
+                    message: `Field "${fieldName}" not found in view "${referenceName}"`,
                     source: "lookml-lsp",
                     code: DiagnosticCode.SQL_REF_FIELD_NOT_FOUND
                   });
