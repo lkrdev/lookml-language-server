@@ -29,7 +29,19 @@ export interface CommandResponse<T = any> {
 let client: LanguageClient;
 const outputChannel = vscode.window.createOutputChannel("LookML");
 
+
+function resolvePath(baseDir: string, pattern: string): string {
+  const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+  if (!workspaceFolder) {
+    // Fallback or error handling if no workspace is open
+    return pattern;
+  }
+  const absolutePath = path.resolve(baseDir, pattern);
+  return path.relative(workspaceFolder, absolutePath);
+}
+
 export function activate(context: ExtensionContext) {
+
   // The server is implemented in node
   const serverModule = context.asAbsolutePath(
     path.join("server", "out", "server.js")
@@ -83,13 +95,16 @@ export function activate(context: ExtensionContext) {
         pattern = `${pattern}.{lkml,lookml,model.lkml,view.lkml,explore.lkml}`;
       }
 
-      // Remove leading slash if present
-      if (pattern.startsWith("/")) {
-        pattern = pattern.slice(1);
+      let files;
+      if (pattern.startsWith('/')) {
+        // Path is absolute from the project root.
+        const searchPattern = pattern.slice(1);
+        files = await vscode.workspace.findFiles(searchPattern);
+      } else {
+        // Path is relative to the model file's directory.
+        const searchPattern = resolvePath(baseDir, pattern);
+        files = await vscode.workspace.findFiles(searchPattern);
       }
-
-      // 🔥 This was missing:
-      const files = await vscode.workspace.findFiles(new vscode.RelativePattern(baseDir, pattern));
 
       const filePaths = files.map((file) => file.fsPath);
 
