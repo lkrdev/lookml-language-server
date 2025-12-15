@@ -1,0 +1,72 @@
+{
+  "title": "Asset Details",
+  "name": "Asset Details",
+  "model": "portfolio",
+  "explore": "market_data",
+  "type": "looker_grid",
+  "fields": [
+    "market_data.id",
+    "market_data.symbol",
+    "market_data.market_cap",
+    "market_data.market_cap_change_percentage_24h",
+    "market_data.market_cap_change_24h"
+  ],
+  "limit": 500,
+  "column_limit": 50,
+  "show_view_names": false,
+  "show_row_numbers": false,
+  "transpose": false,
+  "truncate_text": true,
+  "hide_totals": false,
+  "hide_row_totals": false,
+  "size_to_fit": true,
+  "table_theme": "white",
+  "limit_displayed_rows": false,
+  "enable_conditional_formatting": false,
+  "header_text_alignment": "left",
+  "header_font_size": "12",
+  "rows_font_size": "12",
+  "conditional_formatting_include_totals": false,
+  "conditional_formatting_include_nulls": false,
+  "color_application": {
+    "collection_id": "7c56cc21-66e4-41c9-81ce-a60e1c3967b2",
+    "palette_id": "5d189dfc-4f46-46f3-822b-bfb0b61777b1"
+  },
+  "show_sql_query_menu_options": false,
+  "show_totals": true,
+  "show_row_totals": true,
+  "truncate_header": false,
+  "minimum_column_width": 25,
+  "series_labels": {
+    "market_data.market_cap_change_percentage_24h": "Change % w.r.t Previous year",
+    "market_data.market_cap_change_24h": "Change w.r.t Previous year24hrs",
+    "market_data.symbol": "Asset Name",
+    "market_data.market_cap": "Total Value",
+    "market_data.fully_diluted_valuation": "Net Value"
+  },
+  "series_cell_visualizations": {
+    "market_data.market_cap_change_percentage_24h": {
+      "is_active": true
+    }
+  },
+  "header_font_color": "#fffefa",
+  "header_background_color": "#1A73E8",
+  "custom_color_enabled": true,
+  "show_single_value_title": true,
+  "show_comparison": false,
+  "comparison_type": "value",
+  "comparison_reverse_colors": false,
+  "show_comparison_label": true,
+  "hidden_fields": [
+    "market_data.id"
+  ],
+  "defaults_version": 1,
+  "note_state": "collapsed",
+  "note_display": "hover",
+  "note_text": "ticker symbol, market cap, market cap change percentage in the last 24 hours, actual market cap change in the last 24 hours, and fully diluted valuation",
+  "listen": {},
+  "row": 12,
+  "col": 6,
+  "width": 16,
+  "height": 4
+}

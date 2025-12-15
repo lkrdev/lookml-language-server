@@ -1,4 +1,4 @@
-name: Release Docker Image
+name: Release Packages
 
 on:
   release:
@@ -19,7 +19,7 @@ jobs:
           - os: windows-latest
             platform: win32
             arch: arm64
-            npm_config_arch: arm
+            npm_config_arch: arm64  # CHANGED: arm -> arm64
           - os: ubuntu-latest
             platform: linux
             arch: x64
@@ -31,11 +31,11 @@ jobs:
           - os: ubuntu-latest
             platform: linux
             arch: armhf
-            npm_config_arch: arm
+            npm_config_arch: arm    # Correct for armhf (32-bit)
           - os: ubuntu-latest
             platform: alpine
             arch: x64
-            npm_config_arch: x64
+            npm_config_arch: x64    # Warning: Builds on glibc (Ubuntu), might fail on Alpine if native deps exist
           - os: macos-latest
             platform: darwin
             arch: x64
@@ -58,13 +58,13 @@ jobs:
           fi
       - uses: actions/setup-node@v4
         with:
-          node-version: 18.x
+          node-version: 20.x
       - run: npm install
         env:
           npm_config_arch: ${{ matrix.npm_config_arch }}
       - shell: pwsh
         run: echo "target=${{ matrix.platform }}-${{ matrix.arch }}" >> $env:GITHUB_ENV
-      - run: npx @vscode/vsce package --target ${{ env.target }}
+      - run: npx @vscode/vsce@2.31.1 package --target ${{ env.target }}
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ env.target }}
@@ -76,18 +76,23 @@ jobs:
     if: success() && startsWith(github.ref, 'refs/tags/')
     steps:
       - uses: actions/download-artifact@v4
-      - run: npx vsce publish --packagePath $(find . -iname *.vsix)
+      - name: Publish VS Code Marketplace
+        run: npx vsce publish --packagePath $(find . -iname *.vsix)
         env:
           VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
+      - name: Publish OVSX
+        run: npx ovsx publish --packagePath $(find . -iname *.vsix) -p ${{ secrets.OVSX_PAT }}
 
   npm-publish:
+    permissions:
+      id-token: write
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 18.x
-          registry-url: "https://registry.npmjs.org/"
+          node-version: 20.x
       - name: Replace version in package.json
         shell: bash
         run: |
@@ -104,6 +109,8 @@ jobs:
           else
             find . -name "package.json" -exec sed -i "s/\"@lkr-dev\/lookml-language-server\": \".*\"/\"@lkr-dev\/lookml-language-server\": \"${{ env.TAG }}\"/" {} +
           fi
+      - name: Update npm
+        run: npm install -g npm@latest
       - name: Install dependencies (server)
         run: cd server && npm install
       - name: Install dependencies (lookml-validator)
@@ -112,9 +119,5 @@ jobs:
         run: cd packages/lookml-validator && npm run build
       - name: Publish lookml-validator
         run: npm publish --workspace=packages/lookml-validator --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Publish lookml-language-server
         run: npm publish --workspace=server --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
