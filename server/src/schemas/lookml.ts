@@ -352,6 +352,9 @@ export const exploreSchema = parserValues.extend({
 
   // Aggregate Table
   aggregate_table: z.record(z.string(), aggregateTableSchema).optional(),
+
+  // Preamble
+  sql_preamble: z.string().optional(),
 }).strict();
 
 export const derivedTableSchema = z.object({

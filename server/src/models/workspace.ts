@@ -159,6 +159,9 @@ export class WorkspaceModel {
       fileOutput: 'by-name',
       readFileOptions: { encoding: "utf-8" },
       readFileConcurrency: 4,
+      globOptions: {
+        ignore: ["**/node_modules/**", "**/.git/**", "**/Library/**"],
+      }
     });
 
     transformations.addPositions(project)
@@ -286,13 +289,13 @@ export class WorkspaceModel {
         case "model": {
           const model = value as LookmlModel;
           const filePath = model.$file_path;
-          const fileRel = model.$file_rel;
-          const fileName = value.$file_name;
+          const fileRel = key.replace(/\.model$/, '');
+          const fileName = fileRel.split('/').pop() as string;
 
           this.includedViews.set(fileName, new Set<string>)
 
           const uri = `${process.cwd()}/${filePath}`;
-          const filePositions = project?.positions?.file[`${fileRel}.model`];
+          const filePositions = project?.positions?.file[key];
 
           if (!filePositions) {
             throw new Error(`filePositions not found for ${filePath}`);

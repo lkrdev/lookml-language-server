@@ -72,4 +72,8 @@ export class Logger {
       this.connection.console.error(formattedMessage);
     }
   }
+
+  public sendNotification(method: string, params: any): void {
+    this.connection.sendNotification(method, params);
+  }
 } 

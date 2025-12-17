@@ -2,7 +2,6 @@ import { Looker40SDK } from "@looker/sdk";
 import { NodeCryptoHash, NodeTransport } from "@looker/sdk-node";
 import { ApiSettings } from "@looker/sdk-rtl";
 import * as http from "http";
-import open from "open";
 import * as url from "url";
 import {
   AuthRecord,
@@ -10,6 +9,7 @@ import {
   setNewRefreshToken,
 } from "../../utils/sqlite";
 import { NodeOAuthSession } from "./oauth";
+import { Logger } from "../../utils/logger";
 
 export class RefreshTokenExpiredError extends Error {
   constructor(message = "Refresh token expired") {
@@ -135,7 +135,11 @@ export class AuthenticationService {
         "looker_api"
       );
 
-      await open(authUrl);
+      const logger = Logger.getInstance();
+      logger.info(
+        `Please open this URL in your browser to authenticate: ${authUrl}`
+      );
+      logger.sendNotification("looker/oauth", { url: authUrl });
       await new Promise<void>((resolve, reject) => {
         if (this.server) {
           this.server.on("close", () => {
