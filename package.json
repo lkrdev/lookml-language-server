@@ -114,8 +114,9 @@
   "devDependencies": {
     "@types/jest": "^29.5.14",
     "@types/node": "^20.17.30",
+    "@types/webassembly-js-api": "^0.0.3",
     "ts-jest": "^29.3.2",
-    "typescript": "^5.2.2",
+    "typescript": "^5.9.3",
     "vscode": "^1.1.37"
   },
   "workspaces": [

@@ -2,7 +2,7 @@
     "compilerOptions": {
         "module": "commonjs",
         "target": "es2022",
-        "lib": ["es2022"],
+        "lib": ["es2022", "dom", "webworker"],
         "outDir": "dist",
         "rootDir": "src",
         "sourceMap": true,
