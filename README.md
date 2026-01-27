@@ -1,6 +1,7 @@
 # LookML Language Server (beta)
 
 This is a language server for LookML. It is used to provide autocompletion, linting, and other features for LookML files. While in its beta state we are actively working in the following areas:
+
 - 1:1 parity with the LookML IDE
 - Tools to sync and communicate with your development mode in Looker
 - Enhancements to live LookML validation
@@ -10,6 +11,7 @@ We are actively looking for feedback and contributions from the community, pleas
 # [Open Instructions](https://github.com/lkrdev/lookml-language-server/#readme)
 
 There are a few steps you need to follow to get the Language Server working.
+
 - If this if the first time you're using the Language Server, you'll need to register a new OAuth client to communicate with the Language Server [go](#looker-save-all-stage-all-commit-and-sync)
 - If you've already registered an OAuth client, you can skip that step and go to [looker-login](#looker-login)
 - Make sure you do not have uncommited changes in your LookML development mode
@@ -23,6 +25,7 @@ The LookML Language Server uses OAuth2 to authenticate to Looker and manages the
 1. Go to the Looker API Explorer for Register OAuth App (https://your.looker.instance/extensions/marketplace_extension_api_explorer::api-explorer/4.0/methods/Auth/register_oauth_client_app)
 2. Enter `lkr-cli` as the client_id
 3. Enter the following payload in the body
+
 ```
 {
   "redirect_uri": "http://localhost:8000/callback",
@@ -31,16 +34,32 @@ The LookML Language Server uses OAuth2 to authenticate to Looker and manages the
   "enabled": true
 }
 ```
+
 4. Check the "I Understand" box and click the Run button
 
 This only needs to be done once per instance.
 
+## Project Configuration
+
+The LookML Language Server ties the Looker project name to your workspace root. It determines the project name by checking files in the following order:
+
+1.  **.lkrconfig.json**: If this file exists in the root and has a `project_name` key, it will be used.
+2.  **manifest.lkml**: If no config file is found, it will parse `manifest.lkml` (using the official LookML parser) for a `project_name` property.
+
+When you use the **Looker: Select Project** command:
+
+- If `manifest.lkml` exists, the extension will update the `project_name` inside it (maintaining proper LookML syntax).
+- If `manifest.lkml` does not exist, the extension will store the project name in `.lkrconfig.json`.
+
+This configuration ensures that multiple open workspaces can each maintain their own project identity.
+
 # Commands
 
 ## Looker: Login
+
 The Looker: Login command provides the following functionality:
 
-1. Navigate to a *.lookml file
+1. Navigate to a \*.lookml file
 2. Open the command palette
 3. Search for "Looker: Login"
 4. Add new Looker instance
@@ -74,7 +93,6 @@ The Looker: Reset to Remote command allows you to reset your local Looker projec
 
 1. The extension prompts you to enter the name of your Looker project.
 2. You can enter the project name directly or select it from a list of projects you have previously configured.
-
 
 ## Looker: Save All, Stage All, Commit, and Sync
 

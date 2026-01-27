@@ -26,6 +26,7 @@ import { HoverProvider } from "./providers/hover";
 // Import models
 import {
   getCurrentBranch,
+  handleGetAllProjects,
   handleGetDevBranch,
   handleGetExploreUrlAsMe,
   handleListInstances,
@@ -115,6 +116,7 @@ connection.onInitialize((params: InitializeParams) => {
           "looker.switchInstance",
           "looker.addInstance",
           "looker.validateProject",
+          "looker.getAllProjects",
         ],
       },
     },
@@ -233,6 +235,8 @@ connection.onExecuteCommand(async (params: ExecuteCommandParams) => {
       return await handleValidateProject(authService!, {
         project_name: args[0] as string,
       });
+    case "looker.getAllProjects":
+      return await handleGetAllProjects(authService!);
     default:
       throw new Error(`Unknown command: ${command}`);
   }

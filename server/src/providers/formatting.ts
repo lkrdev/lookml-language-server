@@ -5,6 +5,7 @@ import {
   Range,
   TextEdit,
 } from "vscode-languageserver/node";
+import { getLines } from "../utils/document";
 
 export class FormattingProvider {
   /**
@@ -12,10 +13,9 @@ export class FormattingProvider {
    */
   public formatDocument(
     document: TextDocument,
-    options: FormattingOptions
+    options: FormattingOptions,
   ): TextEdit[] {
-    const text = document.getText();
-    const lines = text.split("\n");
+    const lines = getLines(document);
     const edits: TextEdit[] = [];
 
     // Format settings
@@ -36,8 +36,8 @@ export class FormattingProvider {
         edits.push(
           TextEdit.replace(
             this.createRange(i, 0, i, originalLine.length),
-            trimmedLine
-          )
+            trimmedLine,
+          ),
         );
         continue;
       }
@@ -55,8 +55,8 @@ export class FormattingProvider {
         edits.push(
           TextEdit.replace(
             this.createRange(i, 0, i, originalLine.length),
-            formattedLine
-          )
+            formattedLine,
+          ),
         );
       }
 
@@ -75,11 +75,10 @@ export class FormattingProvider {
   public formatRange(
     document: TextDocument,
     range: Range,
-    options: FormattingOptions
+    options: FormattingOptions,
   ): TextEdit[] {
     // Get the relevant line range
-    const text = document.getText();
-    const lines = text.split("\n");
+    const lines = getLines(document);
     const startLine = range.start.line;
     const endLine = range.end.line;
 
@@ -111,8 +110,8 @@ export class FormattingProvider {
         edits.push(
           TextEdit.replace(
             this.createRange(i, 0, i, originalLine.length),
-            trimmedLine
-          )
+            trimmedLine,
+          ),
         );
         continue;
       }
@@ -130,8 +129,8 @@ export class FormattingProvider {
         edits.push(
           TextEdit.replace(
             this.createRange(i, 0, i, originalLine.length),
-            formattedLine
-          )
+            formattedLine,
+          ),
         );
       }
 
@@ -151,15 +150,14 @@ export class FormattingProvider {
     document: TextDocument,
     position: Position,
     ch: string,
-    options: FormattingOptions
+    options: FormattingOptions,
   ): TextEdit[] {
     // Only format after typing special characters
     if (ch !== "{" && ch !== "}" && ch !== "\n") {
       return [];
     }
 
-    const text = document.getText();
-    const lines = text.split("\n");
+    const lines = getLines(document);
     const edits: TextEdit[] = [];
 
     // Format settings
@@ -201,10 +199,10 @@ export class FormattingProvider {
               position.line,
               0,
               position.line,
-              currentLine.length
+              currentLine.length,
             ),
-            formattedLine
-          )
+            formattedLine,
+          ),
         );
       }
     }
@@ -247,10 +245,10 @@ export class FormattingProvider {
                 position.line,
                 0,
                 position.line,
-                currentLine.length
+                currentLine.length,
               ),
-              formattedLine
-            )
+              formattedLine,
+            ),
           );
         }
       }
@@ -266,11 +264,11 @@ export class FormattingProvider {
     startLine: number,
     startChar: number,
     endLine: number,
-    endChar: number
+    endChar: number,
   ): Range {
     return Range.create(
       Position.create(startLine, startChar),
-      Position.create(endLine, endChar)
+      Position.create(endLine, endChar),
     );
   }
 
@@ -294,12 +292,11 @@ export class FormattingProvider {
    */
   public enhancedFormatting(
     document: TextDocument,
-    options: FormattingOptions
+    options: FormattingOptions,
   ): TextEdit[] {
     // Start with basic formatting
     const basicEdits = this.formatDocument(document, options);
-    const text = document.getText();
-    const lines = text.split("\n");
+    const lines = getLines(document);
     const enhancedEdits: TextEdit[] = [];
 
     // Format settings
@@ -322,50 +319,62 @@ export class FormattingProvider {
       if (trimmedLine.includes("[")) {
         const arrayStartIndex = trimmedLine.indexOf("[");
         const arrayEndIndex = trimmedLine.indexOf("]");
-        
+
         if (arrayStartIndex !== -1) {
           // If the array is on a single line, check if it needs to be split
           if (arrayEndIndex !== -1 && arrayEndIndex > arrayStartIndex) {
-            const beforeArray = trimmedLine.substring(0, arrayStartIndex).trim();
-            const arrayContent = trimmedLine.substring(arrayStartIndex + 1, arrayEndIndex).trim();
+            const beforeArray = trimmedLine
+              .substring(0, arrayStartIndex)
+              .trim();
+            const arrayContent = trimmedLine
+              .substring(arrayStartIndex + 1, arrayEndIndex)
+              .trim();
             const afterArray = trimmedLine.substring(arrayEndIndex + 1).trim();
-            
+
             // Calculate the total length including indentation
-            const totalLength = indentStr.repeat(indentLevel).length + 
-              beforeArray.length + 2 + // 2 for ": " after property name
-              arrayContent.length + 2 + // 2 for " [" and "]"
+            const totalLength =
+              indentStr.repeat(indentLevel).length +
+              beforeArray.length +
+              2 + // 2 for ": " after property name
+              arrayContent.length +
+              2 + // 2 for " [" and "]"
               afterArray.length;
 
             // If total length exceeds 80 characters, convert to multi-line
             if (totalLength > 80) {
-              const formattedLine = indentStr.repeat(indentLevel) + beforeArray + " [";
-              
+              const formattedLine =
+                indentStr.repeat(indentLevel) + beforeArray + " [";
+
               if (formattedLine !== originalLine) {
                 enhancedEdits.push(
                   TextEdit.replace(
                     this.createRange(i, 0, i, originalLine.length),
-                    formattedLine
-                  )
+                    formattedLine,
+                  ),
                 );
               }
 
               // Process array elements
               let j = i + 1;
               let inArray = true;
-              const arrayItems = arrayContent.split(",").map(item => item.trim());
-              
+              const arrayItems = arrayContent
+                .split(",")
+                .map((item) => item.trim());
+
               // Add each array item on its own line
               for (let k = 0; k < arrayItems.length; k++) {
-                const arrayLine = indentStr.repeat(indentLevel + 1) + arrayItems[k] + 
+                const arrayLine =
+                  indentStr.repeat(indentLevel + 1) +
+                  arrayItems[k] +
                   (k < arrayItems.length - 1 ? "," : "");
-                
+
                 if (j < lines.length) {
                   if (arrayLine !== lines[j]) {
                     enhancedEdits.push(
                       TextEdit.replace(
                         this.createRange(j, 0, j, lines[j].length),
-                        arrayLine
-                      )
+                        arrayLine,
+                      ),
                     );
                   }
                 }
@@ -373,45 +382,54 @@ export class FormattingProvider {
               }
 
               // Add closing bracket
-              const closingLine = indentStr.repeat(indentLevel) + "]" + afterArray;
+              const closingLine =
+                indentStr.repeat(indentLevel) + "]" + afterArray;
               if (j < lines.length && closingLine !== lines[j]) {
                 enhancedEdits.push(
                   TextEdit.replace(
                     this.createRange(j, 0, j, lines[j].length),
-                    closingLine
-                  )
+                    closingLine,
+                  ),
                 );
               }
             } else {
               // Keep single-line format if under 80 characters
               const formattedArrayContent = arrayContent
                 .split(",")
-                .map(item => item.trim())
+                .map((item) => item.trim())
                 .join(", ");
-              
-              const formattedLine = indentStr.repeat(indentLevel) + 
-                beforeArray + " [" + formattedArrayContent + "]" + afterArray;
-              
+
+              const formattedLine =
+                indentStr.repeat(indentLevel) +
+                beforeArray +
+                " [" +
+                formattedArrayContent +
+                "]" +
+                afterArray;
+
               if (formattedLine !== originalLine) {
                 enhancedEdits.push(
                   TextEdit.replace(
                     this.createRange(i, 0, i, originalLine.length),
-                    formattedLine
-                  )
+                    formattedLine,
+                  ),
                 );
               }
             }
           } else {
             // Multi-line array formatting
-            const beforeArray = trimmedLine.substring(0, arrayStartIndex).trim();
-            const formattedLine = indentStr.repeat(indentLevel) + beforeArray + " [";
-            
+            const beforeArray = trimmedLine
+              .substring(0, arrayStartIndex)
+              .trim();
+            const formattedLine =
+              indentStr.repeat(indentLevel) + beforeArray + " [";
+
             if (formattedLine !== originalLine) {
               enhancedEdits.push(
                 TextEdit.replace(
                   this.createRange(i, 0, i, originalLine.length),
-                  formattedLine
-                )
+                  formattedLine,
+                ),
               );
             }
 
@@ -421,28 +439,30 @@ export class FormattingProvider {
             while (j < lines.length && inArray) {
               const currentLine = lines[j];
               const trimmedCurrentLine = currentLine.trim();
-              
+
               if (trimmedCurrentLine.includes("]")) {
                 // Found closing bracket
-                const formattedClosingLine = indentStr.repeat(indentLevel) + "]";
+                const formattedClosingLine =
+                  indentStr.repeat(indentLevel) + "]";
                 if (formattedClosingLine !== currentLine) {
                   enhancedEdits.push(
                     TextEdit.replace(
                       this.createRange(j, 0, j, currentLine.length),
-                      formattedClosingLine
-                    )
+                      formattedClosingLine,
+                    ),
                   );
                 }
                 inArray = false;
               } else if (trimmedCurrentLine) {
                 // Array element
-                const formattedArrayLine = indentStr.repeat(indentLevel + 1) + trimmedCurrentLine;
+                const formattedArrayLine =
+                  indentStr.repeat(indentLevel + 1) + trimmedCurrentLine;
                 if (formattedArrayLine !== currentLine) {
                   enhancedEdits.push(
                     TextEdit.replace(
                       this.createRange(j, 0, j, currentLine.length),
-                      formattedArrayLine
-                    )
+                      formattedArrayLine,
+                    ),
                   );
                 }
               }
@@ -458,17 +478,17 @@ export class FormattingProvider {
       if (colonIndex !== -1) {
         const name = trimmedLine.substring(0, colonIndex).trim();
         const value = trimmedLine.substring(colonIndex + 1).trim();
-        
+
         // Remove any extra spaces before the colon
-        const formattedLine = indentStr.repeat(indentLevel) + 
-          name + ": " + value;
-        
+        const formattedLine =
+          indentStr.repeat(indentLevel) + name + ": " + value;
+
         if (formattedLine !== originalLine) {
           enhancedEdits.push(
             TextEdit.replace(
               this.createRange(i, 0, i, originalLine.length),
-              formattedLine
-            )
+              formattedLine,
+            ),
           );
         }
         continue;
@@ -484,19 +504,20 @@ export class FormattingProvider {
             enhancedEdits.push(
               TextEdit.replace(
                 this.createRange(i, 0, i, originalLine.length),
-                formattedLine
-              )
+                formattedLine,
+              ),
             );
           }
         } else {
           // Single-line SQL
-          const formattedLine = indentStr.repeat(indentLevel) + "sql: " + sqlContent;
+          const formattedLine =
+            indentStr.repeat(indentLevel) + "sql: " + sqlContent;
           if (formattedLine !== originalLine) {
             enhancedEdits.push(
               TextEdit.replace(
                 this.createRange(i, 0, i, originalLine.length),
-                formattedLine
-              )
+                formattedLine,
+              ),
             );
           }
         }
@@ -510,8 +531,8 @@ export class FormattingProvider {
           enhancedEdits.push(
             TextEdit.replace(
               this.createRange(i, 0, i, originalLine.length),
-              formattedLine
-            )
+              formattedLine,
+            ),
           );
         }
         continue;
@@ -519,14 +540,17 @@ export class FormattingProvider {
 
       // Handle opening braces
       if (trimmedLine.endsWith("{")) {
-        const beforeBrace = trimmedLine.substring(0, trimmedLine.length - 1).trim();
-        const formattedLine = indentStr.repeat(indentLevel) + beforeBrace + " {";
+        const beforeBrace = trimmedLine
+          .substring(0, trimmedLine.length - 1)
+          .trim();
+        const formattedLine =
+          indentStr.repeat(indentLevel) + beforeBrace + " {";
         if (formattedLine !== originalLine) {
           enhancedEdits.push(
             TextEdit.replace(
               this.createRange(i, 0, i, originalLine.length),
-              formattedLine
-            )
+              formattedLine,
+            ),
           );
         }
         continue;

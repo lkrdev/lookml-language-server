@@ -46,14 +46,23 @@ export async function addInstance(client: LanguageClient) {
   }
 
   try {
-    const add_instance = await client.sendRequest<{
-      success: boolean;
-      message: string;
-      data: { instance_name: string; base_url: string };
-    }>("workspace/executeCommand", {
-      command: "looker.addInstance",
-      arguments: [instance_name, new_instance, use_production.value],
-    });
+    const add_instance = await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: `Authenticating with ${instance_name}...`,
+        cancellable: false,
+      },
+      async () => {
+        return await client.sendRequest<{
+          success: boolean;
+          message: string;
+          data: { instance_name: string; base_url: string };
+        }>("workspace/executeCommand", {
+          command: "looker.addInstance",
+          arguments: [instance_name, new_instance, use_production.value],
+        });
+      },
+    );
 
     if (add_instance.success) {
       vscode.window.showInformationMessage(

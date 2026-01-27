@@ -7,4 +7,5 @@ export { handleSwitchCurrentInstance } from "./switchCurrentInstance";
 export { handleSwitchToBranchAndPull } from "./switchToBranchAndPull";
 export { handleSwitchToDev } from "./switchToDev";
 
+export { handleGetAllProjects } from "./getAllProjects";
 export { handleValidateProject } from "./validateProject";

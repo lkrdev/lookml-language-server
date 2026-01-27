@@ -1,10 +1,11 @@
-import { Location, Position, Range } from "vscode-languageserver/node";
-import { TextDocument } from "vscode-languageserver-textdocument";
-import * as path from "path";
-import { URI } from "vscode-uri";
-import { LookmlProject, parseFiles } from "lookml-parser";
 import * as fs from "fs/promises";
+import { LookmlProject, parseFiles } from "lookml-parser";
 import * as os from "os";
+import * as path from "path";
+import { TextDocument } from "vscode-languageserver-textdocument";
+import { Location, Position, Range } from "vscode-languageserver/node";
+import { URI } from "vscode-uri";
+import { splitIntoLines } from "../utils/document";
 
 // Define interfaces for LookML elements
 export interface ViewInfo {
@@ -79,10 +80,10 @@ export class LookMLParser {
   private async initTempDir(): Promise<void> {
     try {
       this.tempFilesDir = await fs.mkdtemp(
-        path.join(os.tmpdir(), "lookml-lsp-")
+        path.join(os.tmpdir(), "lookml-lsp-"),
       );
     } catch (error) {
-      console.error('Failed to create temp directory:', error);
+      console.error("Failed to create temp directory:", error);
     }
   }
 
@@ -96,13 +97,16 @@ export class LookMLParser {
   /**
    * Perform custom parsing to extract locations and basic structure
    */
-  private customParseDocument(document: TextDocument, result: ParseResult): void {
+  private customParseDocument(
+    document: TextDocument,
+    result: ParseResult,
+  ): void {
     const text = document.getText();
-    const lines = text.split("\n");
+    const lines = splitIntoLines(text);
     const uri = document.uri;
 
     // Determine if this is a model file by checking extension or content
-    result.isModelFile = 
+    result.isModelFile =
       uri.endsWith(".model.lkml") ||
       text.includes("connection:") ||
       text.includes("include:");
@@ -124,7 +128,7 @@ export class LookMLParser {
         name: result.modelName,
         location: Location.create(
           uri,
-          Range.create(Position.create(0, 0), Position.create(0, 0))
+          Range.create(Position.create(0, 0), Position.create(0, 0)),
         ),
         includes: [],
         explores: [],
@@ -152,9 +156,13 @@ export class LookMLParser {
 
       // Track top-level property assignments (for model files)
       const topLevelPropertyMatch = line.match(
-        /^\s*([a-zA-Z0-9_]+):\s+(.+?)\s*(?:;;|$)/
+        /^\s*([a-zA-Z0-9_]+):\s+(.+?)\s*(?:;;|$)/,
       );
-      if (result.isModelFile && topLevelPropertyMatch && blockStack.length === 0) {
+      if (
+        result.isModelFile &&
+        topLevelPropertyMatch &&
+        blockStack.length === 0
+      ) {
         const propertyName = topLevelPropertyMatch[1];
         const propertyValue = topLevelPropertyMatch[2]
           .replace(/;;$/, "")
@@ -166,8 +174,8 @@ export class LookMLParser {
           uri,
           Range.create(
             Position.create(i, 0),
-            Position.create(i, lines[i].length)
-          )
+            Position.create(i, lines[i].length),
+          ),
         );
 
         const propertyInfo: PropertyInfo = {
@@ -177,7 +185,9 @@ export class LookMLParser {
         };
 
         // Add to the model
-        const modelInfo = result.modelName ? result.models.get(result.modelName) : undefined;
+        const modelInfo = result.modelName
+          ? result.models.get(result.modelName)
+          : undefined;
         if (modelInfo) {
           modelInfo.properties.set(propertyName, propertyInfo);
 
@@ -208,7 +218,7 @@ export class LookMLParser {
 
       // Track block openings
       const blockMatch = line.match(
-        /^\s*([a-zA-Z0-9_]+):\s+([a-zA-Z0-9_]+)\s*\{/
+        /^\s*([a-zA-Z0-9_]+):\s+([a-zA-Z0-9_]+)\s*\{/,
       );
       if (blockMatch) {
         const blockType = blockMatch[1];
@@ -227,8 +237,8 @@ export class LookMLParser {
           uri,
           Range.create(
             Position.create(i, 0),
-            Position.create(i, lines[i].length)
-          )
+            Position.create(i, lines[i].length),
+          ),
         );
 
         // Register different block types
@@ -304,7 +314,7 @@ export class LookMLParser {
 
       // Track property assignments inside blocks
       const propertyMatch = line.match(
-        /^\s*([a-zA-Z0-9_]+):\s+(.+?)\s*(?:;;|$)/
+        /^\s*([a-zA-Z0-9_]+):\s+(.+?)\s*(?:;;|$)/,
       );
       if (propertyMatch && blockStack.length > 0) {
         const propertyName = propertyMatch[1];
@@ -313,8 +323,8 @@ export class LookMLParser {
           uri,
           Range.create(
             Position.create(i, 0),
-            Position.create(i, lines[i].length)
-          )
+            Position.create(i, lines[i].length),
+          ),
         );
 
         const propertyInfo: PropertyInfo = {
@@ -360,7 +370,7 @@ export class LookMLParser {
           }
         } else if (
           ["dimension", "measure", "parameter", "filter"].includes(
-            currentBlock.type
+            currentBlock.type,
           )
         ) {
           // Find parent view
@@ -419,9 +429,12 @@ export class LookMLParser {
   /**
    * Enhance the parse result with lookml-parser information
    */
-  private async enhanceWithLookMLParser(document: TextDocument, result: ParseResult): Promise<void> {
+  private async enhanceWithLookMLParser(
+    document: TextDocument,
+    result: ParseResult,
+  ): Promise<void> {
     if (!this.tempFilesDir) {
-      console.error('Temp directory not initialized');
+      console.error("Temp directory not initialized");
       return;
     }
 
@@ -430,7 +443,7 @@ export class LookMLParser {
       const content = document.getText();
       const fileUri = URI.parse(uri);
       const fileName = path.basename(fileUri.fsPath);
-      
+
       // Write document content to temp file for lookml-parser to read
       const tempFilePath = path.join(this.tempFilesDir, fileName);
       await fs.writeFile(tempFilePath, content);
@@ -439,8 +452,6 @@ export class LookMLParser {
       const parsedProject = await parseFiles({
         source: tempFilePath,
       });
-
-      
     } catch (error) {
       console.error(`Error using lookml-parser for ${document.uri}:`, error);
       // Continue with existing parser results if lookml-parser fails
@@ -454,9 +465,7 @@ export class LookMLParser {
     // This would use lookml-parser's validation capabilities
     // The actual implementation will depend on what lookml-parser provides
     const diagnostics: any[] = [];
-    
 
-    
     return diagnostics;
   }
 
@@ -466,7 +475,7 @@ export class LookMLParser {
   public getCompletions(document: TextDocument, position: Position): any[] {
     // Implementation would use lookml-parser knowledge to provide smart completions
     const completions: any[] = [];
-    
+
     // Example implementation - would be enhanced with lookml-parser knowledge
     return completions;
   }
@@ -476,7 +485,7 @@ export class LookMLParser {
    */
   public getHoverInfo(document: TextDocument, position: Position): any | null {
     // Implementation would use lookml-parser knowledge to provide rich hover info
-    
+
     // Example implementation - would be enhanced with lookml-parser knowledge
     return null;
   }
@@ -489,7 +498,7 @@ export class LookMLParser {
       try {
         await fs.rm(this.tempFilesDir, { recursive: true, force: true });
       } catch (error) {
-        console.error('Failed to clean up temp directory:', error);
+        console.error("Failed to clean up temp directory:", error);
       }
     }
   }
