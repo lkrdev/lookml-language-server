@@ -9,8 +9,8 @@ export async function handleGetAllProjects(
     return {
       success: true,
       projects: projects
-        .map((p: any) => p.id!)
-        .filter((id: any) => !!id)
+        .map((p: { id?: string | null }) => p.id)
+        .filter((id): id is string => !!id)
         .sort(),
     };
   } catch (error) {

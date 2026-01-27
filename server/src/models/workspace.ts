@@ -1,4 +1,18 @@
 import {
+  LookmlError,
+  LookmlExploreWithFileInfo,
+  LookmlFile,
+  LookmlModel,
+  LookmlModelWithFileInfo,
+  LookmlProject,
+  LookmlViewWithFileInfo,
+  parse,
+  parseFiles,
+  transformations,
+} from "lookml-parser";
+import * as path from "path";
+import { TextDocument } from "vscode-languageserver-textdocument";
+import {
   Connection,
   Diagnostic,
   DiagnosticSeverity,
@@ -7,13 +21,9 @@ import {
   Position,
   Range,
 } from "vscode-languageserver/node";
-import { TextDocument } from "vscode-languageserver-textdocument";
-import * as path from "path";
 import { URI } from "vscode-uri";
-import {
-  LookMLParser,
-} from "./lookml-parser";
-import { parseFiles, parse, LookmlProject, LookmlViewWithFileInfo, LookmlExploreWithFileInfo, transformations, LookmlModelWithFileInfo, LookmlError, LookmlExplore, LookmlView, LookmlModel, LookmlFile, } from "lookml-parser";
+import { getLines } from "../utils/document";
+import { LookMLParser } from "./lookml-parser";
 
 export class WorkspaceModel {
   public connection: Connection;
@@ -39,7 +49,6 @@ export class WorkspaceModel {
     this.lookmlParser = new LookMLParser();
   }
 
-
   public getView(name: string): LookmlViewWithFileInfo | undefined {
     return this.views.get(name);
   }
@@ -55,7 +64,6 @@ export class WorkspaceModel {
   public getErrorsByFileName(fileName: string): LookmlError[] {
     return this.errors.get(fileName) ?? [];
   }
-
 
   public getExplore(name: string): LookmlExploreWithFileInfo | undefined {
     return this.explores.get(name);
@@ -85,7 +93,9 @@ export class WorkspaceModel {
   }
 
   public isViewFile(document: TextDocument): boolean {
-    return document.uri.includes(".view") && document.getText().includes("view:");
+    return (
+      document.uri.includes(".view") && document.getText().includes("view:")
+    );
   }
 
   public isModelFile(document: TextDocument): boolean {
@@ -93,7 +103,7 @@ export class WorkspaceModel {
   }
 
   public getViewNameFromFile(document: TextDocument): string | undefined {
-    const lines = document.getText().split("\n");
+    const lines = getLines(document);
 
     // Scan first 10 lines for view declaration
     for (let i = 0; i < Math.min(10, lines.length); i++) {
@@ -125,7 +135,7 @@ export class WorkspaceModel {
     const isModel = document.uri.includes(".model");
     const cwd = process.cwd();
 
-    const filePath = document.uri.replace(`file://${cwd}/`, "")
+    const filePath = document.uri.replace(`file://${cwd}/`, "");
     const fullFileName = filePath.split("/").pop() ?? "";
     const fileRel = filePath.split(".")[0];
 
@@ -139,7 +149,7 @@ export class WorkspaceModel {
           $file_type: isModel ? "model" : "view",
         },
       },
-    }
+    };
     transformations.addPositions(project as any);
 
     await this.processProject(project);
@@ -156,12 +166,12 @@ export class WorkspaceModel {
 
     const project = await parseFiles({
       source,
-      fileOutput: 'by-name',
+      fileOutput: "by-name",
       readFileOptions: { encoding: "utf-8" },
       readFileConcurrency: 4,
     });
 
-    transformations.addPositions(project)
+    transformations.addPositions(project);
 
     if (reset) {
       this.errors = new Map<string, LookmlError[]>();
@@ -189,12 +199,12 @@ export class WorkspaceModel {
 
   public async processProject(project: LookmlProject): Promise<void> {
     const initialEntries: {
-      view: Array<LookmlFile["view"]>,
-      explore: Array<LookmlFile["explore"]>,
+      view: Array<LookmlFile["view"]>;
+      explore: Array<LookmlFile["explore"]>;
     } = {
       view: [],
       explore: [],
-    }
+    };
 
     const entities = Object.values(project.file).reduce((acc, value) => {
       const { explore, view } = value;
@@ -203,39 +213,38 @@ export class WorkspaceModel {
         $file_path: value.$file_path,
         $file_rel: value.$file_rel,
         $file_type: value.$file_type,
-      }
+      };
 
       if (explore) {
         Object.values(explore).forEach((explore) => {
           acc.explore.push({
             file,
-            explore
+            explore,
           });
         });
-      } 
-      
+      }
+
       if (view) {
         Object.values(view).forEach((view) => {
           acc.view.push({
             file,
-            view
+            view,
           });
         });
       }
       return acc;
-    }, initialEntries)
+    }, initialEntries);
 
-    
     for (const { file, view } of entities.view) {
       const viewName = view.$name;
       const filePath = file.$file_path;
       const fileName = file.$file_name;
 
-      
       const uri = `${process.cwd()}/${filePath}`;
       const viewsByFile = this.viewsByFile.get(uri) || [];
 
-      const filePositions = project?.positions?.file[filePath.replace(".lkml", "")];
+      const filePositions =
+        project?.positions?.file[filePath.replace(".lkml", "")];
 
       if (!filePositions) {
         throw new Error(`filePositions not found for ${filePath}`);
@@ -248,7 +257,6 @@ export class WorkspaceModel {
         positions: filePositions?.view?.[viewName],
       });
 
-      
       if (viewsByFile.includes(viewName)) {
         continue;
       }
@@ -263,7 +271,8 @@ export class WorkspaceModel {
       const fileName = file.$file_name;
 
       const uri = `${process.cwd()}/${filePath}`;
-      const filePositions = project?.positions?.file[filePath.replace(".lkml", "")];
+      const filePositions =
+        project?.positions?.file[filePath.replace(".lkml", "")];
 
       if (!filePositions) {
         throw new Error(`filePositions not found for ${filePath}`);
@@ -289,7 +298,7 @@ export class WorkspaceModel {
           const fileRel = model.$file_rel;
           const fileName = value.$file_name;
 
-          this.includedViews.set(fileName, new Set<string>)
+          this.includedViews.set(fileName, new Set<string>());
 
           const uri = `${process.cwd()}/${filePath}`;
           const filePositions = project?.positions?.file[`${fileRel}.model`];
@@ -308,7 +317,8 @@ export class WorkspaceModel {
 
           if (model.view) {
             Object.keys(model.view).forEach((viewName) => {
-              const includedViews = this.includedViews.get(fileName) || new Set<string>();
+              const includedViews =
+                this.includedViews.get(fileName) || new Set<string>();
               includedViews.add(viewName);
               this.includedViews.set(fileName, includedViews);
             });
@@ -319,7 +329,8 @@ export class WorkspaceModel {
             this.modelsByFile.set(uri, modelFileNames);
           }
 
-          const includes = typeof model.include === 'string' ? [model.include] : model.include;
+          const includes =
+            typeof model.include === "string" ? [model.include] : model.include;
           if (!includes) {
             continue;
           }
@@ -347,7 +358,7 @@ export class WorkspaceModel {
 
     // Remove existing data for this file
     this.clearDocumentData(uri);
-    
+
     const cleanUri = uri.replace(`file://${process.cwd()}/`, "");
     try {
       await this.parseDocument(document);
@@ -363,9 +374,9 @@ export class WorkspaceModel {
         $file_path: filePath,
         $file_rel: fileRel,
         $file_type: fileType,
-      }
+      };
 
-      if (lookmlError.error.exception) { 
+      if (lookmlError.error.exception) {
         const existingErrors = this.errors.get(fileName) ?? [];
         existingErrors.push(lookmlError);
         this.errors.set(fileName, existingErrors);
@@ -407,7 +418,7 @@ export class WorkspaceModel {
       this.models.delete(modelName);
     }
     this.modelsByFile.delete(uri);
-    
+
     const fileName = uri.split("/").pop() ?? "";
 
     const errorsByFile = this.errors.get(fileName) ?? [];
@@ -475,9 +486,7 @@ export class WorkspaceModel {
   /**
    * Get included views for a model
    */
-  public getIncludedViewsForModel(
-    modelName: string
-  ): Set<string> | undefined {
+  public getIncludedViewsForModel(modelName: string): Set<string> | undefined {
     return this.includedViews.get(modelName);
   }
 
@@ -487,12 +496,12 @@ export class WorkspaceModel {
   private async resolveInclude(
     baseUri: string,
     includePattern: string,
-    modelName: string
+    modelName: string,
   ): Promise<void> {
     try {
       // Clean up the pattern (remove quotes)
       const cleanPattern = includePattern
-        .replace(/\s*#.*$/, "")   // 1. remove comments (everything after #)
+        .replace(/\s*#.*$/, "") // 1. remove comments (everything after #)
         .replace(/^["']|["']$/g, ""); // 2. remove surrounding quotes
 
       // Get the base directory
@@ -503,23 +512,18 @@ export class WorkspaceModel {
         return;
       }
       // Send a custom request to the client to find matching files
-      const matchedFiles = await this.getMatchingFiles(
-        baseDir,
-        cleanPattern
-      );
+      const matchedFiles = await this.getMatchingFiles(baseDir, cleanPattern);
 
       for (const filePath of matchedFiles) {
         if (this.loadedFiles.has(filePath)) continue;
         try {
           // Request file content via LSP
-          const viewsFromThisFile =
-            this.viewsByFile.get(filePath) || [];
-      
+          const viewsFromThisFile = this.viewsByFile.get(filePath) || [];
+
           const modelIncludes = this.includedViews.get(modelName) || new Set();
 
           viewsFromThisFile.forEach((view) => modelIncludes.add(view));
           this.includedViews.set(modelName, modelIncludes);
-
         } catch (fileError) {
           console.error(`Failed to load file ${filePath}:`, fileError);
         }
@@ -534,7 +538,7 @@ export class WorkspaceModel {
    */
   public async getMatchingFiles(
     baseDir: string,
-    pattern: string
+    pattern: string,
   ): Promise<string[]> {
     try {
       // Send a custom request to the client
@@ -543,7 +547,7 @@ export class WorkspaceModel {
         {
           baseDir,
           pattern,
-        }
+        },
       );
 
       // The response should be an array of file paths
@@ -575,10 +579,7 @@ export class WorkspaceModel {
   /**
    * Use lookml-parser to get hover information
    */
-  public getHoverInfo(
-    document: TextDocument,
-    position: Position
-  ): any | null {
+  public getHoverInfo(document: TextDocument, position: Position): any | null {
     return this.lookmlParser.getHoverInfo(document, position);
   }
 
@@ -594,7 +595,7 @@ export class WorkspaceModel {
    * Used for providing field completions in SQL contexts
    */
   public getTableFields(
-    tableName: string
+    tableName: string,
   ): { name: string; type: string }[] | null {
     // Look up the view in our workspace
     const viewDetails = this.getView(tableName);
@@ -605,20 +606,26 @@ export class WorkspaceModel {
     }
 
     // Convert the Map to an array of field objects
-    const measureFields = view.measure ? Object.entries(view.measure).map(([fieldName, field]) => ({
-      name: fieldName,
-      type: field.type,
-    })) : [];
+    const measureFields = view.measure
+      ? Object.entries(view.measure).map(([fieldName, field]) => ({
+          name: fieldName,
+          type: field.type,
+        }))
+      : [];
 
-    const dimensionFields = view.dimension ? Object.entries(view.dimension).map(([fieldName, field]) => ({
-      name: fieldName,
-      type: field.type,
-    })) : [];
+    const dimensionFields = view.dimension
+      ? Object.entries(view.dimension).map(([fieldName, field]) => ({
+          name: fieldName,
+          type: field.type,
+        }))
+      : [];
 
-    const dimensionGroupFields = view.dimension_group ? Object.entries(view.dimension_group).map(([fieldName, field]) => ({
-      name: fieldName,
-      type: field.type,
-    })) : [];
+    const dimensionGroupFields = view.dimension_group
+      ? Object.entries(view.dimension_group).map(([fieldName, field]) => ({
+          name: fieldName,
+          type: field.type,
+        }))
+      : [];
 
     return [...measureFields, ...dimensionFields, ...dimensionGroupFields];
   }

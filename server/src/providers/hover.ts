@@ -1,3 +1,4 @@
+import { LookmlDimensionGroup, LookmlMeasure } from "lookml-parser";
 import {
   Hover,
   MarkupKind,
@@ -6,7 +7,7 @@ import {
   TextDocument,
 } from "vscode-languageserver/node";
 import { WorkspaceModel } from "../models/workspace";
-import { LookmlMeasure, LookmlDimension, LookmlDimensionGroup } from "lookml-parser";
+import { getLines } from "../utils/document";
 
 export class HoverProvider {
   private workspaceModel: WorkspaceModel;
@@ -76,7 +77,7 @@ export class HoverProvider {
    */
   public getHoverInfo(
     document: TextDocument,
-    position: Position
+    position: Position,
   ): Hover | null {
     //const text = document.getText();
     const wordRange = this.getWordRangeAtPosition(document, position);
@@ -111,10 +112,9 @@ export class HoverProvider {
    */
   private getWordRangeAtPosition(
     document: TextDocument,
-    position: Position
+    position: Position,
   ): Range | null {
-    const text = document.getText();
-    const lines = text.split("\n");
+    const lines = getLines(document);
 
     if (position.line >= lines.length) {
       return null;
@@ -152,13 +152,13 @@ export class HoverProvider {
 
     return Range.create(
       Position.create(position.line, start),
-      Position.create(position.line, end)
+      Position.create(position.line, end),
     );
   }
 
   /**
    * Get hover info for a keyword
-   */ 
+   */
   private getKeywordHover(word: string): Hover | undefined {
     if (!this.lookmlDocs[word]) {
       return;
@@ -219,9 +219,10 @@ export class HoverProvider {
     }
 
     // Add field counts
-    const totalFields = fieldCounts.dimension + fieldCounts.dimensionGroup + fieldCounts.measure;
+    const totalFields =
+      fieldCounts.dimension + fieldCounts.dimensionGroup + fieldCounts.measure;
     details.push(
-      `**Fields:** ${totalFields} total (${fieldCounts.dimension} dimensions, ${fieldCounts.dimensionGroup} dimension groups, ${fieldCounts.measure} measures)`
+      `**Fields:** ${totalFields} total (${fieldCounts.dimension} dimensions, ${fieldCounts.dimensionGroup} dimension groups, ${fieldCounts.measure} measures)`,
     );
 
     return {
@@ -238,13 +239,16 @@ export class HoverProvider {
   private getFieldHover(
     word: string,
     document: TextDocument,
-    position: Position
+    position: Position,
   ): Hover | null {
     const views = this.workspaceModel.getViews();
     // Check if this word is a field in any view
     for (const [viewName, viewDetails] of views) {
       const view = viewDetails?.view;
-      const field = view?.dimension?.[word] || view?.dimension_group?.[word] || view?.measure?.[word];
+      const field =
+        view?.dimension?.[word] ||
+        view?.dimension_group?.[word] ||
+        view?.measure?.[word];
       if (field) {
         // Build field details
         const details = [];
@@ -271,14 +275,24 @@ export class HoverProvider {
 
         // Add drill fields if it's a measure
         const measureField = field as LookmlMeasure;
-        if ('drill_fields' in measureField && measureField.drill_fields?.length) {
-          details.push(`**Drill Fields:** ${measureField.drill_fields.join(', ')}`);
+        if (
+          "drill_fields" in measureField &&
+          measureField.drill_fields?.length
+        ) {
+          details.push(
+            `**Drill Fields:** ${measureField.drill_fields.join(", ")}`,
+          );
         }
 
         // Add timeframes if it's a dimension group
         const dimensionGroupField = field as LookmlDimensionGroup;
-        if ('timeframes' in dimensionGroupField && dimensionGroupField.timeframes?.length) {
-          details.push(`**Timeframes:** ${dimensionGroupField.timeframes.join(', ')}`);
+        if (
+          "timeframes" in dimensionGroupField &&
+          dimensionGroupField.timeframes?.length
+        ) {
+          details.push(
+            `**Timeframes:** ${dimensionGroupField.timeframes.join(", ")}`,
+          );
         }
 
         return {
@@ -342,11 +356,10 @@ export class HoverProvider {
   private getPropertyHover(
     word: string,
     document: TextDocument,
-    position: Position
+    position: Position,
   ): Hover | null {
     // Check if the word is a property within the current context
-    const text = document.getText();
-    const lines = text.split("\n");
+    const lines = getLines(document);
     const line = lines[position.line];
 
     // Check if we're looking at a property assignment
@@ -359,7 +372,7 @@ export class HoverProvider {
       for (let i = position.line - 1; i >= 0; i--) {
         const prevLine = lines[i].trim();
         const blockMatch = prevLine.match(
-          /^([a-zA-Z0-9_]+):\s+([a-zA-Z0-9_]+)\s*\{/
+          /^([a-zA-Z0-9_]+):\s+([a-zA-Z0-9_]+)\s*\{/,
         );
 
         if (blockMatch) {

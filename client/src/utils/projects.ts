@@ -85,7 +85,9 @@ export const setProjectName = async (projectName: string) => {
       }
       await vscode.workspace.fs.writeFile(manifestUri, Buffer.from(text));
     } catch (e) {
-      console.error("Failed to update manifest.lkml", e);
+      const message = `Failed to update manifest.lkml: ${e instanceof Error ? e.message : String(e)}`;
+      console.error(message);
+      vscode.window.showErrorMessage(message);
     }
   } else {
     let config: any = {};

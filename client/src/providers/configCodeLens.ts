@@ -11,13 +11,10 @@ export class ProjectConfigCodeLensProvider implements vscode.CodeLensProvider {
       return lenses;
     }
 
-    const text = document.getText();
-    const lines = text.split("\n");
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      if (line.includes('"project_name":')) {
-        const range = new vscode.Range(i, 0, i, line.length);
+    for (let i = 0; i < document.lineCount; i++) {
+      const line = document.lineAt(i);
+      if (line.text.includes('"project_name":')) {
+        const range = new vscode.Range(i, 0, i, line.text.length);
         const lens = new vscode.CodeLens(range, {
           title: "$(arrow-right) Move to manifest.lkml",
           tooltip: "Move project_name to manifest.lkml and clean up config",

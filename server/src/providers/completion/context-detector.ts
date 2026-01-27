@@ -4,6 +4,7 @@ import {
   TextDocumentPositionParams,
 } from "vscode-languageserver/node";
 import { WorkspaceModel } from "../../models/workspace";
+import { getLines } from "../../utils/document";
 
 export interface CompletionContext {
   type:
@@ -45,18 +46,15 @@ export class ContextDetector {
     this.workspaceModel = workspaceModel;
   }
 
-  
-
   /**
    * Analyze document to determine completion context
    */
   public getContext(
     document: TextDocument,
-    params: TextDocumentPositionParams
+    params: TextDocumentPositionParams,
   ): CompletionContext {
     const position = params.position;
-    const text = document.getText();
-    const lines = text.split("\n");
+    const lines = getLines(document);
     const line = lines[position.line];
     const linePrefix = line.substring(0, position.character);
     const lineSuffix = line.substring(position.character);
@@ -92,7 +90,7 @@ export class ContextDetector {
 
     // Check if we're typing fields for a specific table after an equal sign
     const sqlOnFieldAfterEqual = linePrefix.match(
-      /.*sql_on:.*=\s*\$\{([a-zA-Z0-9_]+)\.\s*$/
+      /.*sql_on:.*=\s*\$\{([a-zA-Z0-9_]+)\.\s*$/,
     );
 
     if (sqlOnFieldAfterEqual) {
@@ -121,7 +119,7 @@ export class ContextDetector {
 
     // Check if we're typing fields for a specific table in sql_on
     const sqlOnTableField = linePrefix.match(
-      /.*sql_on:.*\$\{([a-zA-Z0-9_]+)\.\s*$/
+      /.*sql_on:.*\$\{([a-zA-Z0-9_]+)\.\s*$/,
     );
 
     if (sqlOnTableField) {
@@ -132,7 +130,7 @@ export class ContextDetector {
         type: "field_reference",
         viewName: sqlOnTableField[1], // The table name captured from regex
       };
-    }    
+    }
 
     // Check if we're providing a value to the "type:" property
     if (linePrefix.match(/^\s+type:\s*$/)) {
@@ -144,8 +142,8 @@ export class ContextDetector {
       };
     }
 
-     // Check if we're in a relationship context
-     if (linePrefix.match(/.*relationship:\s*$/)) {
+    // Check if we're in a relationship context
+    if (linePrefix.match(/.*relationship:\s*$/)) {
       return {
         blockType: this.getCurrentBlockType(document, position),
         linePrefix,
@@ -212,12 +210,12 @@ export class ContextDetector {
         propertyName: valueMatch[1],
         type: "value",
       };
-    }     
+    }
 
     // Default context
     return {
       blockType: this.getCurrentBlockType(document, position),
-      linePrefix, 
+      linePrefix,
       lineSuffix,
       type: "empty",
       viewName: this.getCurrentViewName(document, position),
@@ -249,15 +247,14 @@ export class ContextDetector {
    */
   private getCurrentBlockType(
     document: TextDocument,
-    position: Position
+    position: Position,
   ): string | undefined {
-    const text = document.getText();
-    const lines = text.split("\n");
+    const lines = getLines(document);
 
     // Scan backwards from current line to find the block type
     for (let i = position.line; i >= 0; i--) {
       const line = lines[i].trim();
-      
+
       // Look for block start
       const blockMatch = line.match(/^([a-zA-Z0-9_]+):\s+[a-zA-Z0-9_]+\s*\{/);
       if (blockMatch) {
@@ -273,15 +270,14 @@ export class ContextDetector {
    */
   private getCurrentViewName(
     document: TextDocument,
-    position: Position
+    position: Position,
   ): string | undefined {
-    const text = document.getText();
-    const lines = text.split("\n");
+    const lines = getLines(document);
 
     // Scan backwards from current line
     for (let i = position.line; i >= 0; i--) {
       const line = lines[i].trim();
-      
+
       // Look for view definition
       const viewMatch = line.match(/^view:\s+([a-zA-Z0-9_]+)\s*\{/);
       if (viewMatch) {
@@ -297,10 +293,9 @@ export class ContextDetector {
    */
   private getJoinContext(
     document: TextDocument,
-    position: Position
+    position: Position,
   ): { exploreName: string; joinName: string; viewName: string } | undefined {
-    const text = document.getText();
-    const lines = text.split("\n");
+    const lines = getLines(document);
     let exploreName: string | undefined;
     let joinName: string | undefined;
     let viewName: string | undefined;
@@ -347,18 +342,19 @@ export class LineContextDetector {
    */
   public getLineContext(
     document: TextDocument,
-    params: TextDocumentPositionParams
+    params: TextDocumentPositionParams,
   ): LineContext {
-    const text = document.getText();
-    const lines = text.split("\n");
+    const lines = getLines(document);
     const line = lines[params.position.line];
     const linePrefix = line.substring(0, params.position.character);
     const lineSuffix = line.substring(params.position.character);
 
     // Determine if we're completing a property or value
     const colonIndex = linePrefix.lastIndexOf(":");
-    const isPropertyCompletion = colonIndex === -1 || 
-      (colonIndex < params.position.character && linePrefix.substring(colonIndex + 1).trim() === "");
+    const isPropertyCompletion =
+      colonIndex === -1 ||
+      (colonIndex < params.position.character &&
+        linePrefix.substring(colonIndex + 1).trim() === "");
 
     // Get the current property if we're completing a value
     let currentProperty: string | undefined;
@@ -377,12 +373,14 @@ export class LineContextDetector {
     for (let i = params.position.line; i >= 0; i--) {
       const currentLine = lines[i].trim();
       const lineIndent = lines[i].search(/\S|$/); // Find first non-whitespace character
-      
+
       // Look for block definitions
-      const blockMatch = currentLine.match(/^([a-zA-Z0-9_]+):\s+([a-zA-Z0-9_]+)\s*\{/);
+      const blockMatch = currentLine.match(
+        /^([a-zA-Z0-9_]+):\s+([a-zA-Z0-9_]+)\s*\{/,
+      );
       if (blockMatch) {
         const [_, type, name] = blockMatch;
-        
+
         // Only add to path if this block is a parent (has less indentation)
         if (currentIndent === -1 || lineIndent < currentIndent) {
           path.unshift({ type, name });
@@ -400,8 +398,7 @@ export class LineContextDetector {
       path,
       blockType,
       linePrefix,
-      lineSuffix
+      lineSuffix,
     };
   }
 }
- 
