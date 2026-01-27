@@ -1,15 +1,15 @@
 import {
-    createConnection,
-    Definition,
-    DefinitionParams,
-    DocumentSymbolParams,
-    ExecuteCommandParams,
-    InitializeParams,
-    InitializeResult,
-    ProposedFeatures,
-    SymbolInformation,
-    TextDocuments,
-    TextDocumentSyncKind,
+  createConnection,
+  Definition,
+  DefinitionParams,
+  DocumentSymbolParams,
+  ExecuteCommandParams,
+  InitializeParams,
+  InitializeResult,
+  ProposedFeatures,
+  SymbolInformation,
+  TextDocuments,
+  TextDocumentSyncKind,
 } from "vscode-languageserver/node";
 
 import { TextDocument } from "vscode-languageserver-textdocument";
@@ -25,13 +25,14 @@ import { HoverProvider } from "./providers/hover";
 
 // Import models
 import {
-    getCurrentBranch,
-    handleGetDevBranch,
-    handleGetExploreUrlAsMe,
-    handleListInstances,
-    handleSwitchCurrentInstance,
-    handleSwitchToBranchAndPull,
-    handleSwitchToDev,
+  getCurrentBranch,
+  handleGetDevBranch,
+  handleGetExploreUrlAsMe,
+  handleListInstances,
+  handleSwitchCurrentInstance,
+  handleSwitchToBranchAndPull,
+  handleSwitchToDev,
+  handleValidateProject,
 } from "./commands";
 import { WorkspaceModel } from "./models/workspace";
 import { DefinitionProvider } from "./providers/definition";
@@ -113,6 +114,7 @@ connection.onInitialize((params: InitializeParams) => {
           "looker.listInstances",
           "looker.switchInstance",
           "looker.addInstance",
+          "looker.validateProject",
         ],
       },
     },
@@ -167,11 +169,11 @@ connection.onExecuteCommand(async (params: ExecuteCommandParams) => {
       };
       const branch_response = await handleGetDevBranch(
         authService!,
-        switch_args
+        switch_args,
       );
       if (branch_response.branch_name !== switch_args.branch_name) {
         throw new Error(
-          `Branch name does not match. Looker ${switch_args.project_name} is on ${branch_response.branch_name} but ${switch_args.branch_name} was expected`
+          `Branch name does not match. Looker ${switch_args.project_name} is on ${branch_response.branch_name} but ${switch_args.branch_name} was expected`,
         );
       } else {
         return handleSwitchToDev(authService!, switch_args);
@@ -223,7 +225,14 @@ connection.onExecuteCommand(async (params: ExecuteCommandParams) => {
       if (!args || args.length !== 1) {
         throw new Error("Invalid arguments for switchInstance command");
       }
-      return await handleSwitchCurrentInstance(args[0] as string);
+      return await handleSwitchCurrentInstance(authService!, args[0] as string);
+    case "looker.validateProject":
+      if (!args || args.length !== 1) {
+        throw new Error("Invalid arguments for validateProject command");
+      }
+      return await handleValidateProject(authService!, {
+        project_name: args[0] as string,
+      });
     default:
       throw new Error(`Unknown command: ${command}`);
   }
@@ -318,7 +327,7 @@ connection.onDocumentSymbol(
     // This will be simplified once we implement document tracking
 
     return symbols;
-  }
+  },
 );
 
 // Document formatting
@@ -346,7 +355,7 @@ connection.onDocumentOnTypeFormatting((params) => {
     document,
     params.position,
     params.ch,
-    params.options
+    params.options,
   );
 });
 

@@ -1,11 +1,74 @@
-import sqlite3 from "@vscode/sqlite3";
 import fs from "fs";
 import os from "os";
 import path from "path";
+import initSqlJs, { Database } from "sql.js";
 
-let activeDb: sqlite3.Database | null = null;
+// Wrapper class to manage persistence and transactions
+class SqlJsWrapper {
+  private db: Database;
+  private dbPath: string;
+  private inTransaction: boolean = false;
 
-async function getDb(): Promise<sqlite3.Database> {
+  constructor(db: Database, dbPath: string) {
+    this.db = db;
+    this.dbPath = dbPath;
+  }
+
+  public run(sql: string, params: any[] = []): void {
+    this.db.run(sql, params);
+
+    // Handle persistence
+    const upperSql = sql.trim().toUpperCase();
+    if (upperSql.startsWith("BEGIN")) {
+      this.inTransaction = true;
+    } else if (
+      upperSql.startsWith("COMMIT") ||
+      upperSql.startsWith("ROLLBACK") ||
+      upperSql.startsWith("END")
+    ) {
+      this.inTransaction = false;
+      this.save();
+    } else if (!this.inTransaction) {
+      // Auto-commit mode: save after modification
+      this.save();
+    }
+  }
+
+  public get(sql: string, params: any[] = []): any {
+    const stmt = this.db.prepare(sql);
+    stmt.bind(params);
+    let row = undefined;
+    if (stmt.step()) {
+      row = stmt.getAsObject();
+    }
+    stmt.free();
+    return row;
+  }
+
+  public all(sql: string, params: any[] = []): any[] {
+    const stmt = this.db.prepare(sql);
+    stmt.bind(params);
+    const rows = [];
+    while (stmt.step()) {
+      rows.push(stmt.getAsObject());
+    }
+    stmt.free();
+    return rows;
+  }
+
+  public close(): void {
+    this.db.close();
+  }
+
+  public save() {
+    const data = this.db.export();
+    fs.writeFileSync(this.dbPath, Buffer.from(data));
+  }
+}
+
+let activeDb: SqlJsWrapper | null = null;
+
+async function getDb(): Promise<SqlJsWrapper> {
   if (activeDb) {
     return activeDb;
   } else {
@@ -16,11 +79,23 @@ async function getDb(): Promise<sqlite3.Database> {
       fs.mkdirSync(lkrDir, { recursive: true });
     }
     const dbPath = path.join(lkrDir, "auth.db");
-    try {
-      activeDb = new sqlite3.Database(dbPath);
-    } catch (error) {
-      throw error;
+
+    let db: Database;
+    const SQL = await initSqlJs();
+
+    if (fs.existsSync(dbPath)) {
+      const filebuffer = fs.readFileSync(dbPath);
+      db = new SQL.Database(filebuffer);
+    } else {
+      db = new SQL.Database();
     }
+
+    activeDb = new SqlJsWrapper(db, dbPath);
+    // If we just created a new DB, save it immediately (empty) so file exists
+    if (!fs.existsSync(dbPath)) {
+      activeDb.save();
+    }
+
     await doTransaction(activeDb, [
       {
         sql: `
@@ -48,44 +123,29 @@ async function getDb(): Promise<sqlite3.Database> {
   return activeDb;
 }
 
-function dbExec(db: sqlite3.Database, sql: string, ...params: any[]) {
-  return new Promise((resolve, reject) => {
-    db.run(sql, ...params, (err: Error | null) => {
-      if (err) reject(err);
-      else resolve(undefined);
-    });
-  });
+async function dbExec(db: SqlJsWrapper, sql: string, ...params: any[]) {
+  db.run(sql, params);
 }
 
-function dbGet<T = any>(
-  db: sqlite3.Database,
+async function dbGet<T = any>(
+  db: SqlJsWrapper,
   sql: string,
   ...params: any[]
 ): Promise<T | undefined> {
-  return new Promise((resolve, reject) => {
-    db.get(sql, ...params, (err: Error | null, row: T | undefined) => {
-      if (err) reject(err);
-      else resolve(row);
-    });
-  });
+  return db.get(sql, params) as T | undefined;
 }
 
-function dbAll<T = any>(
-  db: sqlite3.Database,
+async function dbAll<T = any>(
+  db: SqlJsWrapper,
   sql: string,
   ...params: any[]
 ): Promise<T[]> {
-  return new Promise((resolve, reject) => {
-    db.all(sql, ...params, (err: Error | null, rows: T[]) => {
-      if (err) reject(err);
-      else resolve(rows);
-    });
-  });
+  return db.all(sql, params) as T[];
 }
 
 async function doTransaction(
-  db: sqlite3.Database,
-  sqls: { sql: string; params: any[] }[]
+  db: SqlJsWrapper,
+  sqls: { sql: string; params: any[] }[],
 ) {
   return new Promise(async (resolve, reject) => {
     let error: Error | null = null;
@@ -128,12 +188,12 @@ export interface AuthRecord {
 
 export async function setNewRefreshToken(
   instance_name: string,
-  refresh_token: string
+  refresh_token: string,
 ) {
   const db = await getDb();
   try {
     const refresh_expires_at = new Date(
-      Date.now() + 1000 * 60 * 60 * 24 * 30
+      Date.now() + 1000 * 60 * 60 * 24 * 30,
     ).toISOString();
     await doTransaction(db, [
       {
@@ -152,7 +212,7 @@ export async function saveAuthToken(record: AuthRecord) {
     const existing = await dbGet<AuthRecord>(
       db,
       "SELECT * FROM auth WHERE instance_name = ?",
-      record.instance_name
+      record.instance_name,
     );
 
     if (existing) {
@@ -204,11 +264,11 @@ export async function saveAuthToken(record: AuthRecord) {
     const response = await dbGet<AuthRecord>(
       db,
       "SELECT * FROM auth WHERE instance_name = ?",
-      record.instance_name
+      record.instance_name,
     );
     return response;
   } catch (error) {
-    await db.prepare("ROLLBACK").run();
+    await dbExec(db, "ROLLBACK");
     throw error;
   }
 }
@@ -236,7 +296,7 @@ export async function getCurrentAuthToken(): Promise<AuthRecord | undefined> {
   try {
     return await dbGet<AuthRecord>(
       db,
-      "SELECT * FROM auth WHERE current_instance = 1 ORDER BY id ASC LIMIT 1"
+      "SELECT * FROM auth WHERE current_instance = 1 ORDER BY id ASC LIMIT 1",
     );
   } catch (error) {
     throw error;
@@ -244,14 +304,17 @@ export async function getCurrentAuthToken(): Promise<AuthRecord | undefined> {
 }
 
 export async function listAuthTokens(): Promise<
-  Pick<AuthRecord, "instance_name" | "base_url" | "current_instance">[]
+  Pick<
+    AuthRecord,
+    "instance_name" | "base_url" | "current_instance" | "use_production"
+  >[]
 > {
   const db = await getDb();
   try {
     return (
       (await dbAll<AuthRecord>(
         db,
-        "SELECT * FROM auth ORDER BY instance_name ASC"
+        "SELECT instance_name, base_url, current_instance, use_production FROM auth ORDER BY instance_name ASC",
       )) || []
     );
   } catch (error) {
