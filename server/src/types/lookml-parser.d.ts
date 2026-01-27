@@ -2,18 +2,34 @@ declare module "lookml-parser" {
     export type LookmlValue = string | number | boolean | LookmlValue[];
 
     export interface LookmlFile {
-        view?: Record<string, LookmlFileAttributes & { view: { [key: string]: LookmlView } }>;
-        model?: Record<string, LookmlModel >;
-        explore?: Record<string, LookmlFileAttributes & { explore: { [key: string]: LookmlExplore } }>;
-        manifest?: Record<string, LookmlFileAttributes & { manifest: { [key: string]: LookmlManifest } }>;
-        dashboard?: Record<string, LookmlFileAttributes & { dashboard: { [key: string]: LookmlDashboard } }>;
+        view?: Record<
+            string,
+            LookmlFileAttributes & { view: { [key: string]: LookmlView } }
+        >;
+        model?: Record<string, LookmlModel>;
+        explore?: Record<
+            string,
+            LookmlFileAttributes & { explore: { [key: string]: LookmlExplore } }
+        >;
+        manifest?: Record<
+            string,
+            LookmlFileAttributes & {
+                manifest: { [key: string]: LookmlManifest };
+            }
+        >;
+        dashboard?: Record<
+            string,
+            LookmlFileAttributes & {
+                dashboard: { [key: string]: LookmlDashboard };
+            }
+        >;
     }
 
-    interface LookmlError {
+    export interface LookmlError {
         $file_name: string;
         $file_path: string;
         $file_rel: string;
-        $file_type: 'view' | 'model' | 'explore' | 'manifest' | 'dashboard';
+        $file_type: "view" | "model" | "explore" | "manifest" | "dashboard";
         error: {
             exception: {
                 message: string;
@@ -22,18 +38,18 @@ declare module "lookml-parser" {
                         offset: number;
                         line: number;
                         column: number;
-                    }
+                    };
                     start: {
                         offset: number;
                         line: number;
                         column: number;
-                    }
-                }
-            }
+                    };
+                };
+            };
             context: string;
             name: string;
             stack: string;
-        }
+        };
     }
 
     export interface LookmlProject {
@@ -42,14 +58,14 @@ declare module "lookml-parser" {
         model?: Record<string, LookmlModel>;
         positions?: {
             file: Record<string, any>;
-        }
+        };
     }
 
     export interface LookmlFileAttributes {
         $file_name: string;
         $file_path: string;
         $file_rel: string;
-        $file_type: 'view' | 'model' | 'explore' | 'manifest' | 'dashboard';
+        $file_type: "view" | "model" | "explore" | "manifest" | "dashboard";
         $strings: any;
     }
 
@@ -64,7 +80,7 @@ declare module "lookml-parser" {
         sql?: string;
         tags?: string[];
         timeframes?: string[];
-        type: 'time' | 'duration';
+        type: "time" | "duration";
         value_format_name?: string;
     }
 
@@ -98,9 +114,9 @@ declare module "lookml-parser" {
     }
 
     export interface LookmlJoin {
-        type?: 'left_outer' | 'inner' | 'full_outer' | string;
+        type?: "left_outer" | "inner" | "full_outer" | string;
         sql_on?: string;
-        relationship?: 'one_to_one' | 'one_to_many' | 'many_to_one' | string;
+        relationship?: "one_to_one" | "one_to_many" | "many_to_one" | string;
         sql_where?: string;
         sql_having?: string;
         required_joins?: string[];
@@ -183,7 +199,7 @@ declare module "lookml-parser" {
             [fieldName: string]: MeasurePosition;
         };
         $p: [number, number, number, number];
-    };
+    }
 
     export interface LookmlViewWithFileInfo {
         file: LookmlFileAttributes;
@@ -203,15 +219,21 @@ declare module "lookml-parser" {
         model: LookmlModel;
         uri: string;
         positions: {
-            explore: Record<string, {
-                $name: Position;    
-                extends: Position[];
-                sql_always_where: Position;
-                sql_always_having: Position;
-                join: Record<string, Position & {
-                    sql_on: Position;
-                }>;
-            }>;
+            explore: Record<
+                string,
+                {
+                    $name: Position;
+                    extends: Position[];
+                    sql_always_where: Position;
+                    sql_always_having: Position;
+                    join: Record<
+                        string,
+                        Position & {
+                            sql_on: Position;
+                        }
+                    >;
+                }
+            >;
         };
     }
 
@@ -240,11 +262,31 @@ declare module "lookml-parser" {
         tags?: string[];
     }
 
-    export interface LookmlManifest {
+    export interface LookmlConstant {
+        $name: string;
+        $type: "constant";
+        value: string;
+        $strings?: any;
+    }
+
+    export interface LookmlVisualization {
+        $type: "visualization";
+        id: string;
+        label?: string;
+        file?: string;
+        url?: string;
+        sri_hash?: string;
+        dependencies?: string[];
+        $strings?: any;
+    }
+
+    export interface LookmlManifest extends Partial<LookmlFileAttributes> {
         project_name?: string;
-        application?: string;
+        application?: any;
         includes?: string[];
         timezone?: string;
+        constant?: Record<string, LookmlConstant>;
+        visualization?: LookmlVisualization[];
     }
 
     export interface LookmlDashboard {
@@ -269,7 +311,7 @@ declare module "lookml-parser" {
         | LookmlModelFile
         | LookmlExploreFile
         | LookmlManifestFile
-        | LookmlDashboardFile
+        | LookmlDashboardFile;
 
     export interface TransformOptions {
         s?: boolean;
@@ -280,7 +322,7 @@ declare module "lookml-parser" {
 
     export interface ParseFilesOptions {
         source: string;
-        fileOutput?: 'by-type' | 'by-name' | 'array';
+        fileOutput?: "by-type" | "by-name" | "array";
         transformations?: TransformOptions;
         globOptions?: object;
         readFileOptions?: object;
@@ -288,15 +330,31 @@ declare module "lookml-parser" {
         console?: Console;
         conditionalComment?: string;
     }
-    
+
     export const transformations: {
         addPositions: (project: LookmlProject) => void;
     };
 
-    export function parse(lkml: string): LookmlModel | {view: LookmlView} | {explore: LookmlExplore};
+    export function parse(
+        lkml: string,
+    ):
+        | LookmlModel
+        | { view: LookmlView }
+        | { explore: LookmlExplore }
+        | LookmlManifest;
 
-    export function parseFiles(options: ParseFilesOptions & { fileOutput?: 'by-type' }): Promise<LookmlProject>;
-    export function parseFiles(options: ParseFilesOptions & { fileOutput: 'by-name' }): Promise<LookmlProject>;
-    export function parseFiles(options: ParseFilesOptions & { fileOutput: 'array' }): Promise<LookmlProject[]>;
-    export function parseFiles(options: ParseFilesOptions): Promise<LookmlCollectionByType | Record<string, LookmlProject> | LookmlProject[]>;
+    export function parseFiles(
+        options: ParseFilesOptions & { fileOutput?: "by-type" },
+    ): Promise<LookmlProject>;
+    export function parseFiles(
+        options: ParseFilesOptions & { fileOutput: "by-name" },
+    ): Promise<LookmlProject>;
+    export function parseFiles(
+        options: ParseFilesOptions & { fileOutput: "array" },
+    ): Promise<LookmlProject[]>;
+    export function parseFiles(
+        options: ParseFilesOptions,
+    ): Promise<
+        LookmlCollectionByType | Record<string, LookmlProject> | LookmlProject[]
+    >;
 }
