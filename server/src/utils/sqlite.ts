@@ -17,7 +17,7 @@ class SqlJsWrapper {
   public run(sql: string, params: any[] = []): void {
     this.db.run(sql, params);
 
-    // Handle persistence
+    // Handle persistence: Write file back after transaction ends or on auto-commit
     const upperSql = sql.trim().toUpperCase();
     if (upperSql.startsWith("BEGIN")) {
       this.inTransaction = true;
