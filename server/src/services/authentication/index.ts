@@ -86,7 +86,7 @@ export class AuthenticationService {
         .listen(AuthenticationService.DEFAULT_PORT, () => {
           console.log(
             "OAuth callback server started on port " +
-              AuthenticationService.DEFAULT_PORT
+              AuthenticationService.DEFAULT_PORT,
           );
           resolve();
         })
@@ -110,7 +110,7 @@ export class AuthenticationService {
   public async waitForOauthFlow(
     base_url: string,
     instance_name: string,
-    use_production: AuthRecord["use_production"]
+    use_production: AuthRecord["use_production"],
   ) {
     let timeoutId: NodeJS.Timeout | null = null;
     try {
@@ -132,7 +132,7 @@ export class AuthenticationService {
 
       const authUrl = await this.oauthSession.createAuthCodeRequestUrl(
         "cors_api",
-        "looker_api"
+        "looker_api",
       );
 
       await open(authUrl);
@@ -156,12 +156,17 @@ export class AuthenticationService {
       if (!this.sdk) {
         // This case might be hit if the timeout occurred and sdk was not set
         // or if the server closed before the SDK could be initialized by the callback.
-        if (!this.oauthSession?.activeToken) { // Check if token is missing due to timeout
-          throw new Error("SDK not initialized and no active token found, possibly due to timeout or premature server close.");
+        if (!this.oauthSession?.activeToken) {
+          // Check if token is missing due to timeout
+          throw new Error(
+            "SDK not initialized and no active token found, possibly due to timeout or premature server close.",
+          );
         }
         // If there's an active token, it implies the callback was successful before server close/timeout
         // but this.sdk wasn't set for some reason. This path is less likely with current logic.
-        throw new Error("SDK not initialized despite apparent successful OAuth flow.");
+        throw new Error(
+          "SDK not initialized despite apparent successful OAuth flow.",
+        );
       } else {
         return await this.oauthSession.activeToken;
       }
@@ -182,12 +187,12 @@ export class AuthenticationService {
     const new_token = await this.waitForOauthFlow(
       auth_record.base_url,
       auth_record.instance_name,
-      auth_record.use_production
+      auth_record.use_production,
     );
     if (new_token.refresh_token) {
       await setNewRefreshToken(
         auth_record.instance_name,
-        new_token.refresh_token
+        new_token.refresh_token,
       );
     } else {
       throw new Error("No refresh token found");
@@ -197,7 +202,7 @@ export class AuthenticationService {
   public async newInstance(
     instance_name: string,
     base_url: string,
-    use_production: AuthRecord["use_production"]
+    use_production: AuthRecord["use_production"],
   ): Promise<void> {
     this.stopServer(); // Ensure any existing server is stopped
     this.oauthSession = null;
@@ -227,7 +232,7 @@ export class AuthenticationService {
           await this.waitForOauthFlow(
             existing.base_url,
             existing.instance_name,
-            existing.use_production
+            existing.use_production,
           );
         } catch {
           throw new Error("No new token found");
@@ -259,7 +264,7 @@ export class AuthenticationService {
             ? (new Date(existing.expires_at).getTime() - new Date().getTime()) /
                 1000
             : 0,
-          0
+          0,
         ),
       };
 
@@ -297,7 +302,7 @@ export class AuthenticationService {
   }
 
   public async resetToRemote(
-    project_name: string
+    project_name: string,
   ): Promise<{ success: boolean; message: string }> {
     const sdk = await this.getSDK();
     if (!sdk) {
@@ -320,6 +325,26 @@ export class AuthenticationService {
     }
   }
 
+  public async validateProject(
+    project_name: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const sdk = await this.getSDK();
+    if (!sdk) {
+      throw new Error("SDK not initialized");
+    }
+    try {
+      // Try to get the project to see if it exists
+      await sdk.ok(sdk.project(project_name));
+      return { success: true, message: "Project found" };
+    } catch (error) {
+      console.error(`Failed to validate project (${project_name}):`, error);
+      return {
+        success: false,
+        message: `Project ${project_name} not validation found on instance`,
+      };
+    }
+  }
+
   public async getSDK(db_auth_token?: AuthRecord): Promise<Looker40SDK> {
     // There are two ways to authenticate:
     // 1. Implicitly grabbing the token from the local sqllitedb or
@@ -328,7 +353,7 @@ export class AuthenticationService {
       this.oauthSession = new NodeOAuthSession({
         settings: new ApiSettings({ base_url: db_auth_token.base_url }),
         transport: new NodeTransport(
-          new ApiSettings({ base_url: db_auth_token.base_url })
+          new ApiSettings({ base_url: db_auth_token.base_url }),
         ),
         crypto: new NodeCryptoHash(),
       });

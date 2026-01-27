@@ -20,6 +20,51 @@ const setProjectName = (projectName: string) => {
     .update(PROJECT_NAME_KEY, projectName, true);
 };
 
+const validateProjectName = async (
+  projectName: string | undefined,
+): Promise<string | undefined> => {
+  let valid = false;
+  let currentProjectName = projectName;
+
+  while (!valid) {
+    if (!currentProjectName) {
+      currentProjectName = await vscode.window.showInputBox({
+        prompt: "Enter Looker project name",
+        placeHolder: "your-project-name",
+      });
+      if (!currentProjectName) {
+        return undefined; // User cancelled
+      }
+    }
+
+    const response = await client.sendRequest<CommandResponse>(
+      "workspace/executeCommand",
+      {
+        command: "looker.validateProject",
+        arguments: [currentProjectName],
+      },
+    );
+
+    if (response.success) {
+      valid = true;
+      setProjectName(currentProjectName);
+      return currentProjectName;
+    } else {
+      const selection = await vscode.window.showErrorMessage(
+        `Project "${currentProjectName}" not found.`,
+        "Try Again",
+        "Cancel",
+      );
+      if (selection === "Try Again") {
+        currentProjectName = undefined; // Trigger input box again
+      } else {
+        return undefined; // User cancelled
+      }
+    }
+  }
+  return currentProjectName;
+};
+
 export interface CommandResponse<T = any> {
   success: boolean;
   message: string;
@@ -32,7 +77,7 @@ const outputChannel = vscode.window.createOutputChannel("LookML");
 export function activate(context: ExtensionContext) {
   // The server is implemented in node
   const serverModule = context.asAbsolutePath(
-    path.join("server", "out", "server.js")
+    path.join("server", "out", "server.js"),
   );
 
   // Server options
@@ -50,7 +95,7 @@ export function activate(context: ExtensionContext) {
     documentSelector: [{ scheme: "file", language: "lookml" }],
     synchronize: {
       fileEvents: workspace.createFileSystemWatcher(
-        "**/*.{lkml,lookml,model.lkml,view.lkml,explore.lkml}"
+        "**/*.{lkml,lookml,model.lkml,view.lkml,explore.lkml}",
       ),
     },
     outputChannel,
@@ -61,7 +106,7 @@ export function activate(context: ExtensionContext) {
     "lookmlLanguageServer",
     "LookML Language Server",
     serverOptions,
-    clientOptions
+    clientOptions,
   );
 
   client.onRequest("lookml/findMatchingFiles", async (params: any) => {
@@ -77,7 +122,7 @@ export function activate(context: ExtensionContext) {
       // Ensure pattern ends with appropriate extension
       if (
         !/(\.lkml|\.lookml|\.model\.lkml|\.view\.lkml|\.explore\.lkml)$/i.test(
-          pattern
+          pattern,
         )
       ) {
         pattern = `${pattern}.{lkml,lookml,model.lkml,view.lkml,explore.lkml}`;
@@ -125,7 +170,7 @@ export function activate(context: ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand("looker.showOutput", () => {
       outputChannel.show();
-    })
+    }),
   );
 
   context.subscriptions.push(
@@ -135,19 +180,14 @@ export function activate(context: ExtensionContext) {
         placeHolder: "your_project_name",
       });
       setProjectName(projectName);
-    })
+    }),
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("looker.syncBranches", async () => {
       let projectName = getProjectName();
-      if (!projectName) {
-        projectName = await vscode.window.showInputBox({
-          prompt: "Enter Looker project name",
-          placeHolder: "your-project-name",
-        });
-        setProjectName(projectName);
-      }
+      projectName = await validateProjectName(projectName);
+      if (!projectName) return;
 
       const dev_branch = await client.sendRequest<{
         success: boolean;
@@ -170,36 +210,31 @@ export function activate(context: ExtensionContext) {
             {
               command: "looker.switchToBranchAndPull",
               arguments: [dev_branch.branch_name],
-            }
+            },
           );
       }
-    })
+    }),
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("looker.resetToRemote", async () => {
       let projectName = getProjectName();
-      if (!projectName?.length) {
-        projectName = await vscode.window.showInputBox({
-          prompt: "Enter Looker project name associated with this repository",
-          placeHolder: "your-project-name",
-        });
-        await setProjectName(projectName);
-      }
+      projectName = await validateProjectName(projectName);
+      if (!projectName) return;
 
       const result = await client.sendRequest<CommandResponse>(
         "workspace/executeCommand",
         {
           command: "looker.remoteReset",
           arguments: [projectName],
-        }
+        },
       );
       if (result.success) {
         vscode.window.showInformationMessage(result.message);
       } else {
         vscode.window.showErrorMessage(result.message);
       }
-    })
+    }),
   );
 
   context.subscriptions.push(
@@ -235,71 +270,89 @@ export function activate(context: ExtensionContext) {
       if (selectedInstance) {
         if (selectedInstance.label === new_login_label) {
           try {
-            await addInstance();
+            await addInstance(client);
           } catch (error) {
             vscode.window.showErrorMessage(`Failed to add instance: ${error}`);
           }
         } else {
-          (await client.sendRequest<CommandResponse<QuickPickItem>>(
+          const response = await client.sendRequest<CommandResponse>(
             "workspace/executeCommand",
             {
               command: "looker.switchInstance",
               arguments: [selectedInstance.label],
-            }
-          )) as unknown as QuickPickItem;
+            },
+          );
+          if (response.success) {
+            vscode.window.showInformationMessage(response.message, {
+              modal: true,
+            });
+          } else {
+            vscode.window.showErrorMessage(
+              `Failed to switch instance: ${response.message}`,
+            );
+          }
         }
       } else {
         vscode.window.showErrorMessage("No instance selected");
       }
-    })
+    }),
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("looker.saveAllStageAllCommitAndSync", async () => {
-      let projectName = getProjectName();
-      if (!projectName?.length) {
-        projectName = await vscode.window.showInputBox({
-          prompt: "Enter Looker project name associated with this repository",
-          placeHolder: "your-project-name",
-        });
-        await setProjectName(projectName);
-      }
-      try {
-        // 1. Save all files
-        await vscode.commands.executeCommand("workbench.action.files.saveAll");
-        // sleep for 1 second
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        // 2. Stage all changes
-        await vscode.commands.executeCommand("git.stageAll");
-
-        // 3. Generate commit message (using Cursor's command if available)
-        let commitMessage = "Auto-commit";
+    vscode.commands.registerCommand(
+      "looker.saveAllStageAllCommitAndSync",
+      async () => {
+        let projectName = getProjectName();
+        projectName = await validateProjectName(projectName);
+        if (!projectName) return;
         try {
-          commitMessage = await vscode.commands.executeCommand<string>("cursor.generateGitCommitMessage");
-        } catch (e) {
-          // Fallback if Cursor extension is not available
-          commitMessage = await vscode.window.showInputBox({
-            prompt: "Enter a commit message",
-            value: commitMessage,
-          }) || commitMessage;
+          // 1. Save all files
+          await vscode.commands.executeCommand(
+            "workbench.action.files.saveAll",
+          );
+          // sleep for 1 second
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          // 2. Stage all changes
+          await vscode.commands.executeCommand("git.stageAll");
+
+          // 3. Generate commit message (using Cursor's command if available)
+          let commitMessage = "Auto-commit";
+          try {
+            commitMessage = await vscode.commands.executeCommand<string>(
+              "cursor.generateGitCommitMessage",
+            );
+          } catch (e) {
+            // Fallback if Cursor extension is not available
+            commitMessage =
+              (await vscode.window.showInputBox({
+                prompt: "Enter a commit message",
+                value: commitMessage,
+              })) || commitMessage;
+          }
+
+          // 4. Commit all staged changes
+          await vscode.commands.executeCommand("git.commitAll", {
+            message: commitMessage,
+          });
+
+          // 5. Push to remote
+          await vscode.commands.executeCommand("git.push");
+          // sleep for 1 second
+          await new Promise((resolve) => setTimeout(resolve, 500));
+
+          // 6. Run Looker resetToRemote
+          await vscode.commands.executeCommand("looker.resetToRemote");
+
+          vscode.window.showInformationMessage(
+            "All changes saved, committed, pushed, and Looker reset to remote.",
+          );
+        } catch (err: any) {
+          vscode.window.showErrorMessage(
+            `Error in saveAllStageAllCommitAndSync: ${err.message || err}`,
+          );
         }
-
-        // 4. Commit all staged changes
-        await vscode.commands.executeCommand("git.commitAll", { message: commitMessage });
-
-        // 5. Push to remote
-        await vscode.commands.executeCommand("git.push");
-        // sleep for 1 second
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
-        // 6. Run Looker resetToRemote
-        await vscode.commands.executeCommand("looker.resetToRemote");
-
-        vscode.window.showInformationMessage("All changes saved, committed, pushed, and Looker reset to remote.");
-      } catch (err: any) {
-        vscode.window.showErrorMessage(`Error in saveAllStageAllCommitAndSync: ${err.message || err}`);
-      }
-    })
+      },
+    ),
   );
 
   client.start();

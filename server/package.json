@@ -17,9 +17,9 @@
   "dependencies": {
     "@looker/sdk": "^25.4.0",
     "@looker/sdk-node": "^25.4.0",
-    "@vscode/sqlite3": "^5.1.8-vscode",
     "lookml-parser": "7.0.1",
     "open": "^8.4.2",
+    "sql.js": "^1.13.0",
     "vscode": "^1.1.37",
     "vscode-languageserver": "^8.1.0",
     "vscode-languageserver-textdocument": "^1.0.8",
@@ -29,6 +29,7 @@
   "devDependencies": {
     "@types/jest": "^29.5.14",
     "@types/node": "^20.17.30",
+    "@types/sql.js": "^1.4.9",
     "jest": "^29.7.0",
     "ts-jest": "^29.1.2",
     "typescript": "^5.3.3"
