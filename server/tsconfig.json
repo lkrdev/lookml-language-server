@@ -1,18 +1,18 @@
 {
-  "compilerOptions": {
-    "target": "es2022",
-    "lib": ["es2022"],
-    "module": "commonjs",
-    "moduleResolution": "node",
-    "esModuleInterop": true,
-    "sourceMap": true,
-    "strict": true,
-    "outDir": "out",
-    "rootDir": "src",
-    "incremental": true,
-    "skipLibCheck": true,
-    "composite": true
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", ".vscode-test"]
+    "compilerOptions": {
+        "target": "es2022",
+        "lib": ["es2022", "dom", "webworker"],
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "esModuleInterop": true,
+        "sourceMap": true,
+        "strict": true,
+        "outDir": "out",
+        "rootDir": "src",
+        "incremental": true,
+        "skipLibCheck": true,
+        "composite": true
+    },
+    "include": ["src/**/*"],
+    "exclude": ["node_modules", ".vscode-test"]
 }
