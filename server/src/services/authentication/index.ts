@@ -340,7 +340,7 @@ export class AuthenticationService {
       console.error(`Failed to validate project (${project_name}):`, error);
       return {
         success: false,
-        message: `Project ${project_name} not validation found on instance`,
+        message: `Project ${project_name} not found on instance`,
       };
     }
   }
