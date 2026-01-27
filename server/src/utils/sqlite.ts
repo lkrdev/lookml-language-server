@@ -123,45 +123,24 @@ async function getDb(): Promise<SqlJsWrapper> {
   return activeDb;
 }
 
-function dbExec(db: SqlJsWrapper, sql: string, ...params: any[]) {
-  return new Promise((resolve, reject) => {
-    try {
-      db.run(sql, params);
-      resolve(undefined);
-    } catch (err) {
-      reject(err);
-    }
-  });
+async function dbExec(db: SqlJsWrapper, sql: string, ...params: any[]) {
+  db.run(sql, params);
 }
 
-function dbGet<T = any>(
+async function dbGet<T = any>(
   db: SqlJsWrapper,
   sql: string,
   ...params: any[]
 ): Promise<T | undefined> {
-  return new Promise((resolve, reject) => {
-    try {
-      const row = db.get(sql, params);
-      resolve(row as T | undefined);
-    } catch (err) {
-      reject(err);
-    }
-  });
+  return db.get(sql, params) as T | undefined;
 }
 
-function dbAll<T = any>(
+async function dbAll<T = any>(
   db: SqlJsWrapper,
   sql: string,
   ...params: any[]
 ): Promise<T[]> {
-  return new Promise((resolve, reject) => {
-    try {
-      const rows = db.all(sql, params);
-      resolve(rows as T[]);
-    } catch (err) {
-      reject(err);
-    }
-  });
+  return db.all(sql, params) as T[];
 }
 
 async function doTransaction(
