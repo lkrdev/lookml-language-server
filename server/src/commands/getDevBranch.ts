@@ -10,7 +10,7 @@ export async function handleGetDevBranch(
   authService: AuthenticationService,
   args: {
     project_name: string;
-  }
+  },
 ): Promise<CommandResponse> {
   if (!args.project_name?.length) {
     throw new Error("Invalid arguments for getDevBranch command");
@@ -21,6 +21,6 @@ export async function handleGetDevBranch(
     return { success: true, branch_name: branch?.name || "" };
   } catch (error) {
     console.error("Error getting dev branch:", error);
-    return { success: false, message: "Error getting dev branch" };
+    return { success: false, message: `Error getting dev branch: ${error}` };
   }
 }

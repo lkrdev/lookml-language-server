@@ -8,61 +8,132 @@ import {
   TransportKind,
 } from "vscode-languageclient/node";
 import { addInstance } from "./addInstance";
-const PROJECT_NAME_KEY = "looker.projectName";
+import { registerConfigCodeLens } from "./providers/configCodeLens";
+import {
+  getProjectName,
+  invalidateProjectCache,
+  setProjectName,
+} from "./utils/projects";
 
-const getProjectName = () => {
-  return vscode.workspace.getConfiguration().get(PROJECT_NAME_KEY, "");
-};
+const promptForProject = async (
+  currentProjectName?: string,
+): Promise<string | undefined> => {
+  try {
+    const projectsResult = await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: "Fetching Looker projects...",
+        cancellable: false,
+      },
+      async () => {
+        return await client.sendRequest<{
+          success: boolean;
+          projects?: string[];
+          message?: string;
+        }>("workspace/executeCommand", {
+          command: "looker.getAllProjects",
+        });
+      },
+    );
 
-const setProjectName = (projectName: string) => {
-  return vscode.workspace
-    .getConfiguration()
-    .update(PROJECT_NAME_KEY, projectName, true);
+    if (
+      projectsResult.success &&
+      projectsResult.projects &&
+      projectsResult.projects.length > 0
+    ) {
+      const current = currentProjectName || (await getProjectName());
+      const items: QuickPickItem[] = projectsResult.projects.map((p) => ({
+        label: p,
+        description: p === current ? "(current)" : undefined,
+        alwaysShow: p === current,
+      }));
+
+      // Sort items so current is at the top if it exists
+      items.sort((a, b) => {
+        if (a.label === current) return -1;
+        if (b.label === current) return 1;
+        return a.label.localeCompare(b.label);
+      });
+
+      const manualItem: QuickPickItem = {
+        label: "$(pencil) Enter manually...",
+        description: "Type project name",
+        alwaysShow: true,
+      };
+
+      const pick = await vscode.window.showQuickPick([...items, manualItem], {
+        placeHolder: "Select a Looker project or enter manually",
+        ignoreFocusOut: true,
+      });
+
+      if (!pick) {
+        return undefined; // User cancelled
+      }
+
+      if (pick.label !== manualItem.label) {
+        return pick.label;
+      }
+    }
+  } catch (error) {
+    console.error("Failed to fetch projects:", error);
+    // Fallback to manual entry silently
+  }
+
+  // Fallback to InputBox
+  return await vscode.window.showInputBox({
+    prompt: "Enter Looker project name",
+    placeHolder: "your-project-name",
+    value: currentProjectName || (await getProjectName()),
+    ignoreFocusOut: true,
+  });
 };
 
 const validateProjectName = async (
   projectName: string | undefined,
 ): Promise<string | undefined> => {
-  let valid = false;
   let currentProjectName = projectName;
 
-  while (!valid) {
+  while (true) {
     if (!currentProjectName) {
-      currentProjectName = await vscode.window.showInputBox({
-        prompt: "Enter Looker project name",
-        placeHolder: "your-project-name",
-      });
+      currentProjectName = await promptForProject();
       if (!currentProjectName) {
         return undefined; // User cancelled
       }
     }
 
-    const response = await client.sendRequest<CommandResponse>(
-      "workspace/executeCommand",
+    const response = await vscode.window.withProgress(
       {
-        command: "looker.validateProject",
-        arguments: [currentProjectName],
+        location: vscode.ProgressLocation.Notification,
+        title: `Validating project "${currentProjectName}"...`,
+        cancellable: false,
+      },
+      async () => {
+        return await client.sendRequest<CommandResponse>(
+          "workspace/executeCommand",
+          {
+            command: "looker.validateProject",
+            arguments: [currentProjectName],
+          },
+        );
       },
     );
 
     if (response.success) {
-      valid = true;
-      setProjectName(currentProjectName);
+      await setProjectName(currentProjectName);
       return currentProjectName;
     } else {
       const selection = await vscode.window.showErrorMessage(
-        `Project "${currentProjectName}" not found.`,
+        `Project "${currentProjectName}" not found on instance.`,
         "Try Again",
         "Cancel",
       );
       if (selection === "Try Again") {
-        currentProjectName = undefined; // Trigger input box again
+        currentProjectName = undefined; // Trigger prompt again
       } else {
         return undefined; // User cancelled
       }
     }
   }
-  return currentProjectName;
 };
 
 export interface CommandResponse<T = any> {
@@ -75,6 +146,26 @@ let client: LanguageClient;
 const outputChannel = vscode.window.createOutputChannel("LookML");
 
 export function activate(context: ExtensionContext) {
+  // Clear cache and reload project name on activation
+  getProjectName(true);
+
+  // Watch for changes to manifest.lkml and .lkrconfig.json to invalidate cache
+  const configWatcher = vscode.workspace.createFileSystemWatcher(
+    "**/{manifest.lkml,.lkrconfig.json}",
+  );
+  context.subscriptions.push(configWatcher);
+
+  const invalidateCache = () => {
+    invalidateProjectCache();
+    getProjectName(); // Trigger reload
+  };
+
+  context.subscriptions.push(configWatcher.onDidChange(invalidateCache));
+  context.subscriptions.push(configWatcher.onDidCreate(invalidateCache));
+  context.subscriptions.push(configWatcher.onDidDelete(invalidateCache));
+
+  registerConfigCodeLens(context);
+
   // The server is implemented in node
   const serverModule = context.asAbsolutePath(
     path.join("server", "out", "server.js"),
@@ -175,34 +266,56 @@ export function activate(context: ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("looker.selectProject", async () => {
-      const projectName = await vscode.window.showInputBox({
-        prompt: "Enter Looker project name",
-        placeHolder: "your_project_name",
-      });
-      setProjectName(projectName);
+      const current = await getProjectName();
+      const selected = await promptForProject(current);
+      if (selected) {
+        await validateProjectName(selected);
+      }
     }),
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("looker.syncBranches", async () => {
-      let projectName = getProjectName();
+      let projectName = await getProjectName();
       projectName = await validateProjectName(projectName);
       if (!projectName) return;
 
       const dev_branch = await client.sendRequest<{
         success: boolean;
         branch_name: string;
+        message?: string;
       }>("workspace/executeCommand", {
         command: "looker.getDevBranch",
         arguments: [projectName],
       });
 
+      if (!dev_branch.success) {
+        vscode.window.showErrorMessage(
+          dev_branch.message || "Failed to get dev branch",
+        );
+        return;
+      }
+
+      if (!dev_branch.branch_name) {
+        vscode.window.showErrorMessage("Dev branch name is empty or null.");
+        return;
+      }
+
       const current_branch = await client.sendRequest<{
         success: boolean;
         branch_name: string;
+        message?: string;
       }>("workspace/executeCommand", {
         command: "looker.getCurrentBranch",
       });
+
+      if (!current_branch.success) {
+        vscode.window.showErrorMessage(
+          current_branch.message || "Failed to get current branch",
+        );
+        return;
+      }
+
       if (dev_branch.branch_name !== current_branch.branch_name) {
         const switch_to_branch_and_pull =
           await client.sendRequest<CommandResponse>(
@@ -212,21 +325,43 @@ export function activate(context: ExtensionContext) {
               arguments: [dev_branch.branch_name],
             },
           );
+
+        if (switch_to_branch_and_pull.success) {
+          vscode.window.showInformationMessage(
+            `Switched to branch ${dev_branch.branch_name} and pulled changes.`,
+          );
+        } else {
+          vscode.window.showErrorMessage(
+            switch_to_branch_and_pull.message ||
+              "Failed to switch to branch and pull.",
+          );
+        }
+      } else {
+        vscode.window.showInformationMessage("Already on the dev branch.");
       }
     }),
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("looker.resetToRemote", async () => {
-      let projectName = getProjectName();
+      let projectName = await getProjectName();
       projectName = await validateProjectName(projectName);
       if (!projectName) return;
 
-      const result = await client.sendRequest<CommandResponse>(
-        "workspace/executeCommand",
+      const result = await vscode.window.withProgress(
         {
-          command: "looker.remoteReset",
-          arguments: [projectName],
+          location: vscode.ProgressLocation.Notification,
+          title: `Resetting project "${projectName}" to remote...`,
+          cancellable: false,
+        },
+        async () => {
+          return await client.sendRequest<CommandResponse>(
+            "workspace/executeCommand",
+            {
+              command: "looker.remoteReset",
+              arguments: [projectName],
+            },
+          );
         },
       );
       if (result.success) {
@@ -302,7 +437,7 @@ export function activate(context: ExtensionContext) {
     vscode.commands.registerCommand(
       "looker.saveAllStageAllCommitAndSync",
       async () => {
-        let projectName = getProjectName();
+        let projectName = await getProjectName();
         projectName = await validateProjectName(projectName);
         if (!projectName) return;
         try {
