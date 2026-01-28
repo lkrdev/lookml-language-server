@@ -1,126 +1,143 @@
 {
-  "name": "lookml-language-server",
-  "displayName": "LookML Language Server",
-  "description": "LookML Language Server for linting, validating, formatting, and more",
-  "icon": "images/lkr-dev-logo.png",
-  "author": "rileylnapier@gmail.com",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/lkrdev/lookml-language-server.git"
-  },
-  "publisher": "lkr-dev",
-  "license": "MIT",
-  "version": "0.0.0",
-  "categories": [],
-  "engines": {
-    "vscode": "^1.75.0"
-  },
-  "activationEvents": [
-    "onStartupFinished"
-  ],
-  "main": "./client/out/extension",
-  "contributes": {
-    "commands": [
-      {
-        "command": "looker.resetToRemote",
-        "title": "Reset to Remote",
-        "category": "Looker"
-      },
-      {
-        "command": "looker.selectProject",
-        "title": "Select Project",
-        "category": "Looker"
-      },
-      {
-        "command": "looker.syncBranches",
-        "title": "Sync Branches",
-        "category": "Looker"
-      },
-      {
-        "command": "looker.login",
-        "title": "Login",
-        "category": "Looker"
-      },
-      {
-        "command": "looker.saveAllStageAllCommitAndSync",
-        "title": "Save All, Stage All, Commit, and Sync",
-        "category": "Looker"
-      }
-    ],
-    "configuration": {
-      "title": "Looker",
-      "properties": {
-        "looker.projectName": {
-          "type": "string",
-          "default": "",
-          "description": "Looker project name"
-        }
-      }
+    "name": "lookml-language-server",
+    "displayName": "LookML Language Server",
+    "description": "LookML Language Server for linting, validating, formatting, and more",
+    "icon": "images/lkr-dev-logo.png",
+    "author": "rileylnapier@gmail.com",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/lkrdev/lookml-language-server.git"
     },
-    "keybindings": [
-      {
-        "command": "looker.saveAllStageAllCommitAndSync",
-        "key": "alt+shift+r",
-        "when": "editorTextFocus"
-      }
+    "publisher": "lkr-dev",
+    "license": "MIT",
+    "version": "0.0.0",
+    "categories": [],
+    "engines": {
+        "vscode": "^1.75.0"
+    },
+    "activationEvents": [
+        "onStartupFinished"
     ],
-    "languages": [
-      {
-        "id": "lookml",
-        "aliases": [
-          "LookML",
-          "lookml"
+    "main": "./client/out/extension",
+    "contributes": {
+        "commands": [
+            {
+                "command": "looker.resetToRemote",
+                "title": "Reset to Remote",
+                "category": "Looker"
+            },
+            {
+                "command": "looker.selectProject",
+                "title": "Select Project",
+                "category": "Looker"
+            },
+            {
+                "command": "looker.syncBranches",
+                "title": "Sync Branches",
+                "category": "Looker"
+            },
+            {
+                "command": "looker.login",
+                "title": "Login",
+                "category": "Looker"
+            },
+            {
+                "command": "looker.saveAllStageAllCommitAndSync",
+                "title": "Save All, Stage All, Commit, and Sync",
+                "category": "Looker"
+            }
         ],
-        "extensions": [
-          ".lkml",
-          ".lookml",
-          ".model.lkml",
-          ".view.lkml",
-          ".explore.lkml"
+        "configuration": {
+            "title": "Looker",
+            "properties": {
+                "looker.projectName": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Looker project name"
+                }
+            }
+        },
+        "keybindings": [
+            {
+                "command": "looker.saveAllStageAllCommitAndSync",
+                "key": "alt+shift+r",
+                "when": "editorTextFocus"
+            }
         ],
-        "configuration": "./language-configuration.json"
-      }
-    ],
-    "grammars": [
-      {
-        "language": "lookml",
-        "scopeName": "source.lookml",
-        "path": "./syntaxes/lookml.tmLanguage.json"
-      }
-    ],
-    "themes": [
-      {
-        "label": "LookML",
-        "uiTheme": "vs-dark",
-        "path": "./syntaxes/lookml.tmTheme.json"
-      }
+        "languages": [
+            {
+                "id": "lookml",
+                "aliases": [
+                    "LookML",
+                    "lookml"
+                ],
+                "extensions": [
+                    ".lkml",
+                    ".lookml",
+                    ".model.lkml",
+                    ".view.lkml",
+                    ".explore.lkml"
+                ],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "lookml",
+                "scopeName": "source.lookml",
+                "path": "./syntaxes/lookml.tmLanguage.json"
+            }
+        ],
+        "themes": [
+            {
+                "label": "LookML",
+                "uiTheme": "vs-dark",
+                "path": "./syntaxes/lookml.tmTheme.json"
+            }
+        ]
+    },
+    "scripts": {
+        "install:client": "cd client && npm install",
+        "install:server": "cd server && npm install",
+        "install:validator": "cd packages/lookml-validator && npm install",
+        "clean:client": "cd client && rm -rf node_modules && npm install",
+        "clean:server": "cd server && rm -rf node_modules && npm install",
+        "clean": "npm run clean:client && npm run clean:server",
+        "compile": "npm run install:client && npm run install:server && tsc --build",
+        "build:validator": "cd packages/lookml-validator && npm run build",
+        "bundle:client": "esbuild ./client/src/extension.ts --bundle --outfile=client/out/extension.js --external:vscode --format=cjs --platform=node && cp node_modules/lookml-parser/lib/parse/lookml.peg client/out/",
+        "bundle:server": "esbuild ./server/src/server.ts --bundle --outfile=server/out/server.js --external:vscode --format=cjs --platform=node && cp node_modules/lookml-parser/lib/parse/lookml.peg server/out/ && cp node_modules/sql.js/dist/sql-wasm.wasm server/out/",
+        "bundle": "npm run bundle:client && npm run bundle:server",
+        "vscode:prepublish": "npm run bundle",
+        "watch": "tsc --build --watch",
+        "lint": "eslint src --ext ts",
+        "test": "jest",
+        "test:server": "cd server && jest"
+    },
+    "dependencies": {
+        "@looker/sdk": "^25.4.0",
+        "@looker/sdk-node": "^25.4.0",
+        "js-yaml": "^4.1.0",
+        "lookml-parser": "^7.1.0",
+        "open": "^8.4.2",
+        "sql.js": "^1.13.0",
+        "vscode-languageclient": "^8.1.0",
+        "vscode-languageserver": "^8.1.0",
+        "vscode-languageserver-textdocument": "^1.0.8",
+        "vscode-uri": "^3.1.0",
+        "zod": "^3.24.3"
+    },
+    "devDependencies": {
+        "@types/jest": "^29.5.14",
+        "@types/node": "^20.17.30",
+        "@types/webassembly-js-api": "^0.0.3",
+        "esbuild": "^0.27.2",
+        "ts-jest": "^29.3.2",
+        "typescript": "^5.9.3"
+    },
+    "workspaces": [
+        "packages/*",
+        "server",
+        "client"
     ]
-  },
-  "scripts": {
-    "install:client": "cd client && npm install",
-    "install:server": "cd server && npm install",
-    "install:validator": "cd packages/lookml-validator && npm install",
-    "clean:client": "cd client && rm -rf node_modules && npm install",
-    "clean:server": "cd server && rm -rf node_modules && npm install",
-    "clean": "npm run clean:client && npm run clean:server",
-    "compile": "npm run install:client && npm run install:server && tsc --build",
-    "build:validator": "cd packages/lookml-validator && npm run build",
-    "vscode:prepublish": "npm run compile",
-    "watch": "tsc --build --watch",
-    "lint": "eslint src --ext ts",
-    "test": "jest",
-    "test:server": "cd server && jest"
-  },
-  "devDependencies": {
-    "@types/jest": "^29.5.14",
-    "@types/node": "^20.17.30",
-    "@types/webassembly-js-api": "^0.0.3",
-    "ts-jest": "^29.3.2",
-    "typescript": "^5.9.3",
-    "vscode": "^1.1.37"
-  },
-  "workspaces": [
-    "packages/*",
-    "server"
-  ]
 }
