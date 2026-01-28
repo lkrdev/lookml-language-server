@@ -245,7 +245,7 @@ export class WorkspaceModel {
             const filePath = file.$file_path;
             const fileName = file.$file_name;
 
-            const uri = `${process.cwd()}/${filePath}`;
+            const uri = path.resolve(process.cwd(), filePath);
             const viewsByFile = this.viewsByFile.get(uri) || [];
 
             const filePositions =
@@ -275,7 +275,7 @@ export class WorkspaceModel {
             const filePath = file.$file_path;
             const fileName = file.$file_name;
 
-            const uri = `${process.cwd()}/${filePath}`;
+            const uri = path.resolve(process.cwd(), filePath);
             const filePositions =
                 project?.positions?.file[filePath.replace(".lkml", "")];
 
@@ -305,7 +305,7 @@ export class WorkspaceModel {
 
                     this.includedViews.set(fileName, new Set<string>());
 
-                    const uri = `${process.cwd()}/${filePath}`;
+                    const uri = path.resolve(process.cwd(), filePath);
                     const filePositions =
                         project?.positions?.file[`${fileRel}.model`];
 
