@@ -78,7 +78,7 @@
                     ".view.lkml",
                     ".explore.lkml"
                 ],
-                "configuration": "./language-configuration.json"
+                "configuration": "./client/language-configuration.json"
             }
         ],
         "grammars": [
