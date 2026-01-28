@@ -75,9 +75,6 @@ describe("LookML Validator - Type Validation", () => {
         );
 
         expect(hasTypeError).toBe(true);
-
-        // Log diagnostics for debugging
-        console.log("Diagnostics found:", JSON.stringify(diagnostics, null, 2));
     });
 
     test('should not report errors for valid dimension type "number"', async () => {
@@ -118,8 +115,5 @@ describe("LookML Validator - Type Validation", () => {
         );
 
         expect(typeErrors.length).toBe(0);
-
-        // Log diagnostics for debugging
-        console.log("Diagnostics found:", JSON.stringify(diagnostics, null, 2));
     });
 });

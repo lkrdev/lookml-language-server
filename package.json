@@ -78,7 +78,7 @@
                     ".view.lkml",
                     ".explore.lkml"
                 ],
-                "configuration": "./language-configuration.json"
+                "configuration": "./client/language-configuration.json"
             }
         ],
         "grammars": [
@@ -86,13 +86,6 @@
                 "language": "lookml",
                 "scopeName": "source.lookml",
                 "path": "./syntaxes/lookml.tmLanguage.json"
-            }
-        ],
-        "themes": [
-            {
-                "label": "LookML",
-                "uiTheme": "vs-dark",
-                "path": "./syntaxes/lookml.tmTheme.json"
             }
         ]
     },
