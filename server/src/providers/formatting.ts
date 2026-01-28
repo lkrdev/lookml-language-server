@@ -31,14 +31,28 @@ export class FormattingProvider {
       const originalLine = lines[i];
       const trimmedLine = originalLine.trim();
 
-      // Skip empty lines and comments
-      if (trimmedLine === "" || trimmedLine.startsWith("#")) {
+      // Handle empty lines
+      if (trimmedLine === "") {
         edits.push(
           TextEdit.replace(
             this.createRange(i, 0, i, originalLine.length),
             trimmedLine,
           ),
         );
+        continue;
+      }
+
+      // Handle comments - preserve indentation
+      if (trimmedLine.startsWith("#")) {
+        const formattedLine = indentStr.repeat(indentLevel) + trimmedLine;
+        if (formattedLine !== originalLine) {
+          edits.push(
+            TextEdit.replace(
+              this.createRange(i, 0, i, originalLine.length),
+              formattedLine,
+            ),
+          );
+        }
         continue;
       }
 
@@ -105,14 +119,28 @@ export class FormattingProvider {
       const originalLine = lines[i];
       const trimmedLine = originalLine.trim();
 
-      // Skip empty lines and comments
-      if (trimmedLine === "" || trimmedLine.startsWith("#")) {
+      // Handle empty lines
+      if (trimmedLine === "") {
         edits.push(
           TextEdit.replace(
             this.createRange(i, 0, i, originalLine.length),
             trimmedLine,
           ),
         );
+        continue;
+      }
+
+      // Handle comments - preserve indentation
+      if (trimmedLine.startsWith("#")) {
+        const formattedLine = indentStr.repeat(indentLevel) + trimmedLine;
+        if (formattedLine !== originalLine) {
+          edits.push(
+            TextEdit.replace(
+              this.createRange(i, 0, i, originalLine.length),
+              formattedLine,
+            ),
+          );
+        }
         continue;
       }
 
@@ -276,7 +304,7 @@ export class FormattingProvider {
    * Calculate indent level based on the indentation of a line
    */
   private getIndentLevel(line: string, tabSize: number): number {
-    const leadingSpaces = line.length - line.trimLeft().length;
+    const leadingSpaces = line.length - line.trimStart().length;
 
     // If using tabs
     if (line.startsWith("\t")) {
