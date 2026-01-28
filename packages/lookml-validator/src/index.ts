@@ -8,7 +8,39 @@ import * as fs from "fs/promises";
 import * as path from "path";
 
 const dummyConnection = {
-    sendRequest: async () => [],
+    sendRequest: async (method: string, params: any) => {
+        if (method === "lookml/findMatchingFiles") {
+            const { baseDir, pattern } = params;
+            const absolutePattern = path.join(baseDir, pattern);
+
+            // Very basic glob to regex converter for common LookML patterns
+            const regexStr = pattern
+                .replace(/\*\*/g, "(.+)")
+                .replace(/\*/g, "([^/]+)")
+                .replace(/\//g, "\\/");
+            const regex = new RegExp(regexStr + "$");
+
+            async function findFiles(dir: string): Promise<string[]> {
+                const entries = await fs.readdir(dir, { withFileTypes: true });
+                const files: string[] = [];
+                for (const entry of entries) {
+                    const fullPath = path.join(dir, entry.name);
+                    const relPath = path.relative(baseDir, fullPath);
+                    if (entry.isDirectory()) {
+                        files.push(...(await findFiles(fullPath)));
+                    } else if (
+                        regex.test(relPath) ||
+                        regex.test("/" + relPath)
+                    ) {
+                        files.push(fullPath);
+                    }
+                }
+                return files;
+            }
+            return await findFiles(baseDir);
+        }
+        return [];
+    },
     // Add other no-op methods if needed
 } as any;
 
