@@ -87,15 +87,9 @@ export class DiagnosticsProvider {
      */
     public validateDocument(document: TextDocument): Diagnostic[] {
         const diagnostics: Diagnostic[] = [];
-        const isView = this.workspaceModel.isViewFile(document);
-        // Combine results from all validation checks
-        //diagnostics.push(...this.validateSyntax(document));
-        if (isView) {
-            diagnostics.push(...this.validateProperties(document));
-        } else {
-            diagnostics.push(...this.validateModelReferences(document));
-            diagnostics.push(...this.validateProperties(document));
-        }
+        diagnostics.push(...this.validateProperties(document));
+        diagnostics.push(...this.validateModelReferences(document));
+        diagnostics.push(...this.validateProperties(document));
 
         const fileName = document.uri.split("/").pop() ?? "";
         const errors = this.workspaceModel.getErrorsByFileName(fileName);
@@ -172,9 +166,6 @@ export class DiagnosticsProvider {
                         code: DiagnosticCode.VIEW_REF_FIELD_NOT_FOUND,
                     });
                     continue;
-                }
-
-                if (fieldName === "not_included") {
                 }
 
                 const view = viewDetails.view;

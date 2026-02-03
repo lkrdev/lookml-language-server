@@ -107,12 +107,6 @@ describe("Include Validation: model_with_include_and_refinement", () => {
                     expect(found).toBe(true);
                 }
             } else {
-                if (relevantDiagnostics.length > 0) {
-                    console.log(
-                        `Unexpected diagnostics for ${testCase.exploreName}:`,
-                        JSON.stringify(relevantDiagnostics, null, 2),
-                    );
-                }
                 expect(relevantDiagnostics.length).toBe(0);
             }
         });

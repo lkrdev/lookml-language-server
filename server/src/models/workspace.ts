@@ -407,7 +407,7 @@ export class WorkspaceModel {
 
         // Skip if we've already processed this version
         if (version && this.documentVersions.get(fsPath) === version) {
-            console.log("SKIPPING UPDATE DOCUMENT", fsPath, version);
+            // Skip if we've already processed this version
             return;
         }
         this.documentVersions.set(fsPath, version);
