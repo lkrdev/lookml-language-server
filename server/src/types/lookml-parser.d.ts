@@ -32,6 +32,7 @@ declare module "lookml-parser" {
         $file_type: "view" | "model" | "explore" | "manifest" | "dashboard";
         error: {
             exception: {
+                code: number;
                 message: string;
                 location: {
                     end: {
