@@ -1,6 +1,6 @@
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { FormattingOptions } from 'vscode-languageserver/node';
-import { FormattingProvider } from '../providers/formatting';
+import { FormattingProvider } from '../../providers/formatting';
 
 describe('FormattingProvider', () => {
   let formattingProvider: FormattingProvider;
