@@ -1,97 +1,112 @@
 // A launch configuration that compiles the extension and then opens it inside a new window
 {
-	"version": "0.2.0",
-	"configurations": [
-		{
-			"type": "extensionHost",
-			"request": "launch",
-			"name": "Launch Client",
-			"runtimeExecutable": "${execPath}",
-			"outFiles": [
-				"${workspaceRoot}/client/out/**/*.js",
-				"${workspaceRoot}/server/out/**/*.js"
-			],
-			"autoAttachChildProcesses": true,
-			"preLaunchTask": {
-				"type": "npm",
-				"script": "watch"
-			}
-		},
-		{
-			"type": "extensionHost",
-			"request": "launch",
-			"name": "Launch Client (The Look)",
-			"runtimeExecutable": "${execPath}",
-			"args": [
-				"--extensionDevelopmentPath=${workspaceRoot}",
-				"${workspaceRoot}/../thelook"
-			],
-			"outFiles": [
-				"${workspaceRoot}/client/out/**/*.js",
-				"${workspaceRoot}/server/out/**/*.js"
-			],
-			"autoAttachChildProcesses": true,
-			"preLaunchTask": {
-				"type": "npm",
-				"script": "watch"
-			}
-		},
-		{
-			"type": "extensionHost",
-			"request": "launch",
-			"name": "Launch Client (The Look Backup)",
-			"runtimeExecutable": "${execPath}",
-			"args": [
-				"--extensionDevelopmentPath=${workspaceRoot}",
-				"${workspaceRoot}/../thelook-backup"
-			],
-			"outFiles": [
-				"${workspaceRoot}/client/out/**/*.js",
-				"${workspaceRoot}/server/out/**/*.js"
-			],
-			"autoAttachChildProcesses": true,
-			"preLaunchTask": {
-				"type": "npm",
-				"script": "watch"
-			}
-		},
-		{
-			"type": "extensionHost",
-			"request": "launch",
-			"name": "Launch Client (Call Center Demo)",
-			"runtimeExecutable": "${execPath}",
-			"args": [
-				"--extensionDevelopmentPath=${workspaceRoot}",
-				"${workspaceRoot}/../call_center_demo"
-			],
-			"outFiles": [
-				"${workspaceRoot}/client/out/**/*.js",
-				"${workspaceRoot}/server/out/**/*.js"
-			],
-			"autoAttachChildProcesses": true,
-			"preLaunchTask": {
-				"type": "npm",
-				"script": "watch"
-			}
-		},
-		{
-			"type": "extensionHost",
-			"request": "launch",
-			"name": "Launch Client (Healthcare Demo)",
-			"runtimeExecutable": "${execPath}",
-			"args": [
-				"--extensionDevelopmentPath=${workspaceRoot}",
-				"${workspaceRoot}/../healthcare_demo"
-			],
-			"outFiles": [
-				"${workspaceRoot}/client/out/**/*.js",
-				"${workspaceRoot}/server/out/**/*.js"
-			],
-			"autoAttachChildProcesses": true,
-			"preLaunchTask": {
-				"type": "npm",
-				"script": "watch"
-			}
-		},
-	],
+        "version": "0.2.0",
+        "configurations": [
+                {
+                        "type": "extensionHost",
+                        "request": "launch",
+                        "name": "Launch Client",
+                        "runtimeExecutable": "${execPath}",
+                        "outFiles": [
+                                "${workspaceRoot}/client/out/**/*.js",
+                                "${workspaceRoot}/server/out/**/*.js"
+                        ],
+                        "autoAttachChildProcesses": true,
+                        "preLaunchTask": {
+                                "type": "npm",
+                                "script": "watch"
+                        }
+                },
+                {
+                        "type": "extensionHost",
+                        "request": "launch",
+                        "name": "Launch Client (The Look)",
+                        "runtimeExecutable": "${execPath}",
+                        "args": [
+                                "--extensionDevelopmentPath=${workspaceRoot}",
+                                "${workspaceRoot}/../thelook"
+                        ],
+                        "outFiles": [
+                                "${workspaceRoot}/client/out/**/*.js",
+                                "${workspaceRoot}/server/out/**/*.js"
+                        ],
+                        "autoAttachChildProcesses": true,
+                        "preLaunchTask": {
+                                "type": "npm",
+                                "script": "watch"
+                        }
+                },
+                {
+                        "type": "extensionHost",
+                        "request": "launch",
+                        "name": "Launch Client (The Look Backup)",
+                        "runtimeExecutable": "${execPath}",
+                        "args": [
+                                "--extensionDevelopmentPath=${workspaceRoot}",
+                                "${workspaceRoot}/../thelook-backup"
+                        ],
+                        "outFiles": [
+                                "${workspaceRoot}/client/out/**/*.js",
+                                "${workspaceRoot}/server/out/**/*.js"
+                        ],
+                        "autoAttachChildProcesses": true,
+                        "preLaunchTask": {
+                                "type": "npm",
+                                "script": "watch"
+                        }
+                },
+                {
+                        "type": "extensionHost",
+                        "request": "launch",
+                        "name": "Launch Client (Call Center Demo)",
+                        "runtimeExecutable": "${execPath}",
+                        "args": [
+                                "--extensionDevelopmentPath=${workspaceRoot}",
+                                "${workspaceRoot}/../call_center_demo"
+                        ],
+                        "outFiles": [
+                                "${workspaceRoot}/client/out/**/*.js",
+                                "${workspaceRoot}/server/out/**/*.js"
+                        ],
+                        "autoAttachChildProcesses": true,
+                        "preLaunchTask": {
+                                "type": "npm",
+                                "script": "watch"
+                        }
+                },
+                {
+                        "type": "extensionHost",
+                        "request": "launch",
+                        "name": "Launch Client (Healthcare Demo)",
+                        "runtimeExecutable": "${execPath}",
+                        "args": [
+                                "--extensionDevelopmentPath=${workspaceRoot}",
+                                "${workspaceRoot}/../healthcare_demo"
+                        ],
+                        "outFiles": [
+                                "${workspaceRoot}/client/out/**/*.js",
+                                "${workspaceRoot}/server/out/**/*.js"
+                        ],
+                        "autoAttachChildProcesses": true,
+                        "preLaunchTask": {
+                                "type": "npm",
+                                "script": "watch"
+                        }
+                },
+                {
+                        "type": "node",
+                        "request": "launch",
+                        "name": "Run Server Tests",
+                        "runtimeExecutable": "npm",
+                        "runtimeArgs": [
+                            "run",
+                            "test",
+                            "--",
+                            "--runInBand"
+                        ],
+                        "cwd": "${workspaceFolder}/server",
+                        "console": "integratedTerminal",
+                        "internalConsoleOptions": "neverOpen"
+                }
+        ]
 }

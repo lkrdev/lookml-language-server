@@ -87,15 +87,9 @@ export class DiagnosticsProvider {
      */
     public validateDocument(document: TextDocument): Diagnostic[] {
         const diagnostics: Diagnostic[] = [];
-        const isView = this.workspaceModel.isViewFile(document);
-        // Combine results from all validation checks
-        //diagnostics.push(...this.validateSyntax(document));
-        if (isView) {
-            diagnostics.push(...this.validateProperties(document));
-        } else {
-            diagnostics.push(...this.validateModelReferences(document));
-            diagnostics.push(...this.validateProperties(document));
-        }
+        diagnostics.push(...this.validateProperties(document));
+        diagnostics.push(...this.validateModelReferences(document));
+        diagnostics.push(...this.validateProperties(document));
 
         const fileName = document.uri.split("/").pop() ?? "";
         const errors = this.workspaceModel.getErrorsByFileName(fileName);
@@ -104,6 +98,7 @@ export class DiagnosticsProvider {
             diagnostics.push({
                 severity: DiagnosticSeverity.Error,
                 message: errorDetails.error.exception.message,
+                code: errorDetails.error.exception.code,
                 range: ensureMinRangeLength({
                     start: {
                         line:
@@ -131,7 +126,7 @@ export class DiagnosticsProvider {
         sql: string,
         position: LookmlPosition | undefined,
         currentViewName?: string,
-        context?: Record<string, Record<string, unknown>>,
+        context?: Record<string, LookmlViewWithFileInfo>,
     ): Diagnostic[] {
         const diagnostics: Diagnostic[] = [];
         if (!position) return diagnostics;
@@ -160,27 +155,30 @@ export class DiagnosticsProvider {
                 const fieldName = refParts[1];
 
                 const viewDetails = context?.[viewName]
-                    ? (context[viewName] as any)
+                    ? context[viewName]
                     : this.workspaceModel.getView(viewName);
+
                 if (!viewDetails) {
                     diagnostics.push({
                         severity: DiagnosticSeverity.Error,
                         range,
-                        message: `View "${viewName}" not found in workspace`,
+                        message: `Could not find a field named "${ref}"`,
+                        code: DiagnosticCode.VIEW_REF_FIELD_NOT_FOUND,
                     });
                     continue;
                 }
 
                 const view = viewDetails.view;
                 if (
-                    !view.dimension?.[fieldName] &&
-                    !view.measure?.[fieldName] &&
-                    !view.dimension_group?.[fieldName]
+                    !view?.dimension?.[fieldName] &&
+                    !view?.measure?.[fieldName] &&
+                    !view?.dimension_group?.[fieldName]
                 ) {
                     diagnostics.push({
                         severity: DiagnosticSeverity.Error,
                         range,
-                        message: `Field "${fieldName}" not found in view "${viewName}"`,
+                        message: `Could not find a field named "${ref}"`,
+                        code: DiagnosticCode.VIEW_REF_FIELD_NOT_FOUND,
                     });
                 }
             } else if (currentViewName) {
@@ -198,7 +196,8 @@ export class DiagnosticsProvider {
                         diagnostics.push({
                             severity: DiagnosticSeverity.Error,
                             range,
-                            message: `Field "${fieldName}" not found in current view "${currentViewName}"`,
+                            message: `Could not find a field named "${ref}"`,
+                            code: DiagnosticCode.VIEW_REF_FIELD_NOT_FOUND,
                         });
                     }
                 }
@@ -411,6 +410,7 @@ export class DiagnosticsProvider {
                                 },
                                 message: error.message,
                                 source: "lookml-lsp",
+                                code: DiagnosticCode.PROP_INVALID_TYPE,
                             });
                         }
                     });
@@ -420,6 +420,7 @@ export class DiagnosticsProvider {
                 if (view.extends && "extends_ref" in view) {
                     diagnostics.push({
                         severity: DiagnosticSeverity.Error,
+                        code: DiagnosticCode.PROP_INVALID_CONTEXT,
                         range: this.getRangeFromPositions(
                             positions,
                             "$name",
@@ -939,21 +940,16 @@ export class DiagnosticsProvider {
                                     character: explorePosition[3],
                                 },
                             },
-                            message: `Explore "${exploreName}" must have a base view`,
+                            message: `Explore name "${exploreName}" must match a view name, or the explore must provide a 'from:' or 'view_name:' property`,
                             source: "lookml-lsp",
                             code: DiagnosticCode.EXPLORE_VIEW_NOT_FOUND,
                         });
                     }
 
-                    const availableViews = new Set<string>();
-                    if (exploreViewDetails) {
-                        availableViews.add(exploreName);
-                    }
+                    const aliasName = explore.view_name || exploreName;
 
-                    // Add the base view
-                    if (explore.from) {
-                        availableViews.add(explore.from);
-                    }
+                    const availableViews = new Set<string>();
+                    availableViews.add(aliasName);
 
                     // Add joined views
                     if (explore.join) {
@@ -988,43 +984,64 @@ export class DiagnosticsProvider {
                     }
 
                     if (!availableViews) return;
-                    if (explore.from) {
-                        const viewName = explore.from;
-                        const viewDetails =
-                            this.workspaceModel.getView(viewName);
+                    const aliasName = explore.view_name || exploreName;
+                    const sourceViewName =
+                        explore.from || explore.view_name || exploreName;
+                    const referredViewDetails =
+                        this.workspaceModel.getView(sourceViewName);
 
-                        if (!viewDetails) {
+                    if (!referredViewDetails) {
+                        // If the view is not found in the workspace at all, emit a "view not found" error.
+                        // This applies to both explicit and implicit references.
+                        // The range will be the explore name itself.
+
+                        // If neither from or view_name are provided, we already emitted a more specific error above.
+                        if (!explore.from && !explore.view_name) {
+                            return;
+                        }
+
+                        const explorePosition =
+                            model.positions.explore?.[exploreName]?.$name?.$p;
+                        if (explorePosition) {
                             diagnostics.push({
                                 severity: DiagnosticSeverity.Error,
-                                range: this.getRangeFromPositions(
-                                    model.positions,
-                                    "explore",
-                                    exploreName,
-                                    "from",
-                                ),
-                                message: `Referenced view "${viewName}" not found in workspace`,
+                                range: {
+                                    start: {
+                                        line: explorePosition[0],
+                                        character: explorePosition[1],
+                                    },
+                                    end: {
+                                        line: explorePosition[2],
+                                        character: explorePosition[3],
+                                    },
+                                },
+                                message: `Referenced view "${sourceViewName}" not found in workspace`,
                                 source: "lookml-lsp",
                                 code: DiagnosticCode.VIEW_REF_VIEW_NOT_FOUND,
                             });
-                        } else if (!includedViews.has(viewName)) {
-                            diagnostics.push({
-                                severity: DiagnosticSeverity.Error,
-                                range: this.getRangeFromPositions(
-                                    model.positions,
-                                    "explore",
-                                    exploreName,
-                                    "from",
-                                ),
-                                message: `View "${viewName}" exists but is not included in this model`,
-                                source: "lookml-lsp",
-                                code: DiagnosticCode.VIEW_REF_VIEW_NOT_INCLUDED,
-                            });
                         }
+                    } else if (!includedViews.has(sourceViewName)) {
+                        diagnostics.push({
+                            severity: DiagnosticSeverity.Error,
+                            range: this.getRangeFromPositions(
+                                model.positions,
+                                "explore",
+                                exploreName,
+                            ),
+                            message: `View "${sourceViewName}" exists but is not included in this model`,
+                            source: "lookml-lsp",
+                            code: DiagnosticCode.VIEW_REF_VIEW_NOT_INCLUDED,
+                        });
                     }
 
-                    const exploreContext = {
-                        [explore.view_name ?? exploreName]: {},
-                    };
+                    const exploreContext: Record<
+                        string,
+                        LookmlViewWithFileInfo
+                    > = {};
+                    if (referredViewDetails) {
+                        exploreContext[aliasName] = referredViewDetails;
+                    }
+
                     if (explore.sql_always_where) {
                         const sqlPosition =
                             model.positions.explore?.[exploreName]

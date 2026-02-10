@@ -230,7 +230,11 @@ export class WorkspaceModel {
             }
 
             if (view) {
-                Object.values(view).forEach((view) => {
+                Object.entries(view).forEach(([name, view]: [string, any]) => {
+                    // Ensure view has a name
+                    if (!view.$name) {
+                        view.$name = name;
+                    }
                     acc.view.push({
                         file,
                         view,
@@ -270,6 +274,43 @@ export class WorkspaceModel {
             this.viewsByFile.set(uri, viewsByFile);
         }
 
+        // Apply refinements mapping
+        for (const { view } of entities.view) {
+            const viewName = view.$name;
+            if (viewName && viewName.startsWith("+")) {
+                const baseName = viewName.slice(1);
+                const baseEntry = this.views.get(baseName);
+                if (baseEntry) {
+                    let targetView = baseEntry.view;
+                    if (Array.isArray(targetView)) {
+                        targetView = targetView[0];
+                    }
+                    const refineViews = Array.isArray(view) ? view : [view];
+
+                    for (const refineView of refineViews) {
+                        if (refineView.dimension) {
+                            targetView.dimension = {
+                                ...(targetView.dimension || {}),
+                                ...refineView.dimension,
+                            };
+                        }
+                        if (refineView.measure) {
+                            targetView.measure = {
+                                ...(targetView.measure || {}),
+                                ...refineView.measure,
+                            };
+                        }
+                        if (refineView.dimension_group) {
+                            targetView.dimension_group = {
+                                ...(targetView.dimension_group || {}),
+                                ...refineView.dimension_group,
+                            };
+                        }
+                    }
+                }
+            }
+        }
+
         for (const { file, explore } of entities.explore) {
             const exploreName = explore.$name;
             const filePath = file.$file_path;
@@ -295,7 +336,10 @@ export class WorkspaceModel {
             this.exploresByFile.set(uri, fileExploreNames);
         }
 
-        for (const [key, value] of Object.entries(project.file)) {
+        for (const [key, value] of Object.entries(project.file) as [
+            string,
+            any,
+        ][]) {
             switch (value.$file_type) {
                 case "model": {
                     const model = value as LookmlModel;
@@ -359,13 +403,14 @@ export class WorkspaceModel {
      */
     public async updateDocument(document: TextDocument): Promise<void> {
         const { uri, version = 0 } = document;
+        const fsPath = URI.parse(uri).fsPath;
 
         // Skip if we've already processed this version
-        if (version && this.documentVersions.get(uri) === version) {
-            console.log("SKIPPING UPDATE DOCUMENT", uri, version);
+        if (version && this.documentVersions.get(fsPath) === version) {
+            // Skip if we've already processed this version
             return;
         }
-        this.documentVersions.set(uri, version);
+        this.documentVersions.set(fsPath, version);
 
         // Remove existing data for this file
         this.clearDocumentData(uri);
@@ -409,28 +454,29 @@ export class WorkspaceModel {
      * Clear all data associated with a document
      */
     private clearDocumentData(uri: DocumentUri): void {
+        const fsPath = URI.parse(uri).fsPath;
         // Remove views defined in this file
-        const viewNames = this.viewsByFile.get(uri) || [];
+        const viewNames = this.viewsByFile.get(fsPath) || [];
         for (const viewName of viewNames) {
             this.views.delete(viewName);
         }
-        this.viewsByFile.delete(uri);
+        this.viewsByFile.delete(fsPath);
 
         // Remove explores defined in this file
-        const exploreNames = this.exploresByFile.get(uri) || [];
+        const exploreNames = this.exploresByFile.get(fsPath) || [];
         for (const exploreName of exploreNames) {
             this.explores.delete(exploreName);
         }
-        this.exploresByFile.delete(uri);
+        this.exploresByFile.delete(fsPath);
 
         // Remove models defined in this file
-        const modelNames = this.modelsByFile.get(uri) || [];
+        const modelNames = this.modelsByFile.get(fsPath) || [];
         for (const modelName of modelNames) {
             this.models.delete(modelName);
         }
-        this.modelsByFile.delete(uri);
+        this.modelsByFile.delete(fsPath);
 
-        const fileName = uri.split("/").pop() ?? "";
+        const fileName = fsPath.split("/").pop() ?? "";
 
         const errorsByFile = this.errors.get(fileName) ?? [];
         errorsByFile.forEach((error) => {
@@ -454,6 +500,7 @@ export class WorkspaceModel {
                     Range.create(Position.create(0, 0), Position.create(0, 1)),
                 message: diag.message || "Unknown error",
                 source: "lookml-lsp",
+                code: diag.code,
             };
         });
 
@@ -533,12 +580,14 @@ export class WorkspaceModel {
             );
 
             for (const filePath of matchedFiles) {
-                if (this.loadedFiles.has(filePath)) continue;
+                const fsPath = URI.parse(filePath).fsPath;
+                if (this.loadedFiles.has(fsPath)) continue;
+                this.loadedFiles.add(fsPath);
                 try {
                     // Request file content via LSP
                     const viewsFromThisFile =
-                        this.viewsByFile.get(filePath) || [];
-
+                        this.viewsByFile.get(fsPath) || [];
+                    // console.log(`RESOLVE include: filePath=${fsPath}, viewsFound=${viewsFromThisFile.join(",")}`);
                     const modelIncludes =
                         this.includedViews.get(modelName) || new Set();
 
@@ -638,22 +687,26 @@ export class WorkspaceModel {
 
         // Convert the Map to an array of field objects
         const measureFields = view.measure
-            ? Object.entries(view.measure).map(([fieldName, field]) => ({
-                  name: fieldName,
-                  type: field.type,
-              }))
+            ? Object.entries(view.measure).map(
+                  ([fieldName, field]: [string, any]) => ({
+                      name: fieldName,
+                      type: field.type,
+                  }),
+              )
             : [];
 
         const dimensionFields = view.dimension
-            ? Object.entries(view.dimension).map(([fieldName, field]) => ({
-                  name: fieldName,
-                  type: field.type,
-              }))
+            ? Object.entries(view.dimension).map(
+                  ([fieldName, field]: [string, any]) => ({
+                      name: fieldName,
+                      type: field.type,
+                  }),
+              )
             : [];
 
         const dimensionGroupFields = view.dimension_group
             ? Object.entries(view.dimension_group).map(
-                  ([fieldName, field]) => ({
+                  ([fieldName, field]: [string, any]) => ({
                       name: fieldName,
                       type: field.type,
                   }),
