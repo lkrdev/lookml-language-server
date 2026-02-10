@@ -39,7 +39,7 @@ describe("Workspace Model and Diagnostics: definition", () => {
 
         // Parse the file into the workspace model
         await workspaceModel.parseFiles({
-            source: "src/__tests__/definition/lkml/*.lkml",
+            source: path.join(__dirname, "lkml", "*.lkml"),
             reset: true,
         });
 

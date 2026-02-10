@@ -25,7 +25,7 @@
     },
     "scripts": {
         "build": "tsc -b --clean && tsc -b",
-        "test": "jest"
+        "test": "tsc -b && jest"
     },
     "license": "MIT",
     "exports": {
