@@ -79,8 +79,11 @@ declare module "lookml-parser" {
         hidden?: boolean;
         label?: string;
         sql?: string;
+        sql_start?: string;
+        sql_end?: string;
         tags?: string[];
         timeframes?: string[];
+        intervals?: string[];
         type: "time" | "duration";
         value_format_name?: string;
     }

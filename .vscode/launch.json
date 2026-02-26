@@ -107,6 +107,42 @@
                         "cwd": "${workspaceFolder}/server",
                         "console": "integratedTerminal",
                         "internalConsoleOptions": "neverOpen"
+                },
+                {
+                        "type": "node",
+                        "request": "launch",
+                        "name": "Debug Current Test File",
+                        "program": "${workspaceFolder}/node_modules/.bin/jest",
+                        "args": [
+                            "${relativeFile}",
+                            "--runInBand",
+                            "--colors",
+                            "--verbose=false"
+                        ],
+                        "console": "integratedTerminal",
+                        "internalConsoleOptions": "neverOpen"
+                },
+                {
+                        "type": "node",
+                        "request": "launch",
+                        "name": "Debug Test by Pattern",
+                        "program": "${workspaceFolder}/node_modules/.bin/jest",
+                        "args": [
+                            "${input:testPattern}",
+                            "--runInBand",
+                            "--colors",
+                            "--verbose=false"
+                        ],
+                        "console": "integratedTerminal",
+                        "internalConsoleOptions": "neverOpen"
+                }
+        ],
+        "inputs": [
+                {
+                        "id": "testPattern",
+                        "type": "promptString",
+                        "description": "Test name or pattern (e.g. dimension_group/index.test.ts)",
+                        "default": "dimension_group/index.test.ts"
                 }
         ]
 }

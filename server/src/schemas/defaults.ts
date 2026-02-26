@@ -1,0 +1,32 @@
+export const DIMENSION_GROUP_DEFAULT_TIMEFRAMES = [
+    "date",
+    "day_of_month",
+    "day_of_week",
+    "day_of_week_index",
+    "day_of_year",
+    "hour",
+    "hour_of_day",
+    "minute",
+    "month",
+    "month_name",
+    "month_num",
+    "quarter",
+    "quarter_of_year",
+    "raw",
+    "time",
+    "time_of_day",
+    "week",
+    "week_of_year",
+    "year",
+];
+
+export const DIMENSION_GROUP_DEFAULT_INTERVALS = [
+    "day",
+    "hour",
+    "minute",
+    "month",
+    "quarter",
+    "second",
+    "week",
+    "year",
+];
