@@ -19,11 +19,16 @@ import {
     DocumentUri,
     Location,
     Position,
-    Range,
+    Range
 } from "vscode-languageserver/node";
 import { URI } from "vscode-uri";
+import {
+    DIMENSION_GROUP_DEFAULT_INTERVALS,
+    DIMENSION_GROUP_DEFAULT_TIMEFRAMES,
+} from "../schemas/defaults";
 import { getLines } from "../utils/document";
 import { LookMLParser } from "./lookml-parser";
+
 
 export class WorkspaceModel {
     public connection: Connection;
@@ -175,7 +180,7 @@ export class WorkspaceModel {
                 removeAbstract: true,
             } as any,
         });
-
+        
         transformations.addPositions(project);
 
         if (reset) {
@@ -202,6 +207,57 @@ export class WorkspaceModel {
         await this.processProject(project);
     }
 
+    private expandViewDimensionGroups(view: any, viewPositions: any) {
+        if (!view.dimension_group) return;
+
+        if (!view.dimension) view.dimension = {};
+        if (viewPositions && !viewPositions.dimension)
+            viewPositions.dimension = {};
+
+        const groupEntries = Object.entries(view.dimension_group) as [
+            string,
+            any,
+        ][];
+        for (const [groupName, group] of groupEntries) {
+            // Only expand time and duration groups
+            if (group.type === "time" || group.type === "duration") {
+                const names =
+                    group.type === "time"
+                        ? group.timeframes || DIMENSION_GROUP_DEFAULT_TIMEFRAMES
+                        : group.intervals || DIMENSION_GROUP_DEFAULT_INTERVALS;
+
+                const groupPos = viewPositions?.dimension_group?.[groupName];
+
+                for (const name of names) {
+                    const expandedName =
+                        group.type === "time"
+                            ? `${groupName}_${name}`
+                            : `${name}s_${groupName}`;
+
+                    if (!view.dimension[expandedName]) {
+                        view.dimension[expandedName] = {
+                            ...group,
+                            $name: expandedName,
+                            type: "dimension",
+                        };
+                    }
+                    if (
+                        viewPositions &&
+                        groupPos &&
+                        !viewPositions.dimension[expandedName]
+                    ) {
+                        viewPositions.dimension[expandedName] = groupPos;
+                    }
+                }
+                // Stop direct reference to group name by removing it
+                delete view.dimension_group[groupName];
+                if (viewPositions?.dimension_group) {
+                    delete viewPositions.dimension_group[groupName];
+                }
+            }
+        }
+    }
+
     public async processProject(project: LookmlProject): Promise<void> {
         const initialEntries: {
             view: Array<LookmlFile["view"]>;
@@ -221,23 +277,29 @@ export class WorkspaceModel {
             };
 
             if (explore) {
-                Object.values(explore).forEach((explore) => {
-                    acc.explore.push({
-                        file,
-                        explore,
+                const exploreEntries = Array.isArray(explore) ? explore : [explore];
+                exploreEntries.forEach((entry) => {
+                    Object.entries(entry).forEach(([name, e]: [string, any]) => {
+                        if (name.startsWith("$")) return;
+                        if (!e.$name) e.$name = name;
+                        acc.explore.push({
+                            file,
+                            explore: e,
+                        });
                     });
                 });
             }
 
             if (view) {
-                Object.entries(view).forEach(([name, view]: [string, any]) => {
-                    // Ensure view has a name
-                    if (!view.$name) {
-                        view.$name = name;
-                    }
-                    acc.view.push({
-                        file,
-                        view,
+                const viewEntries = Array.isArray(view) ? view : [view];
+                viewEntries.forEach((entry) => {
+                    Object.entries(entry).forEach(([name, v]: [string, any]) => {
+                        if (name.startsWith("$")) return;
+                        if (!v.$name) v.$name = name;
+                        acc.view.push({
+                            file,
+                            view: v,
+                        });
                     });
                 });
             }
@@ -395,6 +457,14 @@ export class WorkspaceModel {
                     }
                 }
             }
+        }
+
+        // Final pass: Expand all dimension groups in all views
+        for (const viewDetails of this.views.values()) {
+            this.expandViewDimensionGroups(
+                viewDetails.view,
+                viewDetails.positions,
+            );
         }
     }
 
@@ -671,48 +741,113 @@ export class WorkspaceModel {
     }
 
     /**
+     * Get all fields for a view, including those inherited via extends
+     */
+    public getViewFields(viewName: string, visited: Set<string> = new Set()): {
+        dimension: Record<string, any>;
+        measure: Record<string, any>;
+        dimension_group: Record<string, any>;
+    } {
+        if (visited.has(viewName)) {
+            return { dimension: {}, measure: {}, dimension_group: {} };
+        }
+        visited.add(viewName);
+
+        const viewDetails = this.getView(viewName);
+        if (!viewDetails || !viewDetails.view) {
+            return { dimension: {}, measure: {}, dimension_group: {} };
+        }
+
+        const view = viewDetails.view;
+        let dimensions = { ...(view.dimension || {}) };
+        let measures = { ...(view.measure || {}) };
+        let dimensionGroups = { ...(view.dimension_group || {}) };
+
+        if (view.extends) {
+            const extendedViews = Array.isArray(view.extends)
+                ? view.extends
+                : [view.extends];
+            // Process extends in reverse order (later ones override earlier ones, 
+            // but local fields override all)
+            for (const extName of extendedViews) {
+                const extFields = this.getViewFields(extName, new Set(visited));
+                dimensions = { ...extFields.dimension, ...dimensions };
+                measures = { ...extFields.measure, ...measures };
+                dimensionGroups = {
+                    ...extFields.dimension_group,
+                    ...dimensionGroups,
+                };
+            }
+        }
+
+        return {
+            dimension: dimensions,
+            measure: measures,
+            dimension_group: dimensionGroups,
+        };
+    }
+
+    /**
      * Get fields for a specific table/view
      * Used for providing field completions in SQL contexts
      */
     public getTableFields(
         tableName: string,
     ): { name: string; type: string }[] | null {
-        // Look up the view in our workspace
-        const viewDetails = this.getView(tableName);
-        const view = viewDetails?.view;
+        // Look up all fields including inherited ones
+        const fields = this.getViewFields(tableName);
+        
+        const hasFields = 
+            Object.keys(fields.dimension).length > 0 || 
+            Object.keys(fields.measure).length > 0 || 
+            Object.keys(fields.dimension_group).length > 0;
 
-        if (!view || !view.measure || !view.dimension) {
+        if (!hasFields) {
             return null;
         }
 
-        // Convert the Map to an array of field objects
-        const measureFields = view.measure
-            ? Object.entries(view.measure).map(
-                  ([fieldName, field]: [string, any]) => ({
-                      name: fieldName,
-                      type: field.type,
-                  }),
-              )
-            : [];
+        const dimensionFields = Object.entries(fields.dimension).map(
+            ([fieldName, field]: [string, any]) => ({
+                name: fieldName,
+                type: field.type || "dimension",
+            }),
+        );
 
-        const dimensionFields = view.dimension
-            ? Object.entries(view.dimension).map(
-                  ([fieldName, field]: [string, any]) => ({
-                      name: fieldName,
-                      type: field.type,
-                  }),
-              )
-            : [];
+        const measureFields = Object.entries(fields.measure).map(
+            ([fieldName, field]: [string, any]) => ({
+                name: fieldName,
+                type: field.type || "measure",
+            }),
+        );
 
-        const dimensionGroupFields = view.dimension_group
-            ? Object.entries(view.dimension_group).map(
-                  ([fieldName, field]: [string, any]) => ({
-                      name: fieldName,
-                      type: field.type,
-                  }),
-              )
-            : [];
+        const dimensionGroupFields = Object.entries(fields.dimension_group).flatMap(
+            ([groupName, group]: [string, any]) => {
+                if (group.type === "time") {
+                    const timeframes =
+                        group.timeframes ||
+                        DIMENSION_GROUP_DEFAULT_TIMEFRAMES;
+                    return timeframes.map((tf: string) => ({
+                        name: `${groupName}_${tf}`,
+                        type: "dimension",
+                    }));
+                } else if (group.type === "duration") {
+                    const intervals =
+                        group.intervals ||
+                        DIMENSION_GROUP_DEFAULT_INTERVALS;
+                    return intervals.map((interval: string) => ({
+                        name: `${interval}s_${groupName}`,
+                        type: "dimension",
+                    }));
+                }
+                return [
+                    {
+                        name: groupName,
+                        type: group.type || "dimension",
+                    },
+                ];
+            },
+        );
 
-        return [...measureFields, ...dimensionFields, ...dimensionGroupFields];
+        return [...dimensionFields, ...measureFields, ...dimensionGroupFields];
     }
 }

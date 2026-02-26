@@ -89,7 +89,6 @@ export class DiagnosticsProvider {
         const diagnostics: Diagnostic[] = [];
         diagnostics.push(...this.validateProperties(document));
         diagnostics.push(...this.validateModelReferences(document));
-        diagnostics.push(...this.validateProperties(document));
 
         const fileName = document.uri.split("/").pop() ?? "";
         const errors = this.workspaceModel.getErrorsByFileName(fileName);
@@ -168,11 +167,11 @@ export class DiagnosticsProvider {
                     continue;
                 }
 
-                const view = viewDetails.view;
+                const fields = this.workspaceModel.getViewFields(viewDetails.view.$name!);
                 if (
-                    !view?.dimension?.[fieldName] &&
-                    !view?.measure?.[fieldName] &&
-                    !view?.dimension_group?.[fieldName]
+                    !fields.dimension?.[fieldName] &&
+                    !fields.measure?.[fieldName] &&
+                    !fields.dimension_group?.[fieldName]
                 ) {
                     diagnostics.push({
                         severity: DiagnosticSeverity.Error,
@@ -186,20 +185,20 @@ export class DiagnosticsProvider {
                 const viewDetails =
                     this.workspaceModel.getView(currentViewName);
                 if (viewDetails) {
-                    const view = viewDetails.view;
-                    if (
-                        !view.dimension?.[fieldName] &&
-                        !view.measure?.[fieldName] &&
-                        !view.dimension_group?.[fieldName] &&
-                        fieldName !== "TABLE"
-                    ) {
-                        diagnostics.push({
-                            severity: DiagnosticSeverity.Error,
-                            range,
-                            message: `Could not find a field named "${ref}"`,
-                            code: DiagnosticCode.VIEW_REF_FIELD_NOT_FOUND,
-                        });
-                    }
+                    const fields = this.workspaceModel.getViewFields(viewDetails.view.$name!);
+                if (
+                    !fields.dimension?.[fieldName] &&
+                    !fields.measure?.[fieldName] &&
+                    !fields.dimension_group?.[fieldName] &&
+                    fieldName !== "TABLE"
+                ) {
+                    diagnostics.push({
+                        severity: DiagnosticSeverity.Error,
+                        range,
+                        message: `Could not find a field named "${ref}"`,
+                        code: DiagnosticCode.VIEW_REF_FIELD_NOT_FOUND,
+                    });
+                }
                 }
             }
         }
@@ -311,10 +310,10 @@ export class DiagnosticsProvider {
                 continue;
             }
 
-            const viewDimensions = targetedViewDetails.view.dimension;
-            const viewMeasures = targetedViewDetails.view.measure;
-            const viewDimensionGroups =
-                targetedViewDetails.view.dimension_group;
+            const fields = this.workspaceModel.getViewFields(targetedViewName!);
+            const viewDimensions = fields.dimension;
+            const viewMeasures = fields.measure;
+            const viewDimensionGroups = fields.dimension_group;
 
             if (
                 !viewDimensions?.[fieldName] &&
