@@ -820,32 +820,11 @@ export class WorkspaceModel {
             }),
         );
 
-        const dimensionGroupFields = Object.entries(fields.dimension_group).flatMap(
-            ([groupName, group]: [string, any]) => {
-                if (group.type === "time") {
-                    const timeframes =
-                        group.timeframes ||
-                        DIMENSION_GROUP_DEFAULT_TIMEFRAMES;
-                    return timeframes.map((tf: string) => ({
-                        name: `${groupName}_${tf}`,
-                        type: "dimension",
-                    }));
-                } else if (group.type === "duration") {
-                    const intervals =
-                        group.intervals ||
-                        DIMENSION_GROUP_DEFAULT_INTERVALS;
-                    return intervals.map((interval: string) => ({
-                        name: `${interval}s_${groupName}`,
-                        type: "dimension",
-                    }));
-                }
-                return [
-                    {
-                        name: groupName,
-                        type: group.type || "dimension",
-                    },
-                ];
-            },
+        const dimensionGroupFields = Object.entries(fields.dimension_group).map(
+            ([groupName, group]: [string, any]) => ({
+                name: groupName,
+                type: group.type || "dimension",
+            }),
         );
 
         return [...dimensionFields, ...measureFields, ...dimensionGroupFields];
