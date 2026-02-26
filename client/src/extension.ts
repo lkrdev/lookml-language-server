@@ -200,6 +200,9 @@ export function activate(context: ExtensionContext) {
     clientOptions,
   );
 
+  // Apply Looker colors automatically on startup
+  applyLookerColors();
+
   client.onRequest("lookml/findMatchingFiles", async (params: any) => {
     const { baseDir } = params;
     let { pattern } = params;
@@ -507,4 +510,128 @@ export function deactivate(): Thenable<void> | undefined {
     return undefined;
   }
   return client.stop();
+}
+
+async function applyLookerColors() {
+  try {
+    const config = vscode.workspace.getConfiguration("editor");
+    const customizations =
+      config.get<{ [key: string]: any }>("tokenColorCustomizations") || {};
+
+    // Check if [lookml] customization already exists to avoid overwriting user prefs
+    if (customizations["[lookml]"]) {
+      return;
+    }
+
+    const lookerRules = {
+      textMateRules: [
+        {
+          scope: ["comment.line.number-sign.lookml", "source.lookml.comment"],
+          settings: { foreground: "#aaaaaa", fontStyle: "italic" },
+        },
+        {
+          scope: [
+            "keyword.control.lookml",
+            "source.lookml.scope.type",
+            "support.type.lookml",
+            "source.lookml.parameter.name",
+            "source.lookml.sql.parameter.name",
+          ],
+          settings: { foreground: "#6997bf" },
+        },
+        {
+          scope: [
+            "constant.language.lookml",
+            "source.lookml.parameter.value.yesno",
+          ],
+          settings: { foreground: "#B6308C" },
+        },
+        {
+          scope: [
+            "support.property.lookml",
+            "entity.name.type.lookml",
+            "source.lookml.scope.name",
+            "source.lookml.parameter.value",
+            "source.lookml.sql.parameter.value",
+            "source.lookml.parameter.array",
+          ],
+          settings: { foreground: "#555555" },
+        },
+        {
+          scope: [
+            "string.quoted.double.lookml",
+            "string.quoted.single.lookml",
+            "constant.character.escape.lookml",
+          ],
+          settings: { foreground: "#c77528" },
+        },
+        {
+          scope: [
+            "variable.parameter.lookml",
+            "variable.other.lookml",
+            "source.lookml.variable",
+          ],
+          settings: { foreground: "#8950c7" },
+        },
+        {
+          scope: [
+            "punctuation.definition.block.begin.lookml",
+            "punctuation.definition.block.end.lookml",
+            "punctuation.separator.key-value.lookml",
+            "source.lookml.scope.start",
+            "source.lookml.scope.end",
+            "source.lookml.scope",
+            "source.lookml.sql.parameter.close",
+          ],
+          settings: { foreground: "#aaaaaa" },
+        },
+        {
+          scope: "source.lookml.liquid",
+          settings: { foreground: "#ff00f2" },
+        },
+        {
+          scope: [
+            "source.lookml.sql.keyword",
+            "source.lookml.sql.function.argument.keyword",
+            "keyword.operator.expression.lookml",
+            "source.lookml.sql.keyword.main",
+            "source.lookml.sql.keyword.type",
+            "source.lookml.sql.function.name",
+          ],
+          settings: { foreground: "#6997bf", fontStyle: "bold" },
+        },
+        {
+          scope: ["source.lookml.sql.numeric", "constant.numeric.lookml"],
+          settings: { foreground: "#c77528" },
+        },
+        {
+          scope: "source.lookml.constant",
+          settings: { foreground: "#00008b" },
+        },
+      ],
+    };
+
+    // Update settings
+    await config.update(
+      "tokenColorCustomizations",
+      { ...customizations, "[lookml]": lookerRules },
+      vscode.ConfigurationTarget.Global,
+    );
+
+    // Disable semantic highlighting for lookml
+    const semanticConfig = vscode.workspace.getConfiguration("editor", {
+      languageId: "lookml",
+    });
+    await semanticConfig.update(
+      "semanticHighlighting.enabled",
+      false,
+      vscode.ConfigurationTarget.Global,
+    );
+
+    vscode.window.showInformationMessage(
+      "Looker IDE colors have been applied to your settings.",
+    );
+  } catch (error) {
+    console.error("Failed to apply Looker colors:", error);
+  }
 }

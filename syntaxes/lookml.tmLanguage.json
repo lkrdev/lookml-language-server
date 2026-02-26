@@ -1,136 +1,182 @@
 {
-    "name": "LookML",
-    "scopeName": "source.lookml",
-    "fileTypes": [
-        ".lkml",
-        ".lookml",
-        ".model.lkml",
-        ".view.lkml",
-        ".explore.lkml"
-    ],
-    "patterns": [
-        {
-            "include": "#comments"
-        },
-        {
-            "include": "#keywords"
-        },
-        {
-            "include": "#strings"
-        },
-        {
-            "include": "#block"
-        },
-        {
-            "include": "#variables"
-        }
-    ],
-    "repository": {
-        "comments": {
-            "patterns": [
-                {
-                    "name": "comment.line.number-sign.lookml",
-                    "match": "#.*$"
-                }
-            ]
-        },
-        "keywords": {
-            "patterns": [
-                {
-                    "name": "keyword.control.lookml",
-                    "match": "\\b(view|explore|model|measure|dimension|dimension_group|parameter|filter|set|join|extends|datagroup|access_grant|sql|sql_on|html|link|label|group_label|description|type|sql_table_name|from|connection|include|primary_key|timeframes|hidden|value_format_name|drill_fields|relationship|derived_table|view_name|value_format|filters|field|value|sql_always_where|sql_always_having)\\b"
-                },
-                {
-                    "name": "constant.language.lookml",
-                    "match": "\\b(yes|no|true|false)\\b"
-                },
-                {
-                    "name": "support.type.lookml",
-                    "match": "\\b(string|number|date|time|datetime|yesno|tier|zipcode|count|count_distinct|sum|average|max|min)\\b"
-                }
-            ]
-        },
-        "strings": {
-            "patterns": [
-                {
-                    "name": "string.quoted.double.lookml",
-                    "begin": "\"",
-                    "end": "(\")|(?=\n)",
-                    "patterns": [
-                        {
-                            "name": "constant.character.escape.lookml",
-                            "match": "\\\\."
-                        },
-                        {
-                            "name": "variable.parameter.lookml",
-                            "match": "\\$\\{[^}]+\\}"
-                        }
-                    ]
-                },
-                {
-                    "name": "string.quoted.single.lookml",
-                    "begin": "'",
-                    "end": "(')|(?=\n)",
-                    "patterns": [
-                        {
-                            "name": "constant.character.escape.lookml",
-                            "match": "\\\\."
-                        },
-                        {
-                            "name": "variable.parameter.lookml",
-                            "match": "\\$\\{[^}]+\\}"
-                        }
-                    ]
-                }
-            ]
-        },
-        "block": {
-            "patterns": [
-                {
-                    "name": "meta.block.lookml",
-                    "begin": "\\{",
-                    "end": "\\}",
-                    "beginCaptures": {
-                        "0": {
-                            "name": "punctuation.definition.block.begin.lookml"
-                        }
-                    },
-                    "endCaptures": {
-                        "0": {
-                            "name": "punctuation.definition.block.end.lookml"
-                        }
-                    },
-                    "patterns": [
-                        {
-                            "include": "#comments"
-                        },
-                        {
-                            "include": "#keywords"
-                        },
-                        {
-                            "include": "#strings"
-                        },
-                        {
-                            "include": "#block"
-                        },
-                        {
-                            "include": "#variables"
-                        }
-                    ]
-                }
-            ]
-        },
-        "variables": {
-            "patterns": [
-                {
-                    "name": "variable.parameter.lookml",
-                    "match": "\\$\\{[^}]+\\}"
-                },
-                {
-                    "name": "variable.other.lookml",
-                    "match": "\\$[a-zA-Z_][a-zA-Z0-9_]*"
-                }
-            ]
-        }
+  "name": "LookML",
+  "scopeName": "source.lookml",
+  "fileTypes": [
+    ".lkml",
+    ".lookml",
+    ".model.lkml",
+    ".view.lkml",
+    ".explore.lkml"
+  ],
+  "patterns": [
+    {
+      "include": "#sql_parameters"
+    },
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#block"
+    },
+    {
+      "include": "#variables"
     }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.number-sign.lookml",
+          "match": "#.*$"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.lookml",
+          "match": "\\b(view|explore|model|measure|dimension|dimension_group|parameter|parameters|filter|set|join|extends|datagroup|access_grant|sql|sql_on|sql_trigger|datagroup_trigger|html|link|label|group_label|description|type|datatype|sql_table_name|from|connection|include|primary_key|timeframes|hidden|value_format_name|drill_fields|relationship|derived_table|view_name|value_format|filters|field|value|sql_always_where|sql_always_having|max_cache_age|partition_keys|cluster_keys|format|default_value|required_fields|allowed_values|name|alias)\\b"
+        },
+        {
+          "name": "constant.language.lookml",
+          "match": "\\b(yes|no|true|false)\\b"
+        },
+        {
+          "name": "support.type.lookml",
+          "match": "\\b(string|number|date|time|datetime|tier|zipcode|count|count_distinct|sum|average|max|min)\\b"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.lookml",
+          "begin": "\"",
+          "end": "(\")|(?=\n)",
+          "patterns": [
+            {
+              "name": "constant.character.escape.lookml",
+              "match": "\\\\."
+            },
+            {
+              "name": "variable.parameter.lookml",
+              "match": "\\$\\{[^}]+\\}"
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.lookml",
+          "begin": "'",
+          "end": "(')|(?=\n)",
+          "patterns": [
+            {
+              "name": "constant.character.escape.lookml",
+              "match": "\\\\."
+            },
+            {
+              "name": "variable.parameter.lookml",
+              "match": "\\$\\{[^}]+\\}"
+            }
+          ]
+        }
+      ]
+    },
+    "block": {
+      "patterns": [
+        {
+          "name": "meta.block.lookml",
+          "begin": "\\{",
+          "end": "\\}",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.block.begin.lookml"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.block.end.lookml"
+            }
+          },
+          "patterns": [
+            {
+              "include": "#sql_parameters"
+            },
+            {
+              "include": "#comments"
+            },
+            {
+              "include": "#keywords"
+            },
+            {
+              "include": "#strings"
+            },
+            {
+              "include": "#block"
+            },
+            {
+              "include": "#variables"
+            }
+          ]
+        }
+      ]
+    },
+    "variables": {
+      "patterns": [
+        {
+          "name": "variable.parameter.lookml",
+          "match": "\\$\\{[^}]+\\}"
+        },
+        {
+          "name": "variable.other.lookml",
+          "match": "\\$[a-zA-Z_][a-zA-Z0-9_]*"
+        }
+      ]
+    },
+    "sql_parameters": {
+      "begin": "\\b(sql|sql_on|sql_always_where|sql_always_having|sql_trigger|html)\\b\\s*:\\s*",
+      "end": ";;",
+      "beginCaptures": {
+        "1": {
+          "name": "source.lookml.sql.parameter.name"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#sql_content"
+        }
+      ]
+    },
+    "sql_content": {
+      "patterns": [
+        {
+          "include": "#strings"
+        },
+        {
+          "include": "#variables"
+        },
+        {
+          "name": "source.lookml.sql.keyword.main",
+          "match": "(?<!\\w)(SELECT|FROM|WHERE|LEFT|JOIN|INNER|OUTER|GROUP BY|ORDER BY|LIMIT|OFFSET|AS|AND|OR|IS|NOT|NULL|DISTINCT|WITH|ON|INTO|UNION|CASE|WHEN|THEN|ELSE|END)(?!\\w)"
+        },
+        {
+          "name": "source.lookml.sql.keyword.type",
+          "match": "(?<!\\w)(CAST|INT64|STRING|DATE|DATETIME|BOOL|BOOLEAN|NUMERIC|DECIMAL|FLOAT64)(?!\\w)"
+        },
+        {
+          "name": "source.lookml.sql.function.name",
+          "match": "(?<!\\w)(CONCAT|COALESCE|DATE|YEAR|MONTH|DAY|SUM|COUNT|AVG|MIN|MAX|UPPER|LOWER|TRIM|SUBSTR|ROUND|ABS)(?!\\w)(?=\\s*\\()"
+        },
+        {
+          "name": "source.lookml.sql.numeric",
+          "match": "\\b[0-9]+(\\.[0-9]+)?\\b"
+        }
+      ]
+    }
+  }
 }
