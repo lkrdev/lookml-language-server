@@ -111,4 +111,39 @@ describe("Extends View", () => {
         expect(fieldNames).toContain("id2");
         expect(fieldNames.length).toBe(2);
     });
+
+    test("should have zero diagnostics for order_items_override_id_final", () => {
+        const exploreDef = workspaceModel.getExplore("order_items_override_id_final");
+        expect(exploreDef).toBeDefined();
+        const exploreLine = exploreDef!.positions;
+
+        const errorsInBlock = sharedDiagnostics.filter((d) => {
+            const diagnosticLine = d.range.start.line;
+            return (
+                diagnosticLine >= exploreLine.$p[0] &&
+                diagnosticLine <= exploreLine.$p[2]
+            );
+        });
+
+        expect(errorsInBlock.length).toBe(0);
+    });
+
+    test("workspace model should have type string for order_items_override_ids1.id", ()=>{
+        const fields = workspaceModel.getTableFields("order_items_override_ids1");
+        expect(fields).toBeDefined();
+        const idField = fields!.find(f => f.name === "id");
+        expect(idField).toBeDefined();
+        expect(idField!.type).toBe("string");
+    })
+
+    test("workspace model should have yesno field for order_items_override_id_final.id", () => {
+        const fields = workspaceModel.getTableFields("order_items_override_id_final");
+        expect(fields).toBeDefined();
+        const idField = fields!.find(f => f.name === "id");
+        expect(idField).toBeDefined();
+        expect(idField!.type).toBe("yesno");
+        const idField2 = fields!.find(f => f.name === "id2");
+        expect(idField2).toBeDefined();
+        expect(idField2!.type).toBe("number");
+    });
 });

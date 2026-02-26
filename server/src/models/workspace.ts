@@ -759,26 +759,38 @@ export class WorkspaceModel {
         }
 
         const view = viewDetails.view;
-        let dimensions = { ...(view.dimension || {}) };
-        let measures = { ...(view.measure || {}) };
-        let dimensionGroups = { ...(view.dimension_group || {}) };
+        let inheritedDimensions = {};
+        let inheritedMeasures = {};
+        let inheritedDimensionGroups = {};
 
         if (view.extends) {
             const extendedViews = Array.isArray(view.extends)
                 ? view.extends
                 : [view.extends];
-            // Process extends in reverse order (later ones override earlier ones, 
-            // but local fields override all)
+            // Process extends in order (later ones override earlier ones)
             for (const extName of extendedViews) {
                 const extFields = this.getViewFields(extName, new Set(visited));
-                dimensions = { ...extFields.dimension, ...dimensions };
-                measures = { ...extFields.measure, ...measures };
-                dimensionGroups = {
+                inheritedDimensions = {
+                    ...inheritedDimensions,
+                    ...extFields.dimension,
+                };
+                inheritedMeasures = {
+                    ...inheritedMeasures,
+                    ...extFields.measure,
+                };
+                inheritedDimensionGroups = {
+                    ...inheritedDimensionGroups,
                     ...extFields.dimension_group,
-                    ...dimensionGroups,
                 };
             }
         }
+
+        const dimensions = { ...inheritedDimensions, ...(view.dimension || {}) };
+        const measures = { ...inheritedMeasures, ...(view.measure || {}) };
+        const dimensionGroups = {
+            ...inheritedDimensionGroups,
+            ...(view.dimension_group || {}),
+        };
 
         return {
             dimension: dimensions,
