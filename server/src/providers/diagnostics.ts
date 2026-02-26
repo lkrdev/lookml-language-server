@@ -104,21 +104,12 @@ export class DiagnosticsProvider {
             return true;
         if (view.dimension_group?.[fieldName]) return true;
 
-        // dimension_group timeframes: e.g. "day_date" from dimension_group "day" with timeframe "date"
-        if (fieldName.includes("_")) {
-            const fieldSplit = fieldName.split("_");
-            const groupName = fieldSplit.pop();
-            if (groupName) {
-                const dimensionGroupName = fieldSplit.join("_");
-                const dimensionGroup = view.dimension_group?.[dimensionGroupName];
-                const timeframes =
-                    dimensionGroup?.timeframes ?? ["time", "date"];
-                if (
-                    dimensionGroup &&
-                    timeframes.includes(groupName)
-                ) {
-                    return true;
-                }
+        // dimension_group timeframes: e.g. "day_date" or "date_transaction_month_name" (timeframe can contain "_")
+        const dimensionGroups = view.dimension_group ?? {};
+        for (const [dimGroupName, dimGroup] of Object.entries(dimensionGroups)) {
+            const timeframes = dimGroup.timeframes ?? ["time", "date"];
+            for (const timeframe of timeframes) {
+                if (fieldName === `${dimGroupName}_${timeframe}`) return true;
             }
         }
 
@@ -532,6 +523,7 @@ export class DiagnosticsProvider {
                                 if (timeframesPosition) {
                                     const validTimeframes = [
                                         "raw",
+                                        "yesno",
                                         "time",
                                         "date",
                                         "week",
@@ -544,18 +536,26 @@ export class DiagnosticsProvider {
                                         "week_of_year",
                                         "month_of_year",
                                         "quarter_of_year",
+                                        "month_num",
+                                        "month_name",
+                                        "quarter_name",
+                                        "day_name",
                                         "hour",
                                         "minute",
                                         "second",
+                                        "millisecond",
+                                        "microsecond",
                                         "hour_of_day",
                                         "minute_of_hour",
                                         "second_of_minute",
                                         "time_of_day",
                                         "day_of_week_index",
                                         "week_start_date",
-                                        "month_name",
-                                        "quarter_name",
-                                        "day_name",
+                                        // Fiscal timeframes (require fiscal_month_offset on model)
+                                        "fiscal_year",
+                                        "fiscal_quarter",
+                                        "fiscal_quarter_of_year",
+                                        "fiscal_month_num",
                                     ];
 
                                     for (const [
