@@ -49,7 +49,7 @@
         },
         {
           "name": "support.type.lookml",
-          "match": "\\b(string|number|date|time|datetime|yesno|tier|zipcode|count|count_distinct|sum|average|max|min)\\b"
+          "match": "\\b(string|number|date|time|datetime|tier|zipcode|count|count_distinct|sum|average|max|min)\\b"
         }
       ]
     },
@@ -139,7 +139,7 @@
       ]
     },
     "sql_parameters": {
-      "begin": "(sql\\w*)\\s*:\\s*",
+      "begin": "\\b(sql|sql_on|sql_always_where|sql_always_having|sql_trigger|html)\\b\\s*:\\s*",
       "end": ";;",
       "beginCaptures": {
         "1": {
