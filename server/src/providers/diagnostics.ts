@@ -83,6 +83,59 @@ export class DiagnosticsProvider {
     }
 
     /**
+     * Check if a field exists in a view, including fields inherited from extended views
+     * (extends: [view_name]) and dimension_group timeframes (e.g. day_date from dimension_group: day).
+     * Used so that refinements can reference dimensions from their base view without false "not found" errors.
+     */
+    private fieldExistsInView(
+        viewName: string,
+        fieldName: string,
+        visited: Set<string> = new Set(),
+    ): boolean {
+        if (visited.has(viewName)) return false;
+        visited.add(viewName);
+
+        const viewDetails = this.workspaceModel.getView(viewName);
+        if (!viewDetails?.view) return false;
+
+        const view = viewDetails.view;
+
+        if (view.dimension?.[fieldName] || view.measure?.[fieldName])
+            return true;
+        if (view.dimension_group?.[fieldName]) return true;
+
+        // dimension_group timeframes: e.g. "day_date" from dimension_group "day" with timeframe "date"
+        if (fieldName.includes("_")) {
+            const fieldSplit = fieldName.split("_");
+            const groupName = fieldSplit.pop();
+            if (groupName) {
+                const dimensionGroupName = fieldSplit.join("_");
+                const dimensionGroup = view.dimension_group?.[dimensionGroupName];
+                const timeframes =
+                    dimensionGroup?.timeframes ?? ["time", "date"];
+                if (
+                    dimensionGroup &&
+                    timeframes.includes(groupName)
+                ) {
+                    return true;
+                }
+            }
+        }
+
+        const extendsList =
+            view.extends === undefined
+                ? []
+                : Array.isArray(view.extends)
+                  ? view.extends
+                  : [view.extends];
+        for (const extViewName of extendsList) {
+            if (this.fieldExistsInView(extViewName, fieldName, visited))
+                return true;
+        }
+        return false;
+    }
+
+    /**
      * Validate a document and return diagnostics
      */
     public validateDocument(document: TextDocument): Diagnostic[] {
@@ -168,12 +221,7 @@ export class DiagnosticsProvider {
                     continue;
                 }
 
-                const view = viewDetails.view;
-                if (
-                    !view?.dimension?.[fieldName] &&
-                    !view?.measure?.[fieldName] &&
-                    !view?.dimension_group?.[fieldName]
-                ) {
+                if (!this.fieldExistsInView(viewName, fieldName)) {
                     diagnostics.push({
                         severity: DiagnosticSeverity.Error,
                         range,
@@ -181,25 +229,15 @@ export class DiagnosticsProvider {
                         code: DiagnosticCode.VIEW_REF_FIELD_NOT_FOUND,
                     });
                 }
-            } else if (currentViewName) {
+            } else if (currentViewName && ref !== "TABLE") {
                 const fieldName = ref;
-                const viewDetails =
-                    this.workspaceModel.getView(currentViewName);
-                if (viewDetails) {
-                    const view = viewDetails.view;
-                    if (
-                        !view.dimension?.[fieldName] &&
-                        !view.measure?.[fieldName] &&
-                        !view.dimension_group?.[fieldName] &&
-                        fieldName !== "TABLE"
-                    ) {
-                        diagnostics.push({
-                            severity: DiagnosticSeverity.Error,
-                            range,
-                            message: `Could not find a field named "${ref}"`,
-                            code: DiagnosticCode.VIEW_REF_FIELD_NOT_FOUND,
-                        });
-                    }
+                if (!this.fieldExistsInView(currentViewName, fieldName)) {
+                    diagnostics.push({
+                        severity: DiagnosticSeverity.Error,
+                        range,
+                        message: `Could not find a field named "${ref}"`,
+                        code: DiagnosticCode.VIEW_REF_FIELD_NOT_FOUND,
+                    });
                 }
             }
         }
@@ -311,39 +349,7 @@ export class DiagnosticsProvider {
                 continue;
             }
 
-            const viewDimensions = targetedViewDetails.view.dimension;
-            const viewMeasures = targetedViewDetails.view.measure;
-            const viewDimensionGroups =
-                targetedViewDetails.view.dimension_group;
-
-            if (
-                !viewDimensions?.[fieldName] &&
-                !viewMeasures?.[fieldName] &&
-                !viewDimensionGroups?.[fieldName]
-            ) {
-                if (fieldName.includes("_")) {
-                    const fieldSplit = fieldName.split("_");
-                    const groupName = fieldSplit.pop();
-                    if (!groupName) {
-                        throw new Error(
-                            `No group name found for field ${fieldName}`,
-                        );
-                    }
-                    const dimensionGroupName = fieldSplit.join("_");
-                    const dimensionGroup =
-                        viewDimensionGroups?.[dimensionGroupName];
-                    const timeframes = dimensionGroup?.timeframes ?? [
-                        "time",
-                        "date",
-                    ];
-                    if (
-                        viewDimensionGroups?.[dimensionGroupName] &&
-                        timeframes.includes(groupName)
-                    ) {
-                        continue;
-                    }
-                }
-
+            if (!this.fieldExistsInView(targetedViewDetails.view.$name ?? "", fieldName)) {
                 diagnostics.push({
                     severity: DiagnosticSeverity.Error,
                     message: `Field "${fieldName}" not found in view "${targetedViewDetails.view.$name}"`,
@@ -650,50 +656,9 @@ export class DiagnosticsProvider {
                                 });
                                 continue;
                             }
-                            const viewDimensions =
-                                targetedViewDetails.view.dimension;
-                            const viewMeasures =
-                                targetedViewDetails.view.measure;
-                            const viewDimensionGroups =
-                                targetedViewDetails.view.dimension_group;
-
-                            if (
-                                !viewDimensions?.[fieldName] &&
-                                !viewMeasures?.[fieldName] &&
-                                !viewDimensionGroups?.[fieldName]
-                            ) {
-                                if (fieldName.includes("_")) {
-                                    const fieldSplit = fieldName.split("_");
-                                    const groupName = fieldSplit.pop();
-
-                                    if (!groupName) {
-                                        throw new Error(
-                                            `No group name found for field ${fieldName}`,
-                                        );
-                                    }
-
-                                    const dimensionGroupName =
-                                        fieldSplit.join("_");
-                                    const dimensionGroup =
-                                        viewDimensionGroups?.[
-                                            dimensionGroupName
-                                        ];
-
-                                    const timeframes =
-                                        dimensionGroup?.timeframes ?? [
-                                            "time",
-                                            "date",
-                                        ];
-                                    if (
-                                        viewDimensionGroups?.[
-                                            dimensionGroupName
-                                        ] &&
-                                        timeframes.includes(groupName)
-                                    ) {
-                                        continue;
-                                    }
-                                }
-
+                            const viewToCheck =
+                                targetedViewName ?? viewDetails.view.$name ?? "";
+                            if (!this.fieldExistsInView(viewToCheck, fieldName)) {
                                 diagnostics.push({
                                     severity: DiagnosticSeverity.Error,
                                     message: `Field "${fieldName}" not found in view "${targetedViewName}"`,
@@ -1139,53 +1104,6 @@ export class DiagnosticsProvider {
                                                 viewName,
                                             );
 
-                                        const viewExtends =
-                                            typeof viewDetails?.view
-                                                ?.extends === "string"
-                                                ? [viewDetails?.view?.extends]
-                                                : viewDetails?.view?.extends;
-                                        const viewExtensions = viewExtends?.map(
-                                            (view) => {
-                                                return this.workspaceModel.getView(
-                                                    view,
-                                                );
-                                            },
-                                        );
-
-                                        const viewHasField = (
-                                            field: string,
-                                        ) => {
-                                            return Boolean(
-                                                viewDetails?.view.measure?.[
-                                                    fieldName
-                                                ] ||
-                                                viewDetails?.view.dimension?.[
-                                                    fieldName
-                                                ] ||
-                                                viewDetails?.view
-                                                    .dimension_group?.[
-                                                    fieldName
-                                                ] ||
-                                                viewExtensions?.some(
-                                                    (viewDetails) =>
-                                                        Boolean(
-                                                            viewDetails?.view
-                                                                .measure?.[
-                                                                fieldName
-                                                            ] ||
-                                                            viewDetails?.view
-                                                                .dimension?.[
-                                                                fieldName
-                                                            ] ||
-                                                            viewDetails?.view
-                                                                .dimension_group?.[
-                                                                fieldName
-                                                            ],
-                                                        ),
-                                                ),
-                                            );
-                                        };
-
                                         if (!viewDetails) {
                                             diagnostics.push({
                                                 severity:
@@ -1226,7 +1144,7 @@ export class DiagnosticsProvider {
                                                 source: "lookml-lsp",
                                                 code: DiagnosticCode.SQL_REF_VIEW_NOT_AVAILABLE,
                                             });
-                                        } else if (!viewHasField(fieldName)) {
+                                        } else if (!this.fieldExistsInView(viewName, fieldName)) {
                                             diagnostics.push({
                                                 severity:
                                                     DiagnosticSeverity.Error,
