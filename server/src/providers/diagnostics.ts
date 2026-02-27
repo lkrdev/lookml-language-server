@@ -14,6 +14,8 @@ import {
     Position,
     Range,
 } from "vscode-languageserver/node";
+import * as fs from "fs";
+import * as path from "path";
 import { URI } from "vscode-uri";
 import { ZodError, ZodIssue } from "zod";
 import { WorkspaceModel } from "../models/workspace";
@@ -41,6 +43,7 @@ export enum DiagnosticCode {
     SQL_REF_VIEW_NOT_FOUND = 30002,
     SQL_REF_VIEW_NOT_INCLUDED = 30003,
     SQL_REF_VIEW_NOT_AVAILABLE = 30004,
+    SQL_REF_CIRCULAR = 30005,
 
     // Drill Fields validation (40000-49999)
     DRILL_FIELDS_INVALID_FORMAT = 40001,
@@ -73,6 +76,13 @@ export enum DiagnosticCode {
     EXPLORE_FIELD_NOT_FOUND = 70002,
     EXPLORE_VIEW_NOT_INCLUDED = 70003,
     EXPLORE_INVALID_EXTENDS = 70004,
+    EXPLORE_INACCESSIBLE_VIEW = 70005,
+
+    // View extends validation (80000-89999)
+    EXTENDS_VIEW_NOT_FOUND = 80001,
+
+    // Include validation (90000-99999)
+    INCLUDE_FILE_NOT_FOUND = 90001,
 }
 
 export class DiagnosticsProvider {
@@ -83,12 +93,242 @@ export class DiagnosticsProvider {
     }
 
     /**
+     * Collect view names referenced in ${view.field} in dimension/measure/dimension_group sql.
+     */
+    private getReferencedViewNamesFromSql(view: LookmlView): Set<string> {
+        const refs = new Set<string>();
+        const collectFromSql = (sql: string | undefined) => {
+            if (!sql) return;
+            const pattern = /\$\{([a-zA-Z0-9_]+)\.([a-zA-Z0-9_.]+)\}/g;
+            let match: RegExpExecArray | null;
+            while ((match = pattern.exec(sql)) !== null) {
+                refs.add(match[1]);
+            }
+        };
+
+        if (view.dimension) {
+            Object.values(view.dimension).forEach((d) => collectFromSql(d.sql));
+        }
+        if (view.measure) {
+            Object.values(view.measure).forEach((m) => collectFromSql(m.sql));
+        }
+        if (view.dimension_group) {
+            Object.values(view.dimension_group).forEach((dg) =>
+                collectFromSql(dg.sql),
+            );
+        }
+        return refs;
+    }
+
+    /**
+     * Check if a field exists in a view, including fields inherited from extended views
+     * (extends: [view_name]) and dimension_group timeframes (e.g. day_date from dimension_group: day).
+     * Used so that refinements can reference dimensions from their base view without false "not found" errors.
+     */
+    private fieldExistsInView(
+        viewName: string,
+        fieldName: string,
+        visited: Set<string> = new Set(),
+    ): boolean {
+        if (visited.has(viewName)) return false;
+        visited.add(viewName);
+
+        const viewDetails = this.workspaceModel.getView(viewName);
+        if (!viewDetails?.view) return false;
+
+        const view = viewDetails.view;
+
+        // Looker special refs: TABLE = current view's table, SQL_TABLE_NAME = view's sql_table_name
+        if (fieldName === "TABLE" || fieldName === "SQL_TABLE_NAME") return true;
+        if (view.dimension?.[fieldName] || view.measure?.[fieldName])
+            return true;
+        if (view.dimension_group?.[fieldName]) return true;
+
+        // dimension_group timeframes: e.g. "day_date" or "date_transaction_month_name" (timeframe can contain "_")
+        const dimensionGroups = view.dimension_group ?? {};
+        for (const [dimGroupName, dimGroup] of Object.entries(dimensionGroups)) {
+            const timeframes = dimGroup.timeframes ?? ["time", "date"];
+            for (const timeframe of timeframes) {
+                if (fieldName === `${dimGroupName}_${timeframe}`) return true;
+            }
+        }
+
+        const extendsList =
+            view.extends === undefined
+                ? []
+                : Array.isArray(view.extends)
+                  ? view.extends
+                  : [view.extends];
+        for (const extViewName of extendsList) {
+            if (this.fieldExistsInView(extViewName, fieldName, visited))
+                return true;
+        }
+        return false;
+    }
+
+    /**
+     * Resolve a field reference like "day_date" to the dimension_group name "day"
+     * if it matches a dimension_group + timeframe combination. Returns null if
+     * the ref doesn't match any dimension_group timeframe.
+     */
+    private resolveToDimensionGroupName(
+        view: LookmlView,
+        fieldRef: string,
+    ): string | null {
+        if (!view.dimension_group) return null;
+        for (const [dgName, dg] of Object.entries(view.dimension_group)) {
+            const timeframes = dg.timeframes ?? ["time", "date"];
+            for (const tf of timeframes) {
+                if (fieldRef === `${dgName}_${tf}`) return dgName;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Build a field dependency graph for a view and detect circular references
+     * using DFS with three-color marking (white/gray/black).
+     * Catches both direct self-references (sql: ${publisher} in publisher)
+     * and indirect cycles (A -> B -> ... -> A).
+     */
+    private validateCircularReferences(
+        viewDetails: LookmlViewWithFileInfo,
+    ): Diagnostic[] {
+        const diagnostics: Diagnostic[] = [];
+        const view = viewDetails.view;
+        const positions = viewDetails.positions;
+        const viewName = view.$name ?? "";
+
+        const graph = new Map<string, Set<string>>();
+        const fieldSqlPositions = new Map<
+            string,
+            { $p: number[] } | undefined
+        >();
+
+        const refPattern = /\$\{([^}]+)\}/g;
+
+        const collectDeps = (
+            fieldName: string,
+            sql: string | undefined,
+            sqlPosition: any,
+        ) => {
+            if (!sql) return;
+            const deps = new Set<string>();
+            let match;
+            refPattern.lastIndex = 0;
+            while ((match = refPattern.exec(sql)) !== null) {
+                const ref = match[1];
+                if (ref === "TABLE" || ref === "SQL_TABLE_NAME") continue;
+                if (ref.includes(".")) {
+                    const [refView, refField] = ref.split(".");
+                    if (refView === viewName) {
+                        deps.add(refField);
+                    }
+                } else {
+                    deps.add(ref);
+                }
+            }
+            graph.set(fieldName, deps);
+            fieldSqlPositions.set(fieldName, sqlPosition);
+        };
+
+        if (view.dimension) {
+            for (const [name, dim] of Object.entries(view.dimension)) {
+                collectDeps(name, dim.sql, positions?.dimension?.[name]?.sql);
+            }
+        }
+        if (view.measure) {
+            for (const [name, meas] of Object.entries(view.measure)) {
+                collectDeps(name, meas.sql, positions?.measure?.[name]?.sql);
+            }
+        }
+        if (view.dimension_group) {
+            for (const [name, dg] of Object.entries(view.dimension_group)) {
+                collectDeps(
+                    name,
+                    dg.sql,
+                    positions?.dimension_group?.[name]?.sql,
+                );
+            }
+        }
+
+        const WHITE = 0,
+            GRAY = 1,
+            BLACK = 2;
+        const color = new Map<string, number>();
+        for (const field of graph.keys()) {
+            color.set(field, WHITE);
+        }
+
+        const fieldsInCycles = new Set<string>();
+
+        const dfs = (node: string, path: string[]) => {
+            color.set(node, GRAY);
+            path.push(node);
+
+            const deps = graph.get(node) ?? new Set();
+            for (const dep of deps) {
+                const resolved =
+                    this.resolveToDimensionGroupName(view, dep) ?? dep;
+                if (!graph.has(resolved)) continue;
+
+                if (color.get(resolved) === GRAY) {
+                    const cycleStart = path.indexOf(resolved);
+                    for (let i = cycleStart; i < path.length; i++) {
+                        fieldsInCycles.add(path[i]);
+                    }
+                } else if (color.get(resolved) === WHITE) {
+                    dfs(resolved, path);
+                }
+            }
+
+            path.pop();
+            color.set(node, BLACK);
+        };
+
+        for (const field of graph.keys()) {
+            if (color.get(field) === WHITE) {
+                dfs(field, []);
+            }
+        }
+
+        for (const fieldName of fieldsInCycles) {
+            const pos = fieldSqlPositions.get(fieldName);
+            if (!pos?.$p) continue;
+
+            const deps = graph.get(fieldName) ?? new Set();
+            const cycleDeps = [...deps].filter((d) => {
+                const resolved =
+                    this.resolveToDimensionGroupName(view, d) ?? d;
+                return fieldsInCycles.has(resolved);
+            });
+
+            const range = {
+                start: { line: pos.$p[0], character: pos.$p[1] },
+                end: { line: pos.$p[2], character: pos.$p[3] },
+            };
+
+            diagnostics.push({
+                severity: DiagnosticSeverity.Error,
+                range: ensureMinRangeLength(range),
+                message: `Circular reference detected: "${fieldName}" in view "${viewName}" references ${cycleDeps.map((d) => `"${d}"`).join(", ")} creating a cycle.`,
+                source: "lookml-lsp",
+                code: DiagnosticCode.SQL_REF_CIRCULAR,
+            });
+        }
+
+        return diagnostics;
+    }
+
+    /**
      * Validate a document and return diagnostics
      */
     public validateDocument(document: TextDocument): Diagnostic[] {
         const diagnostics: Diagnostic[] = [];
         diagnostics.push(...this.validateProperties(document));
         diagnostics.push(...this.validateModelReferences(document));
+        diagnostics.push(...this.validateExploreFileInaccessibleViews(document));
+        diagnostics.push(...this.validateIncludes(document));
 
         const fileName = document.uri.split("/").pop() ?? "";
         const errors = this.workspaceModel.getErrorsByFileName(fileName);
@@ -167,12 +407,7 @@ export class DiagnosticsProvider {
                     continue;
                 }
 
-                const fields = this.workspaceModel.getViewFields(viewDetails.view.$name!);
-                if (
-                    !fields.dimension?.[fieldName] &&
-                    !fields.measure?.[fieldName] &&
-                    !fields.dimension_group?.[fieldName]
-                ) {
+                if (!this.fieldExistsInView(viewName, fieldName)) {
                     diagnostics.push({
                         severity: DiagnosticSeverity.Error,
                         range,
@@ -180,25 +415,15 @@ export class DiagnosticsProvider {
                         code: DiagnosticCode.VIEW_REF_FIELD_NOT_FOUND,
                     });
                 }
-            } else if (currentViewName) {
+            } else if (currentViewName && ref !== "TABLE") {
                 const fieldName = ref;
-                const viewDetails =
-                    this.workspaceModel.getView(currentViewName);
-                if (viewDetails) {
-                    const fields = this.workspaceModel.getViewFields(viewDetails.view.$name!);
-                if (
-                    !fields.dimension?.[fieldName] &&
-                    !fields.measure?.[fieldName] &&
-                    !fields.dimension_group?.[fieldName] &&
-                    fieldName !== "TABLE"
-                ) {
+                if (!this.fieldExistsInView(currentViewName, fieldName)) {
                     diagnostics.push({
                         severity: DiagnosticSeverity.Error,
                         range,
                         message: `Could not find a field named "${ref}"`,
                         code: DiagnosticCode.VIEW_REF_FIELD_NOT_FOUND,
                     });
-                }
                 }
             }
         }
@@ -310,39 +535,7 @@ export class DiagnosticsProvider {
                 continue;
             }
 
-            const fields = this.workspaceModel.getViewFields(targetedViewName!);
-            const viewDimensions = fields.dimension;
-            const viewMeasures = fields.measure;
-            const viewDimensionGroups = fields.dimension_group;
-
-            if (
-                !viewDimensions?.[fieldName] &&
-                !viewMeasures?.[fieldName] &&
-                !viewDimensionGroups?.[fieldName]
-            ) {
-                if (fieldName.includes("_")) {
-                    const fieldSplit = fieldName.split("_");
-                    const groupName = fieldSplit.pop();
-                    if (!groupName) {
-                        throw new Error(
-                            `No group name found for field ${fieldName}`,
-                        );
-                    }
-                    const dimensionGroupName = fieldSplit.join("_");
-                    const dimensionGroup =
-                        viewDimensionGroups?.[dimensionGroupName];
-                    const timeframes = dimensionGroup?.timeframes ?? [
-                        "time",
-                        "date",
-                    ];
-                    if (
-                        viewDimensionGroups?.[dimensionGroupName] &&
-                        timeframes.includes(groupName)
-                    ) {
-                        continue;
-                    }
-                }
-
+            if (!this.fieldExistsInView(targetedViewDetails.view.$name ?? "", fieldName)) {
                 diagnostics.push({
                     severity: DiagnosticSeverity.Error,
                     message: `Field "${fieldName}" not found in view "${targetedViewDetails.view.$name}"`,
@@ -430,6 +623,38 @@ export class DiagnosticsProvider {
                         source: "lookml-lsp",
                     });
                 }
+
+                // Extends: each extended view must exist in the workspace (included in project)
+                const extendsList =
+                    view.extends === undefined
+                        ? []
+                        : Array.isArray(view.extends)
+                          ? view.extends
+                          : [view.extends];
+                const extendsPositions = (positions as { extends?: Array<{ $p: number[] }> }).extends;
+                for (const [index, extViewName] of extendsList.entries()) {
+                    if (!this.workspaceModel.getView(extViewName)) {
+                        const extPos = extendsPositions?.[index]?.$p;
+                        const range = extPos
+                            ? {
+                                  start: { line: extPos[0], character: extPos[1] },
+                                  end: { line: extPos[2], character: extPos[3] },
+                              }
+                            : this.getRangeFromPositions(positions, "$name");
+                        diagnostics.push({
+                            severity: DiagnosticSeverity.Error,
+                            range: ensureMinRangeLength(range),
+                            message: `Cannot find "${extViewName}" to extend. Ensure the view exists and is included in the model.`,
+                            source: "lookml-lsp",
+                            code: DiagnosticCode.EXTENDS_VIEW_NOT_FOUND,
+                        });
+                    }
+                }
+
+                // Circular reference detection
+                diagnostics.push(
+                    ...this.validateCircularReferences(viewDetails),
+                );
 
                 // Validate dimensions
                 if (view.dimension) {
@@ -525,6 +750,7 @@ export class DiagnosticsProvider {
                                 if (timeframesPosition) {
                                     const validTimeframes = [
                                         "raw",
+                                        "yesno",
                                         "time",
                                         "date",
                                         "week",
@@ -537,18 +763,26 @@ export class DiagnosticsProvider {
                                         "week_of_year",
                                         "month_of_year",
                                         "quarter_of_year",
+                                        "month_num",
+                                        "month_name",
+                                        "quarter_name",
+                                        "day_name",
                                         "hour",
                                         "minute",
                                         "second",
+                                        "millisecond",
+                                        "microsecond",
                                         "hour_of_day",
                                         "minute_of_hour",
                                         "second_of_minute",
                                         "time_of_day",
                                         "day_of_week_index",
                                         "week_start_date",
-                                        "month_name",
-                                        "quarter_name",
-                                        "day_name",
+                                        // Fiscal timeframes (require fiscal_month_offset on model)
+                                        "fiscal_year",
+                                        "fiscal_quarter",
+                                        "fiscal_quarter_of_year",
+                                        "fiscal_month_num",
                                     ];
 
                                     for (const [
@@ -649,50 +883,9 @@ export class DiagnosticsProvider {
                                 });
                                 continue;
                             }
-                            const viewDimensions =
-                                targetedViewDetails.view.dimension;
-                            const viewMeasures =
-                                targetedViewDetails.view.measure;
-                            const viewDimensionGroups =
-                                targetedViewDetails.view.dimension_group;
-
-                            if (
-                                !viewDimensions?.[fieldName] &&
-                                !viewMeasures?.[fieldName] &&
-                                !viewDimensionGroups?.[fieldName]
-                            ) {
-                                if (fieldName.includes("_")) {
-                                    const fieldSplit = fieldName.split("_");
-                                    const groupName = fieldSplit.pop();
-
-                                    if (!groupName) {
-                                        throw new Error(
-                                            `No group name found for field ${fieldName}`,
-                                        );
-                                    }
-
-                                    const dimensionGroupName =
-                                        fieldSplit.join("_");
-                                    const dimensionGroup =
-                                        viewDimensionGroups?.[
-                                            dimensionGroupName
-                                        ];
-
-                                    const timeframes =
-                                        dimensionGroup?.timeframes ?? [
-                                            "time",
-                                            "date",
-                                        ];
-                                    if (
-                                        viewDimensionGroups?.[
-                                            dimensionGroupName
-                                        ] &&
-                                        timeframes.includes(groupName)
-                                    ) {
-                                        continue;
-                                    }
-                                }
-
+                            const viewToCheck =
+                                targetedViewName ?? viewDetails.view.$name ?? "";
+                            if (!this.fieldExistsInView(viewToCheck, fieldName)) {
                                 diagnostics.push({
                                     severity: DiagnosticSeverity.Error,
                                     message: `Field "${fieldName}" not found in view "${targetedViewName}"`,
@@ -889,6 +1082,261 @@ export class DiagnosticsProvider {
         return diagnostics;
     }
 
+    /**
+     * Check whether a single include path resolves to an existing file.
+     * Uses project root (model file directory) for absolute LookML includes,
+     * falls back to suffix matching against all known workspace files.
+     */
+    private includePathExists(
+        includePath: string,
+        knownFiles: Set<string>,
+        projectRoot: string | null,
+    ): boolean {
+        if (projectRoot) {
+            const cleanPath = includePath.startsWith("/")
+                ? includePath.slice(1)
+                : includePath;
+            const absolutePath = path.resolve(projectRoot, cleanPath);
+            if (knownFiles.has(absolutePath) || knownFiles.has(path.normalize(absolutePath))) {
+                return true;
+            }
+            try {
+                if (fs.existsSync(absolutePath)) return true;
+            } catch { /* ignore */ }
+        }
+
+        const normalizedSuffix = includePath.startsWith("/")
+            ? includePath.slice(1)
+            : includePath;
+        for (const filePath of knownFiles) {
+            const normalized = filePath.replace(/\\/g, "/");
+            if (
+                normalized.endsWith("/" + normalizedSuffix) ||
+                normalized === normalizedSuffix
+            ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Validate that include: paths in the document resolve to existing files.
+     */
+    private validateIncludes(document: TextDocument): Diagnostic[] {
+        const diagnostics: Diagnostic[] = [];
+        const text = document.getText();
+        const lines = text.split("\n");
+        const knownFiles = this.workspaceModel.getAllKnownFiles();
+        const projectRoot = this.workspaceModel.getProjectRoot();
+        const includePattern = /^\s*include:\s*"([^"]+)"\s*$/;
+
+        for (let i = 0; i < lines.length; i++) {
+            const match = includePattern.exec(lines[i]);
+            if (!match) continue;
+
+            const includePath = match[1].trim();
+            if (includePath.includes("*") || includePath.includes("?")) continue;
+
+            if (!this.includePathExists(includePath, knownFiles, projectRoot)) {
+                const colStart = lines[i].indexOf('"') + 1;
+                const colEnd = colStart + includePath.length;
+                diagnostics.push({
+                    severity: DiagnosticSeverity.Error,
+                    range: {
+                        start: { line: i, character: colStart },
+                        end: { line: i, character: colEnd },
+                    },
+                    message: `Include file not found: "${includePath}". Check the path for typos.`,
+                    source: "lookml-lsp",
+                    code: DiagnosticCode.INCLUDE_FILE_NOT_FOUND,
+                });
+            }
+        }
+
+        return diagnostics;
+    }
+
+    /**
+     * Run inaccessible-view validation for explores defined in this document.
+     */
+    private validateExploreFileInaccessibleViews(
+        _document: TextDocument,
+    ): Diagnostic[] {
+        return [];
+    }
+
+    /**
+     * Validate all explores: for each view used by an explore, check every field's SQL for
+     * cross-view references (${other_view.field}) where the referenced view is not joined.
+     * Returns diagnostics keyed by the VIEW file URI (at the field's sql position),
+     * matching Looker's error reporting.
+     */
+    public validateAllExploresInaccessibleViews(): Map<string, Diagnostic[]> {
+        const byUri = new Map<string, Diagnostic[]>();
+
+        const appendDiag = (uri: string, diag: Diagnostic) => {
+            const list = byUri.get(uri) ?? [];
+            list.push(diag);
+            byUri.set(uri, list);
+        };
+
+        for (const [, exploreDetails] of this.workspaceModel.getExplores()) {
+            const explore = exploreDetails.explore;
+            const exploreName = explore.$name ?? "";
+            const sourceViewName =
+                explore.from || explore.view_name || exploreName;
+            const aliasName = explore.view_name || exploreName;
+
+            const availableViews = new Set<string>([
+                sourceViewName,
+                aliasName,
+                ...(explore.join ? Object.keys(explore.join) : []),
+            ]);
+
+            // All actual view names used in the explore (base + joins with from:)
+            const viewNamesToCheck = new Map<string, string>();
+            viewNamesToCheck.set(aliasName, sourceViewName);
+            if (explore.join) {
+                for (const [joinName, join] of Object.entries(explore.join)) {
+                    const joinViewName = join.from || joinName;
+                    viewNamesToCheck.set(joinName, joinViewName);
+                }
+            }
+
+            for (const [fieldPrefix, viewName] of viewNamesToCheck) {
+                const viewDetails = this.workspaceModel.getView(viewName);
+                if (!viewDetails?.view) continue;
+                const view = viewDetails.view;
+                const viewUri = viewDetails.uri;
+                const positions = viewDetails.positions;
+
+                const checkSql = (
+                    sql: string | undefined,
+                    sqlPos: { $p: number[] } | undefined,
+                    fieldName: string,
+                ) => {
+                    if (!sql) return;
+                    const pattern =
+                        /\$\{([a-zA-Z0-9_]+)\.([a-zA-Z0-9_.]+)\}/g;
+                    let match: RegExpExecArray | null;
+                    while ((match = pattern.exec(sql)) !== null) {
+                        const refViewName = match[1];
+                        if (!availableViews.has(refViewName)) {
+                            const range = sqlPos?.$p
+                                ? {
+                                      start: {
+                                          line: sqlPos.$p[0],
+                                          character: sqlPos.$p[1],
+                                      },
+                                      end: {
+                                          line: sqlPos.$p[2],
+                                          character: sqlPos.$p[3],
+                                      },
+                                  }
+                                : Range.create(0, 0, 0, 0);
+                            appendDiag(viewUri, {
+                                severity: DiagnosticSeverity.Error,
+                                range: ensureMinRangeLength(range),
+                                message: `Inaccessible view "${refViewName}" referenced in "${exploreName}.${fieldName}". "${refViewName}" is not accessible in explore "${exploreName}". Check for missing joins in explore "${exploreName}".`,
+                                source: "lookml-lsp",
+                                code: DiagnosticCode.EXPLORE_INACCESSIBLE_VIEW,
+                            });
+                        }
+                    }
+                };
+
+                if (view.dimension) {
+                    for (const [name, dim] of Object.entries(view.dimension)) {
+                        checkSql(
+                            dim.sql,
+                            positions?.dimension?.[name]?.sql as any,
+                            name,
+                        );
+                    }
+                }
+                if (view.measure) {
+                    for (const [name, meas] of Object.entries(view.measure)) {
+                        checkSql(
+                            meas.sql,
+                            positions?.measure?.[name]?.sql as any,
+                            name,
+                        );
+                    }
+                }
+                if (view.dimension_group) {
+                    for (const [name, dg] of Object.entries(
+                        view.dimension_group,
+                    )) {
+                        checkSql(
+                            dg.sql,
+                            positions?.dimension_group?.[name]?.sql as any,
+                            name,
+                        );
+                    }
+                }
+            }
+        }
+
+        return byUri;
+    }
+
+    /**
+     * Validate include: paths in ALL workspace files (view, explore, model).
+     * Returns diagnostics grouped by file URI.
+     */
+    public validateAllIncludes(): Map<string, Diagnostic[]> {
+        const byUri = new Map<string, Diagnostic[]>();
+        const knownFiles = this.workspaceModel.getAllKnownFiles();
+        const projectRoot = this.workspaceModel.getProjectRoot();
+        const includePattern = /^\s*include:\s*"([^"]+)"\s*$/;
+
+        for (const filePath of knownFiles) {
+            if (!filePath.endsWith(".lkml")) continue;
+
+            let text: string;
+            try {
+                text = fs.readFileSync(filePath, "utf-8");
+            } catch {
+                continue;
+            }
+
+            const lines = text.split("\n");
+            const fileDiags: Diagnostic[] = [];
+
+            for (let i = 0; i < lines.length; i++) {
+                const match = includePattern.exec(lines[i]);
+                if (!match) continue;
+
+                const includePath = match[1].trim();
+                if (includePath.includes("*") || includePath.includes("?")) continue;
+
+                let found = this.includePathExists(includePath, knownFiles, projectRoot);
+
+                if (!found) {
+                    const colStart = lines[i].indexOf('"') + 1;
+                    const colEnd = colStart + includePath.length;
+                    fileDiags.push({
+                        severity: DiagnosticSeverity.Error,
+                        range: {
+                            start: { line: i, character: colStart },
+                            end: { line: i, character: colEnd },
+                        },
+                        message: `Include file not found: "${includePath}". Check the path for typos.`,
+                        source: "lookml-lsp",
+                        code: DiagnosticCode.INCLUDE_FILE_NOT_FOUND,
+                    });
+                }
+            }
+
+            if (fileDiags.length > 0) {
+                byUri.set(filePath, fileDiags);
+            }
+        }
+
+        return byUri;
+    }
+
     private validateModelReferences(document: TextDocument): Diagnostic[] {
         const diagnostics: Diagnostic[] = [];
         const modelName = this.workspaceModel.getModelNameFromUri(document.uri);
@@ -946,9 +1394,12 @@ export class DiagnosticsProvider {
                     }
 
                     const aliasName = explore.view_name || exploreName;
+                    const sourceViewName =
+                        explore.from || explore.view_name || exploreName;
 
                     const availableViews = new Set<string>();
                     availableViews.add(aliasName);
+                    availableViews.add(sourceViewName);
 
                     // Add joined views
                     if (explore.join) {
@@ -988,6 +1439,48 @@ export class DiagnosticsProvider {
                         explore.from || explore.view_name || exploreName;
                     const referredViewDetails =
                         this.workspaceModel.getView(sourceViewName);
+
+                    // Inaccessible view check: views referenced by base or joined views (extends / ${view.field}) must be in the explore
+                    const viewNamesInExplore = new Set<string>([
+                        sourceViewName,
+                        ...(explore.join ? Object.keys(explore.join) : []),
+                    ]);
+                    const inaccessibleViews = new Set<string>();
+                    for (const viewName of viewNamesInExplore) {
+                        const viewDetails =
+                            this.workspaceModel.getView(viewName);
+                        if (!viewDetails?.view) continue;
+                        const referenced =
+                            this.getReferencedViewNamesFromSql(viewDetails.view);
+                        for (const refView of referenced) {
+                            if (!availableViews.has(refView)) {
+                                inaccessibleViews.add(refView);
+                            }
+                        }
+                    }
+                    const explorePosition =
+                        model.positions.explore?.[exploreName]?.$name?.$p;
+                    const exploreRange = explorePosition
+                        ? {
+                              start: {
+                                  line: explorePosition[0],
+                                  character: explorePosition[1],
+                              },
+                              end: {
+                                  line: explorePosition[2],
+                                  character: explorePosition[3],
+                              },
+                          }
+                        : Range.create(0, 0, 0, 0);
+                    for (const refView of inaccessibleViews) {
+                        diagnostics.push({
+                            severity: DiagnosticSeverity.Error,
+                            range: ensureMinRangeLength(exploreRange),
+                            message: `Inaccessible view "${refView}" is not accessible in explore "${exploreName}". Check for missing joins in explore "${exploreName}".`,
+                            source: "lookml-lsp",
+                            code: DiagnosticCode.EXPLORE_INACCESSIBLE_VIEW,
+                        });
+                    }
 
                     if (!referredViewDetails) {
                         // If the view is not found in the workspace at all, emit a "view not found" error.
@@ -1138,53 +1631,6 @@ export class DiagnosticsProvider {
                                                 viewName,
                                             );
 
-                                        const viewExtends =
-                                            typeof viewDetails?.view
-                                                ?.extends === "string"
-                                                ? [viewDetails?.view?.extends]
-                                                : viewDetails?.view?.extends;
-                                        const viewExtensions = viewExtends?.map(
-                                            (view) => {
-                                                return this.workspaceModel.getView(
-                                                    view,
-                                                );
-                                            },
-                                        );
-
-                                        const viewHasField = (
-                                            field: string,
-                                        ) => {
-                                            return Boolean(
-                                                viewDetails?.view.measure?.[
-                                                    fieldName
-                                                ] ||
-                                                viewDetails?.view.dimension?.[
-                                                    fieldName
-                                                ] ||
-                                                viewDetails?.view
-                                                    .dimension_group?.[
-                                                    fieldName
-                                                ] ||
-                                                viewExtensions?.some(
-                                                    (viewDetails) =>
-                                                        Boolean(
-                                                            viewDetails?.view
-                                                                .measure?.[
-                                                                fieldName
-                                                            ] ||
-                                                            viewDetails?.view
-                                                                .dimension?.[
-                                                                fieldName
-                                                            ] ||
-                                                            viewDetails?.view
-                                                                .dimension_group?.[
-                                                                fieldName
-                                                            ],
-                                                        ),
-                                                ),
-                                            );
-                                        };
-
                                         if (!viewDetails) {
                                             diagnostics.push({
                                                 severity:
@@ -1225,7 +1671,7 @@ export class DiagnosticsProvider {
                                                 source: "lookml-lsp",
                                                 code: DiagnosticCode.SQL_REF_VIEW_NOT_AVAILABLE,
                                             });
-                                        } else if (!viewHasField(fieldName)) {
+                                        } else if (!this.fieldExistsInView(viewName, fieldName)) {
                                             diagnostics.push({
                                                 severity:
                                                     DiagnosticSeverity.Error,
