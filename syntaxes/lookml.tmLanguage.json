@@ -59,6 +59,21 @@
     "strings": {
       "patterns": [
         {
+          "name": "string.quoted.other.backtick.lookml",
+          "begin": "`",
+          "end": "(`)|(?=\n)",
+          "patterns": [
+            {
+              "name": "constant.character.escape.lookml",
+              "match": "\\\\."
+            },
+            {
+              "name": "variable.parameter.lookml",
+              "match": "\\$\\{[^}]+\\}"
+            }
+          ]
+        },
+        {
           "name": "string.quoted.double.lookml",
           "begin": "\"",
           "end": "(\")|(?=\n)",
