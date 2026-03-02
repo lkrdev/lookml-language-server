@@ -21,6 +21,7 @@
       "scope": [
         "string.quoted.double.lookml",
         "string.quoted.single.lookml",
+        "string.quoted.other.backtick.lookml",
         "constant.character.escape.lookml"
       ],
       "settings": {
