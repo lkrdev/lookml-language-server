@@ -20,6 +20,18 @@
     ],
     "main": "./client/out/extension",
     "contributes": {
+        "themes": [
+            {
+                "label": "LookML (Looker IDE)",
+                "uiTheme": "vs",
+                "path": "./syntaxes/lookml-looker-ide-theme.json"
+            },
+            {
+                "label": "LookML (Looker IDE Dark)",
+                "uiTheme": "vs-dark",
+                "path": "./syntaxes/lookml-looker-ide-dark-theme.json"
+            }
+        ],
         "commands": [
             {
                 "command": "looker.resetToRemote",
@@ -88,11 +100,6 @@
                 "path": "./syntaxes/lookml.tmLanguage.json"
             }
         ]
-    },
-    "configurationDefaults": {
-        "[lookml]": {
-            "editor.semanticHighlighting.enabled": false
-        }
     },
     "scripts": {
         "install:client": "cd client && npm install",

@@ -1,0 +1,39 @@
+.nh
+.TH "GH-AGENT-TASK-LIST" "1" "Feb 2026" "GitHub CLI 2.87.3" "GitHub CLI manual"
+
+.SH NAME
+gh-agent-task-list - List agent tasks (preview)
+
+
+.SH SYNOPSIS
+\fBgh agent-task list [flags]\fR
+
+
+.SH OPTIONS
+.TP
+\fB-L\fR, \fB--limit\fR \fB<int> (default 30)\fR
+Maximum number of agent tasks to fetch
+
+.TP
+\fB-w\fR, \fB--web\fR
+Open agent tasks in the browser
+
+
+.SH EXIT CODES
+0: Successful execution
+
+.PP
+1: Error
+
+.PP
+2: Command canceled
+
+.PP
+4: Authentication required
+
+.PP
+NOTE: Specific commands may have additional exit codes. Refer to the command's help for more information.
+
+
+.SH SEE ALSO
+\fBgh-agent-task(1)\fR
