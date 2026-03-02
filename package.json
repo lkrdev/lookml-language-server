@@ -87,20 +87,6 @@
                 "scopeName": "source.lookml",
                 "path": "./syntaxes/lookml.tmLanguage.json"
             }
-        ],
-        "themes": [
-            {
-                "id": "lookml-looker-ide",
-                "label": "LookML (Looker IDE)",
-                "uiTheme": "vs",
-                "path": "./syntaxes/lookml-looker-ide-theme.json"
-            },
-            {
-                "id": "lookml-looker-ide-dark",
-                "label": "LookML (Looker IDE Dark)",
-                "uiTheme": "vs-dark",
-                "path": "./syntaxes/lookml-looker-ide-dark-theme.json"
-            }
         ]
     },
     "scripts": {
