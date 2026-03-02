@@ -81,7 +81,8 @@ export const dimensionValidTypes = [
   "bin", "date", "date_time", "date_raw","distance", "duration", "location",
   "number", "string", "tier", "time", "unquoted", "yesno", "zipcode",
   "duration_day", "duration_hour", "duration_minute", "duration_month",
-  "duration_quarter", "duration_second", "duration_week", "duration_year"
+  "duration_quarter", "duration_second", "duration_week", "duration_year",
+  "dimension"
 ] as const;
 
 const individualDurationTypes = [
@@ -139,6 +140,7 @@ export const filterSchema = fieldProperties.extend({
 export const dimensionSchema = fieldProperties.extend({
   action: z.union([actionSchema, z.array(actionSchema)]).optional(),
   case: caseSchema.optional(),
+  datatype: z.string().optional(),
   drill_fields: z.array(z.string()).optional(),
   link: z.union([linkSchema, z.array(linkSchema)]).optional(),
   map_layer_name: z.string().optional(),
@@ -151,6 +153,7 @@ export const dimensionSchema = fieldProperties.extend({
   sql: z.string().optional(),
   style: z.enum(['integer', 'float', 'ordinal', 'interval']).optional(),
   tiers: z.array(z.string()).optional(),
+  timeframes: z.array(z.string()).optional(),
   type: z.enum(dimensionValidTypes).optional(),
   value_format: z.string().optional(),
 }).strict().superRefine((val, ctx) => {

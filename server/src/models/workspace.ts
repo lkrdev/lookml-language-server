@@ -63,7 +63,11 @@ export class WorkspaceModel {
     }
 
     public getViewsByFile(uri: string): string[] {
-        return this.viewsByFile.get(uri) ?? [];
+        return (
+            this.viewsByFile.get(uri) ??
+            this.viewsByFile.get(path.normalize(uri)) ??
+            []
+        );
     }
 
     public getErrorsByFileName(fileName: string): LookmlError[] {
@@ -79,7 +83,11 @@ export class WorkspaceModel {
     }
 
     public getExploresByFile(uri: string): string[] {
-        return this.exploresByFile.get(uri) ?? [];
+        return (
+            this.exploresByFile.get(uri) ??
+            this.exploresByFile.get(path.normalize(uri)) ??
+            []
+        );
     }
 
     public getModels(): Map<string, LookmlModelWithFileInfo> {
@@ -88,6 +96,35 @@ export class WorkspaceModel {
 
     public getModelsByFile(uri: string): string[] {
         return this.modelsByFile.get(uri) ?? [];
+    }
+
+    /**
+     * All file paths known to the workspace (views, explores, models).
+     */
+    public getAllKnownFiles(): Set<string> {
+        const files = new Set<string>();
+        for (const uri of this.viewsByFile.keys()) files.add(uri);
+        for (const uri of this.exploresByFile.keys()) files.add(uri);
+        for (const uri of this.modelsByFile.keys()) files.add(uri);
+        return files;
+    }
+
+    /**
+     * Infer the LookML project root.
+     * In LookML, absolute include paths (starting with /) are relative to the project root.
+     * The project root is the parent of the "models/" directory (or the directory
+     * containing manifest.lkml). Falls back to the model file's grandparent.
+     */
+    public getProjectRoot(): string | null {
+        for (const uri of this.modelsByFile.keys()) {
+            const modelDir = path.dirname(uri);
+            const basename = path.basename(modelDir);
+            if (basename === "models") {
+                return path.dirname(modelDir);
+            }
+            return modelDir;
+        }
+        return null;
     }
 
     /**

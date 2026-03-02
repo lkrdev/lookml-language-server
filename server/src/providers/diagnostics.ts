@@ -321,6 +321,24 @@ export class DiagnosticsProvider {
     }
 
     /**
+     * Run circular reference validation for all views in the workspace.
+     * Returns diagnostics keyed by view file URI so the server can publish
+     * them for every view file (including closed ones) at project level.
+     */
+    public validateAllCircularReferences(): Map<string, Diagnostic[]> {
+        const byUri = new Map<string, Diagnostic[]>();
+        for (const [, viewDetails] of this.workspaceModel.getViews()) {
+            const uri = viewDetails.uri;
+            const diags = this.validateCircularReferences(viewDetails);
+            if (diags.length > 0) {
+                const existing = byUri.get(uri) ?? [];
+                byUri.set(uri, [...existing, ...diags]);
+            }
+        }
+        return byUri;
+    }
+
+    /**
      * Validate a document and return diagnostics
      */
     public validateDocument(document: TextDocument): Diagnostic[] {
@@ -398,12 +416,17 @@ export class DiagnosticsProvider {
                     : this.workspaceModel.getView(viewName);
 
                 if (!viewDetails) {
-                    diagnostics.push({
-                        severity: DiagnosticSeverity.Error,
-                        range,
-                        message: `Could not find a field named "${ref}"`,
-                        code: DiagnosticCode.VIEW_REF_FIELD_NOT_FOUND,
-                    });
+                    // If we are validating a view (no context passed) and the referenced view
+                    // is not globally found, it might be an explore join alias. Skip error.
+                    // If context is passed (explore validation), it must be found in the context.
+                    if (context) {
+                        diagnostics.push({
+                            severity: DiagnosticSeverity.Error,
+                            range,
+                            message: `Could not find a field named "${ref}"`,
+                            code: DiagnosticCode.VIEW_REF_FIELD_NOT_FOUND,
+                        });
+                    }
                     continue;
                 }
 

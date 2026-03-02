@@ -125,10 +125,33 @@ connection.onInitialize((params: InitializeParams) => {
   return result;
 });
 
+/**
+ * Publish diagnostics for all view files in the project (project-level validation).
+ * For open documents we send full document diagnostics; for closed view files we send
+ * project-level diagnostics only (e.g. circular references) so issues show without opening the file.
+ */
+function publishProjectDiagnostics() {
+  const circularByUri = diagnosticsProvider.validateAllCircularReferences();
+  const viewUris = new Set<string>();
+  for (const viewDetails of workspaceModel.getViews().values()) {
+    viewUris.add(viewDetails.uri);
+  }
+  for (const rawUri of viewUris) {
+    // Ensure we are using file:// URIs as expected by VS Code client
+    const uri = rawUri.startsWith("file://") ? rawUri : `file://${rawUri}`;
+    const document = documents.get(uri);
+    const diagnostics = document
+      ? diagnosticsProvider.validateDocument(document)
+      : circularByUri.get(rawUri) ?? [];
+    connection.sendDiagnostics({ uri, diagnostics });
+  }
+}
+
 // Initialize workspace when server is ready
 connection.onInitialized(async () => {
   logger.info("LookML Language Server initialized");
   await workspaceModel.initialize();
+  setTimeout(() => publishProjectDiagnostics(), 300);
 });
 
 // Add command handlers
@@ -264,12 +287,9 @@ documents.onDidSave(async (change) => {
     await updatePromise;
   }
 
-  // Update the model and validate
+  // Update the model and re-run project-level validation so all view files get diagnostics
   await workspaceModel.initialize();
-  setTimeout(() => {
-    const diagnostics = diagnosticsProvider.validateDocument(change.document);
-    connection.sendDiagnostics({ uri: change.document.uri, diagnostics });
-  }, 500);
+  setTimeout(() => publishProjectDiagnostics(), 500);
 });
 
 // Handle document closing
