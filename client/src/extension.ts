@@ -518,11 +518,6 @@ async function applyLookerColors() {
     const customizations =
       config.get<{ [key: string]: any }>("tokenColorCustomizations") || {};
 
-    // Check if [lookml] customization already exists to avoid overwriting user prefs
-    if (customizations["[lookml]"]) {
-      return;
-    }
-
     const lookerRules = {
       textMateRules: [
         {
@@ -611,14 +606,14 @@ async function applyLookerColors() {
       ],
     };
 
-    // Update settings
+    // Always update settings to ensure correct colors
     await config.update(
       "tokenColorCustomizations",
       { ...customizations, "[lookml]": lookerRules },
       vscode.ConfigurationTarget.Global,
     );
 
-    // Disable semantic highlighting for lookml
+    // Always disable semantic highlighting for lookml
     const semanticConfig = vscode.workspace.getConfiguration("editor", {
       languageId: "lookml",
     });
@@ -628,9 +623,9 @@ async function applyLookerColors() {
       vscode.ConfigurationTarget.Global,
     );
 
-    vscode.window.showInformationMessage(
-      "Looker IDE colors have been applied to your settings.",
-    );
+    // Only show message if it was a new apply? No, let's keep it quiet or user will see it every reload.
+    // I'll comment out the message to avoid annoyance, or log it.
+    outputChannel.appendLine("Looker IDE colors applied to settings.");
   } catch (error) {
     console.error("Failed to apply Looker colors:", error);
   }
