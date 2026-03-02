@@ -22,6 +22,9 @@
       "include": "#strings"
     },
     {
+      "include": "#punctuation"
+    },
+    {
       "include": "#block"
     },
     {
@@ -117,12 +120,31 @@
               "include": "#strings"
             },
             {
+              "include": "#punctuation"
+            },
+            {
               "include": "#block"
             },
             {
               "include": "#variables"
             }
           ]
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "name": "punctuation.separator.key-value.lookml",
+          "match": ":"
+        },
+        {
+          "name": "punctuation.definition.array.begin.lookml",
+          "match": "\\["
+        },
+        {
+          "name": "punctuation.definition.array.end.lookml",
+          "match": "\\]"
         }
       ]
     },
@@ -139,11 +161,19 @@
       ]
     },
     "sql_parameters": {
-      "begin": "\\b(sql|sql_on|sql_always_where|sql_always_having|sql_trigger|html)\\b\\s*:\\s*",
+      "begin": "\\b(sql|sql_on|sql_always_where|sql_always_having|sql_trigger|html)\\b\\s*(:)\\s*",
       "end": ";;",
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.terminator.sql.lookml"
+        }
+      },
       "beginCaptures": {
         "1": {
           "name": "source.lookml.sql.parameter.name"
+        },
+        "2": {
+          "name": "punctuation.separator.key-value.lookml"
         }
       },
       "patterns": [

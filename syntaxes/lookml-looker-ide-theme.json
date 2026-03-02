@@ -61,7 +61,6 @@
         "source.lookml.scope.end",
         "punctuation.definition.block.begin.lookml",
         "punctuation.definition.block.end.lookml",
-        "punctuation.separator.key-value.lookml",
         "source.lookml.sql.parameter.close"
       ],
       "settings": {
@@ -71,7 +70,8 @@
     {
       "scope": [
         "source.lookml.parameter.name",
-        "source.lookml.sql.parameter.name"
+        "source.lookml.sql.parameter.name",
+        "punctuation.separator.key-value.lookml"
       ],
       "settings": {
         "foreground": "#6997bf"
@@ -114,8 +114,7 @@
         "source.lookml.sql.function.scope.end"
       ],
       "settings": {
-        "foreground": "#6997bf",
-        "fontStyle": "bold"
+        "foreground": "#6997bf"
       }
     },
     {
@@ -154,6 +153,16 @@
     },
     {
       "scope": [
+        "punctuation.definition.array.begin.lookml",
+        "punctuation.definition.array.end.lookml",
+        "punctuation.terminator.sql.lookml"
+      ],
+      "settings": {
+        "foreground": "#aaaaaa"
+      }
+    },
+    {
+      "scope": [
         "source.lookml.constant"
       ],
       "settings": {
@@ -167,8 +176,7 @@
         "keyword.operator.expression.lookml"
       ],
       "settings": {
-        "foreground": "#6997bf",
-        "fontStyle": "bold"
+        "foreground": "#6997bf"
       }
     },
     {
@@ -176,8 +184,7 @@
         "source.lookml.sql.keyword.main"
       ],
       "settings": {
-        "foreground": "#6997bf",
-        "fontStyle": "bold"
+        "foreground": "#6997bf"
       }
     },
     {
@@ -185,8 +192,7 @@
         "source.lookml.sql.keyword.type"
       ],
       "settings": {
-        "foreground": "#6997bf",
-        "fontStyle": "bold"
+        "foreground": "#6997bf"
       }
     },
     {
