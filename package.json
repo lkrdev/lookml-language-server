@@ -89,6 +89,11 @@
             }
         ]
     },
+    "configurationDefaults": {
+        "[lookml]": {
+            "editor.semanticHighlighting.enabled": false
+        }
+    },
     "scripts": {
         "install:client": "cd client && npm install",
         "install:server": "cd server && npm install",
