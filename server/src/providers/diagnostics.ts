@@ -431,6 +431,17 @@ export class DiagnosticsProvider {
                     });
                 }
 
+                if (view.drill_fields) {
+                    diagnostics.push(
+                        ...this.validateDrillFields({
+                            view,
+                            drillFields: view.drill_fields,
+                            viewDetails: viewDetails,
+                            arrayPosition: positions?.drill_fields,
+                        }),
+                    );
+                }
+
                 // Validate dimensions
                 if (view.dimension) {
                     Object.entries(view.dimension).forEach(
