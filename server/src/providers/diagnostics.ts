@@ -42,6 +42,7 @@ export enum DiagnosticCode {
     SQL_REF_VIEW_NOT_FOUND = 30002,
     SQL_REF_VIEW_NOT_INCLUDED = 30003,
     SQL_REF_VIEW_NOT_AVAILABLE = 30004,
+    SQL_REF_CIRCULAR = 30005,
 
     // Drill Fields validation (40000-49999)
     DRILL_FIELDS_INVALID_FORMAT = 40001,
@@ -78,6 +79,7 @@ export enum DiagnosticCode {
 
 export class DiagnosticsProvider {
     private workspaceModel: WorkspaceModel;
+    private fullyExplored: Set<string> = new Set<string>();
 
     constructor(workspaceModel: WorkspaceModel) {
         this.workspaceModel = workspaceModel;
@@ -87,6 +89,7 @@ export class DiagnosticsProvider {
      * Validate a document and return diagnostics
      */
     public validateDocument(document: TextDocument): Diagnostic[] {
+        this.fullyExplored.clear();
         const diagnostics: Diagnostic[] = [];
         diagnostics.push(...this.validateProperties(document));
         diagnostics.push(...this.validateModelReferences(document));
@@ -122,6 +125,107 @@ export class DiagnosticsProvider {
         return diagnostics;
     }
 
+    private checkCircularReferences(
+        viewName: string,
+        fieldName: string,
+        visited: Set<string>,
+        path: string[],
+        context?: Record<string, LookmlViewWithFileInfo>,
+        depth: number = 0,
+    ): string | null {
+        const MAX_DEPTH = 100;
+        if (depth > MAX_DEPTH) {
+            return path.join(" -> ") + " (Max recursion depth exceeded)";
+        }
+
+        const refKey = `${viewName}.${fieldName}`;
+
+        if (this.fullyExplored.has(refKey)) {
+            return null;
+        }
+
+        if (visited.has(refKey)) {
+            path.push(refKey);
+            return path.join(" -> ");
+        }
+
+        visited.add(refKey);
+        path.push(refKey);
+
+        const viewDetails =
+            context?.[viewName] || this.workspaceModel.getView(viewName);
+        if (!viewDetails) {
+            path.pop();
+            visited.delete(refKey);
+            this.fullyExplored.add(refKey);
+            return null;
+        }
+
+        const fields = this.workspaceModel.getViewFields(
+            viewDetails.view.$name!,
+        );
+
+        let sql: string | undefined;
+
+        if (fieldName === "SQL_TABLE_NAME") {
+            const viewDef = viewDetails.view;
+            if (viewDef.sql_table_name) {
+                sql = viewDef.sql_table_name;
+            } else if (viewDef.derived_table && viewDef.derived_table.sql) {
+                sql = viewDef.derived_table.sql;
+            }
+        } else {
+            const targetField =
+                fields.dimension?.[fieldName] ||
+                fields.measure?.[fieldName] ||
+                fields.dimension_group?.[fieldName];
+
+            if (
+                targetField &&
+                typeof targetField === "object" &&
+                typeof targetField.sql === "string"
+            ) {
+                sql = targetField.sql;
+            }
+        }
+
+        if (sql) {
+            const validRefPattern = /\$\{([^}]+)\}/g;
+            let match;
+
+            while ((match = validRefPattern.exec(sql)) !== null) {
+                const ref = match[1];
+                let nextViewName = viewName;
+                let nextFieldName = ref;
+
+                if (ref.includes(".")) {
+                    const parts = ref.split(".");
+                    nextViewName = parts[0];
+                    nextFieldName = parts[1];
+                } else if (ref === "TABLE") {
+                    continue;
+                }
+
+                const circularPath = this.checkCircularReferences(
+                    nextViewName,
+                    nextFieldName,
+                    visited,
+                    path,
+                    context,
+                    depth + 1,
+                );
+                if (circularPath) {
+                    return circularPath;
+                }
+            }
+        }
+
+        path.pop();
+        visited.delete(refKey);
+        this.fullyExplored.add(refKey);
+        return null;
+    }
+
     private validateSqlReferences(
         sql: string,
         position: LookmlPosition | undefined,
@@ -149,10 +253,15 @@ export class DiagnosticsProvider {
         // ✅ Detect valid references
         while ((match = validRefPattern.exec(sql)) !== null) {
             const ref = match[1];
+            let refViewName: string | undefined;
+            let refFieldName: string | undefined;
+
             if (ref.includes(".")) {
                 const refParts = ref.split(".");
                 const viewName = refParts[0];
                 const fieldName = refParts[1];
+                refViewName = viewName;
+                refFieldName = fieldName;
 
                 const viewDetails = context?.[viewName]
                     ? context[viewName]
@@ -168,11 +277,14 @@ export class DiagnosticsProvider {
                     continue;
                 }
 
-                const fields = this.workspaceModel.getViewFields(viewDetails.view.$name!);
+                const fields = this.workspaceModel.getViewFields(
+                    viewDetails.view.$name!,
+                );
                 if (
                     !fields.dimension?.[fieldName] &&
                     !fields.measure?.[fieldName] &&
-                    !fields.dimension_group?.[fieldName]
+                    !fields.dimension_group?.[fieldName] &&
+                    fieldName !== "SQL_TABLE_NAME"
                 ) {
                     diagnostics.push({
                         severity: DiagnosticSeverity.Error,
@@ -183,23 +295,47 @@ export class DiagnosticsProvider {
                 }
             } else if (currentViewName) {
                 const fieldName = ref;
+                refViewName = currentViewName;
+                refFieldName = fieldName;
                 const viewDetails =
                     this.workspaceModel.getView(currentViewName);
                 if (viewDetails) {
-                    const fields = this.workspaceModel.getViewFields(viewDetails.view.$name!);
-                if (
-                    !fields.dimension?.[fieldName] &&
-                    !fields.measure?.[fieldName] &&
-                    !fields.dimension_group?.[fieldName] &&
-                    fieldName !== "TABLE"
-                ) {
+                    const fields = this.workspaceModel.getViewFields(
+                        viewDetails.view.$name!,
+                    );
+                    if (
+                        !fields.dimension?.[fieldName] &&
+                        !fields.measure?.[fieldName] &&
+                        !fields.dimension_group?.[fieldName] &&
+                        fieldName !== "TABLE" &&
+                        fieldName !== "SQL_TABLE_NAME"
+                    ) {
+                        diagnostics.push({
+                            severity: DiagnosticSeverity.Error,
+                            range,
+                            message: `Could not find a field named "${ref}"`,
+                            code: DiagnosticCode.VIEW_REF_FIELD_NOT_FOUND,
+                        });
+                    }
+                }
+            }
+
+            if (refViewName && refFieldName && refFieldName !== "TABLE") {
+                const circularPath = this.checkCircularReferences(
+                    refViewName,
+                    refFieldName,
+                    new Set<string>(),
+                    [],
+                    context,
+                );
+                if (circularPath) {
                     diagnostics.push({
                         severity: DiagnosticSeverity.Error,
                         range,
-                        message: `Could not find a field named "${ref}"`,
-                        code: DiagnosticCode.VIEW_REF_FIELD_NOT_FOUND,
+                        message: `Circular reference detected: ${circularPath}`,
+                        source: "lookml-lsp",
+                        code: DiagnosticCode.SQL_REF_CIRCULAR,
                     });
-                }
                 }
             }
         }
@@ -474,6 +610,29 @@ export class DiagnosticsProvider {
                                 );
                             }
                         },
+                    );
+                }
+
+                // Validate sql_table_name and derived_table
+                if (view.sql_table_name) {
+                    const position = positions?.sql_table_name;
+                    diagnostics.push(
+                        ...this.validateSqlReferences(
+                            view.sql_table_name,
+                            position,
+                            viewDetails.view.$name,
+                        ),
+                    );
+                }
+
+                if (view.derived_table?.sql) {
+                    const position = positions?.derived_table?.sql;
+                    diagnostics.push(
+                        ...this.validateSqlReferences(
+                            view.derived_table.sql,
+                            position,
+                            viewDetails.view.$name,
+                        ),
                     );
                 }
 

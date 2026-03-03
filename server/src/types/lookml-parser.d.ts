@@ -203,6 +203,9 @@ declare module "lookml-parser" {
         measure?: Position & {
             [fieldName: string]: MeasurePosition;
         };
+        derived_table?: Position & {
+            sql?: Position;
+        };
         $p: [number, number, number, number];
     }
 
