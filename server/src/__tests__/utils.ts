@@ -1,4 +1,5 @@
-import { Connection } from 'vscode-languageserver/node';
+import { Connection, Diagnostic } from 'vscode-languageserver/node';
+import { WorkspaceModel } from '../models/workspace';
 
 export function createMockConnection(): Connection {
   return {
@@ -16,3 +17,19 @@ export function createMockConnection(): Connection {
     dispose: jest.fn(),
   } as unknown as Connection;
 }
+
+
+export const getDiagnosticsForView = (workspaceModel: WorkspaceModel, sharedDiagnostics: Diagnostic[], viewName: string) => {
+    const view = workspaceModel.getView(viewName);
+    if (!view) {
+        throw new Error(`View ${viewName} not found`);
+    }
+    const viewLine = view!.positions;
+    return sharedDiagnostics.filter((d) => {
+        const diagnosticLine = d.range.start.line;
+        return (
+            diagnosticLine >= viewLine.$p[0] &&
+            diagnosticLine <= viewLine.$p[2]
+        );
+    });
+};

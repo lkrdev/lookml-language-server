@@ -129,8 +129,19 @@ export class DiagnosticsProvider {
         visited: Set<string>,
         path: string[],
         context?: Record<string, LookmlViewWithFileInfo>,
+        fullyExplored: Set<string> = new Set<string>(),
+        depth: number = 0,
     ): string | null {
+        const MAX_DEPTH = 100;
+        if (depth > MAX_DEPTH) {
+            return path.join(" -> ") + " (Max recursion depth exceeded)";
+        }
+
         const refKey = `${viewName}.${fieldName}`;
+
+        if (fullyExplored.has(refKey)) {
+            return null;
+        }
 
         if (visited.has(refKey)) {
             path.push(refKey);
@@ -145,6 +156,7 @@ export class DiagnosticsProvider {
         if (!viewDetails) {
             path.pop();
             visited.delete(refKey);
+            fullyExplored.add(refKey);
             return null;
         }
 
@@ -199,6 +211,8 @@ export class DiagnosticsProvider {
                     visited,
                     path,
                     context,
+                    fullyExplored,
+                    depth + 1,
                 );
                 if (circularPath) {
                     return circularPath;
@@ -208,6 +222,7 @@ export class DiagnosticsProvider {
 
         path.pop();
         visited.delete(refKey);
+        fullyExplored.add(refKey);
         return null;
     }
 

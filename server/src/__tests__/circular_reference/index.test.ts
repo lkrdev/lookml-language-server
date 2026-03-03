@@ -4,7 +4,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { Diagnostic } from "vscode-languageserver/node";
 import { WorkspaceModel } from "../../models/workspace";
 import { DiagnosticsProvider } from "../../providers/diagnostics";
-import { createMockConnection } from "../utils";
+import { createMockConnection, getDiagnosticsForView } from "../utils";
 
 describe("Circular Reference", () => {
     let workspaceModel: WorkspaceModel;
@@ -36,15 +36,11 @@ describe("Circular Reference", () => {
     });
 
     test("should have diagnostic for circular reference error", () => {
-        const view1 = workspaceModel.getView("view1");
-        const view1Line = view1!.positions;
-        const view1_errors = sharedDiagnostics.filter((d) => {
-            const diagnosticLine = d.range.start.line;
-            return (
-                diagnosticLine >= view1Line.$p[0] &&
-                diagnosticLine <= view1Line.$p[2]
-            );
-        });
+        const view1_errors = getDiagnosticsForView(
+            workspaceModel,
+            sharedDiagnostics,
+            "view1",
+        );
         expect(view1_errors.length).toEqual(1);
         expect(view1_errors[0].message).toContain(
             "Circular reference detected",
@@ -52,15 +48,11 @@ describe("Circular Reference", () => {
     });
 
     test("should have diagnostic for circular reference error", () => {
-        const view2 = workspaceModel.getView("view2");
-        const view2Line = view2!.positions;
-        const view2_errors = sharedDiagnostics.filter((d) => {
-            const diagnosticLine = d.range.start.line;
-            return (
-                diagnosticLine >= view2Line.$p[0] &&
-                diagnosticLine <= view2Line.$p[2]
-            );
-        });
+        const view2_errors = getDiagnosticsForView(
+            workspaceModel,
+            sharedDiagnostics,
+            "view2",
+        );
         expect(view2_errors.length).toEqual(1);
         expect(view2_errors[0].message).toContain(
             "Circular reference detected",
@@ -68,15 +60,11 @@ describe("Circular Reference", () => {
     });
 
     test("should have diagnostic for circular reference error in sql_view1", () => {
-        const view1 = workspaceModel.getView("sql_view1");
-        const view1Line = view1!.positions;
-        const view1_errors = sharedDiagnostics.filter((d) => {
-            const diagnosticLine = d.range.start.line;
-            return (
-                diagnosticLine >= view1Line.$p[0] &&
-                diagnosticLine <= view1Line.$p[2]
-            );
-        });
+        const view1_errors = getDiagnosticsForView(
+            workspaceModel,
+            sharedDiagnostics,
+            "sql_view1",
+        );
         expect(view1_errors.length).toEqual(1);
         expect(view1_errors[0].message).toContain(
             "Circular reference detected",
@@ -84,15 +72,11 @@ describe("Circular Reference", () => {
     });
 
     test("should have diagnostic for circular reference error in sql_view2", () => {
-        const view2 = workspaceModel.getView("sql_view2");
-        const view2Line = view2!.positions;
-        const view2_errors = sharedDiagnostics.filter((d) => {
-            const diagnosticLine = d.range.start.line;
-            return (
-                diagnosticLine >= view2Line.$p[0] &&
-                diagnosticLine <= view2Line.$p[2]
-            );
-        });
+        const view2_errors = getDiagnosticsForView(
+            workspaceModel,
+            sharedDiagnostics,
+            "sql_view2",
+        );
         expect(view2_errors.length).toEqual(1);
         expect(view2_errors[0].message).toContain(
             "Circular reference detected",
@@ -100,15 +84,11 @@ describe("Circular Reference", () => {
     });
 
     test("should have diagnostic for circular reference error in dimension_self_reference", () => {
-        const view1 = workspaceModel.getView("dimension_self_reference");
-        const view1Line = view1!.positions;
-        const view1_errors = sharedDiagnostics.filter((d) => {
-            const diagnosticLine = d.range.start.line;
-            return (
-                diagnosticLine >= view1Line.$p[0] &&
-                diagnosticLine <= view1Line.$p[2]
-            );
-        });
+        const view1_errors = getDiagnosticsForView(
+            workspaceModel,
+            sharedDiagnostics,
+            "dimension_self_reference",
+        );
         expect(view1_errors.length).toEqual(2);
         expect(view1_errors[0].message).toContain(
             "Circular reference detected",
@@ -119,30 +99,18 @@ describe("Circular Reference", () => {
     });
 
     test("should have no diagnostic for circular reference error in dimension_sql_table_name_circular_no_error1", () => {
-        const view1 = workspaceModel.getView(
+        const view1_errors = getDiagnosticsForView(
+            workspaceModel,
+            sharedDiagnostics,
             "dimension_sql_table_name_circular_no_error1",
         );
-        const view1Line = view1!.positions;
-        const view1_errors = sharedDiagnostics.filter((d) => {
-            const diagnosticLine = d.range.start.line;
-            return (
-                diagnosticLine >= view1Line.$p[0] &&
-                diagnosticLine <= view1Line.$p[2]
-            );
-        });
         expect(view1_errors.length).toEqual(0);
 
-        const view2 = workspaceModel.getView(
+        const view2_errors = getDiagnosticsForView(
+            workspaceModel,
+            sharedDiagnostics,
             "dimension_sql_table_name_circular_no_error2",
         );
-        const view2Line = view2!.positions;
-        const view2_errors = sharedDiagnostics.filter((d) => {
-            const diagnosticLine = d.range.start.line;
-            return (
-                diagnosticLine >= view2Line.$p[0] &&
-                diagnosticLine <= view2Line.$p[2]
-            );
-        });
         expect(view2_errors.length).toEqual(0);
     });
 });
