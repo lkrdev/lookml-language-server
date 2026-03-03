@@ -17,6 +17,7 @@ import {
 import { URI } from "vscode-uri";
 import { ZodError, ZodIssue } from "zod";
 import { WorkspaceModel } from "../models/workspace";
+import { VALID_TIMEFRAMES } from "../schemas/constants";
 import { exploreSchema, LookMLView } from "../schemas/lookml";
 import { ensureMinRangeLength } from "../utils/range";
 
@@ -534,40 +535,14 @@ export class DiagnosticsProvider {
                                     positions?.dimension_group?.[dimGroupName]
                                         ?.timeframes;
                                 if (timeframesPosition) {
-                                    const validTimeframes = [
-                                        "raw",
-                                        "time",
-                                        "date",
-                                        "week",
-                                        "month",
-                                        "quarter",
-                                        "year",
-                                        "day_of_week",
-                                        "day_of_month",
-                                        "day_of_year",
-                                        "week_of_year",
-                                        "month_of_year",
-                                        "quarter_of_year",
-                                        "hour",
-                                        "minute",
-                                        "second",
-                                        "hour_of_day",
-                                        "minute_of_hour",
-                                        "second_of_minute",
-                                        "time_of_day",
-                                        "day_of_week_index",
-                                        "week_start_date",
-                                        "month_name",
-                                        "quarter_name",
-                                        "day_name",
-                                    ];
-
                                     for (const [
                                         index,
                                         timeframe,
                                     ] of dimensionGroup.timeframes.entries()) {
                                         if (
-                                            !validTimeframes.includes(timeframe)
+                                            !VALID_TIMEFRAMES.includes(
+                                                timeframe,
+                                            )
                                         ) {
                                             const timeframePosition =
                                                 timeframesPosition[index];
