@@ -35,7 +35,7 @@ describe("Circular Reference", () => {
         sharedDiagnostics = diagnosticsProvider.validateDocument(document);
     });
 
-    test("should have diagnostic for circular reference error", () => {
+    test("should have diagnostic for circular reference error in view1", () => {
         const view1_errors = getDiagnosticsForView(
             workspaceModel,
             sharedDiagnostics,
@@ -47,7 +47,7 @@ describe("Circular Reference", () => {
         );
     });
 
-    test("should have diagnostic for circular reference error", () => {
+    test("should have diagnostic for circular reference error in view2", () => {
         const view2_errors = getDiagnosticsForView(
             workspaceModel,
             sharedDiagnostics,

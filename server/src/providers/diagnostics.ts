@@ -79,6 +79,7 @@ export enum DiagnosticCode {
 
 export class DiagnosticsProvider {
     private workspaceModel: WorkspaceModel;
+    private fullyExplored: Set<string> = new Set<string>();
 
     constructor(workspaceModel: WorkspaceModel) {
         this.workspaceModel = workspaceModel;
@@ -88,6 +89,7 @@ export class DiagnosticsProvider {
      * Validate a document and return diagnostics
      */
     public validateDocument(document: TextDocument): Diagnostic[] {
+        this.fullyExplored.clear();
         const diagnostics: Diagnostic[] = [];
         diagnostics.push(...this.validateProperties(document));
         diagnostics.push(...this.validateModelReferences(document));
@@ -129,7 +131,6 @@ export class DiagnosticsProvider {
         visited: Set<string>,
         path: string[],
         context?: Record<string, LookmlViewWithFileInfo>,
-        fullyExplored: Set<string> = new Set<string>(),
         depth: number = 0,
     ): string | null {
         const MAX_DEPTH = 100;
@@ -139,7 +140,7 @@ export class DiagnosticsProvider {
 
         const refKey = `${viewName}.${fieldName}`;
 
-        if (fullyExplored.has(refKey)) {
+        if (this.fullyExplored.has(refKey)) {
             return null;
         }
 
@@ -156,7 +157,7 @@ export class DiagnosticsProvider {
         if (!viewDetails) {
             path.pop();
             visited.delete(refKey);
-            fullyExplored.add(refKey);
+            this.fullyExplored.add(refKey);
             return null;
         }
 
@@ -211,7 +212,6 @@ export class DiagnosticsProvider {
                     visited,
                     path,
                     context,
-                    fullyExplored,
                     depth + 1,
                 );
                 if (circularPath) {
@@ -222,7 +222,7 @@ export class DiagnosticsProvider {
 
         path.pop();
         visited.delete(refKey);
-        fullyExplored.add(refKey);
+        this.fullyExplored.add(refKey);
         return null;
     }
 
