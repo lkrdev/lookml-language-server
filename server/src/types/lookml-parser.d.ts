@@ -141,6 +141,7 @@ declare module "lookml-parser" {
         dimension?: Record<string, LookmlDimension>;
         dimension_group?: Record<string, LookmlDimensionGroup>;
         measure?: Record<string, LookmlMeasure>;
+        drill_fields?: string[];
         derived_table?: Record<string, string>;
         extension?: boolean;
         extends?: string | string[];
