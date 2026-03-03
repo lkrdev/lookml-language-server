@@ -485,6 +485,12 @@ export class WorkspaceModel {
         // Remove existing data for this file
         this.clearDocumentData(uri);
 
+        // Dashboard files use YAML list syntax (- dashboard:), not block LookML.
+        // The lookml-parser expects block syntax and would report a false error on "-".
+        if (uri.includes(".dashboard.lookml")) {
+            return;
+        }
+
         const cleanUri = uri.replace(`file://${process.cwd()}/`, "");
         try {
             await this.parseDocument(document);
