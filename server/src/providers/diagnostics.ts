@@ -539,11 +539,7 @@ export class DiagnosticsProvider {
                                         index,
                                         timeframe,
                                     ] of dimensionGroup.timeframes.entries()) {
-                                        if (
-                                            !VALID_TIMEFRAMES.includes(
-                                                timeframe,
-                                            )
-                                        ) {
+                                        if (!VALID_TIMEFRAMES.has(timeframe)) {
                                             const timeframePosition =
                                                 timeframesPosition[index];
                                             if (timeframePosition) {

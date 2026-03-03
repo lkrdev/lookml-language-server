@@ -1,4 +1,4 @@
-export const VALID_TIMEFRAMES = [
+export const VALID_TIMEFRAMES: ReadonlySet<string> = new Set([
     "date",
     "day_of_month",
     "day_of_week",
@@ -56,4 +56,4 @@ export const VALID_TIMEFRAMES = [
     "week_of_year",
     "year",
     "yesno",
-];
+]);
