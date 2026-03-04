@@ -5,49 +5,50 @@ export const recursiveStringArray: z.ZodType<unknown> = z.lazy(() =>
 );
 
 const parserValues = z.object({
-  $name: z.string().optional(),
-  $type: z.string(),
-  $strings: recursiveStringArray,
-});
+    $name: z.string().optional(),
+    $type: z.string(),
+    $strings: recursiveStringArray,
+}); 
 
 export const fieldProperties = parserValues.extend({
-  alias: z.array(z.string()).optional(),
-  alpha_sort: z.boolean().optional(),
-  allow_approximate_optimization: z.boolean().optional(),
-  approximate: z.boolean().optional(),
-  approximate_threshold: z.number().optional(),
-  fanout_on: z.string().optional(),
-  precision: z.number().optional(),
-  primary_key: z.boolean().optional(),
-  required_access_grants: z.array(z.string()).optional(),
-  sql_distinct_key: z.string().optional(),
-  direction: z.string().optional(),
-  end_location_field: z.string().optional(),
-  list_field: z.string().optional(),
-  start_location_field: z.string().optional(),
-  description: z.string().optional(),
-  full_suggestions: z.boolean().optional(),
-  group_item_label: z.string().optional(),
-  group_label: z.string().optional(),
-  hidden: z.boolean().optional(),
-  html: z.string().optional(),
-  label_from_parameter: z.string().optional(),
-  label: z.string().optional(),
-  order_by_field: z.string().optional(),
-  required_fields: z.array(z.string()).optional(),
-  style: z.string().optional(),
-  suggest_dimension: z.string().optional(),
-  suggest_explore: z.string().optional(),
-  suggest_persist_for: z.string().optional(),
-  suggestable: z.boolean().optional(),
-  suggestions: z.union([z.string(), z.array(z.string())]).optional(),
-  tags: z.array(z.string()).optional(),
-  value_format_name: z.string().optional(),
-  view_label: z.string().optional(),
-  can_filter: z.boolean().optional(),
-  case_sensitive: z.boolean().optional(),
-  skip_drill_filter: z.boolean().optional(),
-  bypass_suggest_restrictions: z.boolean().optional(),
+    alias: z.array(z.string()).optional(),
+    alpha_sort: z.boolean().optional(),
+    allow_approximate_optimization: z.boolean().optional(),
+    approximate: z.boolean().optional(),
+    approximate_threshold: z.number().optional(),
+    fanout_on: z.string().optional(),
+    precision: z.number().optional(),
+    primary_key: z.boolean().optional(),
+    required_access_grants: z.array(z.string()).optional(),
+    sql_distinct_key: z.string().optional(),
+    direction: z.string().optional(),
+    end_location_field: z.string().optional(),
+    list_field: z.string().optional(),
+    start_location_field: z.string().optional(),
+    description: z.string().optional(),
+    full_suggestions: z.boolean().optional(),
+    group_item_label: z.string().optional(),
+    group_label: z.string().optional(),
+    hidden: z.boolean().optional(),
+    html: z.string().optional(),
+    label_from_parameter: z.string().optional(),
+    label: z.string().optional(),
+    order_by_field: z.string().optional(),
+    required_fields: z.array(z.string()).optional(),
+    style: z.string().optional(),
+    synonyms: z.array(z.string()).optional(),
+    suggest_dimension: z.string().optional(),
+    suggest_explore: z.string().optional(),
+    suggest_persist_for: z.string().optional(),
+    suggestable: z.boolean().optional(),
+    suggestions: z.union([z.string(), z.array(z.string())]).optional(),
+    tags: z.array(z.string()).optional(),
+    value_format_name: z.string().optional(),
+    view_label: z.string().optional(),
+    can_filter: z.boolean().optional(),
+    case_sensitive: z.boolean().optional(),
+    skip_drill_filter: z.boolean().optional(),
+    bypass_suggest_restrictions: z.boolean().optional(),
 });
 
 export const linkSchema = parserValues.extend({
@@ -136,125 +137,136 @@ export const filterSchema = fieldProperties.extend({
   // Add other filter-specific properties here if needed
 }).catchall(z.string()).strict();
 
-export const dimensionSchema = fieldProperties.extend({
-  action: z.union([actionSchema, z.array(actionSchema)]).optional(),
-  case: caseSchema.optional(),
-  drill_fields: z.array(z.string()).optional(),
-  link: z.union([linkSchema, z.array(linkSchema)]).optional(),
-  map_layer_name: z.string().optional(),
-  primary_key: z.boolean().optional(),
-  required_fields: z.array(z.string()).optional(),
-  sql_end: z.string().optional(),
-  sql_latitude: z.string().optional(),
-  sql_longitude: z.string().optional(),
-  sql_start: z.string().optional(),
-  sql: z.string().optional(),
-  style: z.enum(['integer', 'float', 'ordinal', 'interval']).optional(),
-  tiers: z.array(z.string()).optional(),
-  type: z.enum(dimensionValidTypes).optional(),
-  value_format: z.string().optional(),
-}).strict().superRefine((val, ctx) => {
-  if (val.type === 'location') {
-    if (!val.sql_latitude) {
-      ctx.addIssue({
-        path: ['sql_latitude'],
-        code: z.ZodIssueCode.custom,
-        message: 'sql_latitude is required for type: location',
-      });
-    }
-    if (!val.sql_longitude) {
-      ctx.addIssue({
-        path: ['sql_longitude'],
-        code: z.ZodIssueCode.custom,
-        message: 'sql_longitude is required for type: location',
-      });
-    }
-  }
-  if (val.type && individualDurationTypes.includes(val.type)) {
-    if (!val.sql_start) {
-      ctx.addIssue({
-        path: ['sql_start'],
-        code: z.ZodIssueCode.custom,
-        message: 'sql_start is required for individual duration types',
-      });
-    }
-    if (!val.sql_end) {
-      ctx.addIssue({
-        path: ['sql_end'],
-        code: z.ZodIssueCode.custom,
-        message: 'sql_end is required for individual duration types',
-      });
-    }
-  }
-});
+export const dimensionSchema = fieldProperties
+    .extend({
+        action: z.union([actionSchema, z.array(actionSchema)]).optional(),
+        case: caseSchema.optional(),
+        datatype: z
+            .enum(["epoch", "timestamp", "datetime", "date", "yyyymmdd"])
+            .optional(),
+        drill_fields: z.array(z.string()).optional(),
+        link: z.union([linkSchema, z.array(linkSchema)]).optional(),
+        map_layer_name: z.string().optional(),
+        primary_key: z.boolean().optional(),
+        required_fields: z.array(z.string()).optional(),
+        sql_end: z.string().optional(),
+        sql_latitude: z.string().optional(),
+        sql_longitude: z.string().optional(),
+        sql_start: z.string().optional(),
+        sql: z.string().optional(),
+        style: z.enum(["integer", "float", "ordinal", "interval"]).optional(),
+        tiers: z.array(z.string()).optional(),
+        type: z.enum(dimensionValidTypes).optional(),
+    })
+    .strict()
+    .superRefine((val, ctx) => {
+        if (val.type === "location") {
+            if (!val.sql_latitude) {
+                ctx.addIssue({
+                    path: ["sql_latitude"],
+                    code: z.ZodIssueCode.custom,
+                    message: "sql_latitude is required for type: location",
+                });
+            }
+            if (!val.sql_longitude) {
+                ctx.addIssue({
+                    path: ["sql_longitude"],
+                    code: z.ZodIssueCode.custom,
+                    message: "sql_longitude is required for type: location",
+                });
+            }
+        }
+        if (val.type && individualDurationTypes.includes(val.type)) {
+            if (!val.sql_start) {
+                ctx.addIssue({
+                    path: ["sql_start"],
+                    code: z.ZodIssueCode.custom,
+                    message:
+                        "sql_start is required for individual duration types",
+                });
+            }
+            if (!val.sql_end) {
+                ctx.addIssue({
+                    path: ["sql_end"],
+                    code: z.ZodIssueCode.custom,
+                    message:
+                        "sql_end is required for individual duration types",
+                });
+            }
+        }
+    });
 
-export const dimensionGroupSchema = fieldProperties.extend({
-  type: z.enum(['time', 'duration']),
-  // For 'time' type
-  sql: z.string().optional(),
-  timeframes: z.array(z.string()).optional(),
-  datatype: z.enum(['date', 'datetime', 'unixtime']).optional(),
-  convert_tz: z.boolean().optional(),
-  // For 'duration' type
-  sql_start: z.string().optional(),
-  sql_end: z.string().optional(),
-  intervals: z.array(z.string()).optional(),
-  // Additional dimension group-specific properties
-  string_datatype: z.string().optional(),
-  units: z.enum(['feet', 'kilometers', 'meters', 'miles', 'nautical_miles', 'yards']).optional(),
-  value_format: z.string().optional(),
-  allow_fill: z.boolean().optional(),
-  map_layer_name: z.string().optional(),
-}).strict().superRefine((val, ctx) => {
-  if (val.type === 'time') {
-    if (!val.sql) {
-      ctx.addIssue({
-        path: ['sql'],
-        code: z.ZodIssueCode.custom,
-        message: 'sql is required for type: time',
-      });
-    }
-    if (val.intervals) {
-      ctx.addIssue({
-        path: ['intervals'],
-        code: z.ZodIssueCode.custom,
-        message: 'intervals should not be present for type: time',
-      });
-    }
-    // timeframes is optional for 'time'
-  }
-  if (val.type === 'duration') {
-    if (!val.sql_start) {
-      ctx.addIssue({
-        path: ['sql_start'],
-        code: z.ZodIssueCode.custom,
-        message: 'sql_start is required for type: duration',
-      });
-    }
-    if (!val.sql_end) {
-      ctx.addIssue({
-        path: ['sql_end'],
-        code: z.ZodIssueCode.custom,
-        message: 'sql_end is required for type: duration',
-      });
-    }
-    if (val.sql) {
-      ctx.addIssue({
-        path: ['sql'],
-        code: z.ZodIssueCode.custom,
-        message: 'sql should not be present for type: duration',
-      });
-    }
-    if (val.timeframes) {
-      ctx.addIssue({
-        path: ['timeframes'],
-        code: z.ZodIssueCode.custom,
-        message: 'timeframes should not be present for type: duration',
-      });
-    }
-    // intervals is allowed for 'duration'
-  }
-});
+export const dimensionGroupSchema = fieldProperties
+    .extend({
+        allow_fill: z.boolean().optional(),
+        convert_tz: z.boolean().optional(),
+        datatype: z
+            .enum(["epoch", "timestamp", "datetime", "date", "yyyymmdd"])
+            .optional(),
+        intervals: z
+            .array(
+                z.enum([
+                    "day",
+                    "hour",
+                    "minute",
+                    "month",
+                    "quarter",
+                    "second",
+                    "week",
+                    "year",
+                ]),
+            )
+            .optional(),
+        sql: z.string().optional(),
+        sql_end: z.string().optional(),
+        sql_start: z.string().optional(),
+        timeframes: z.array(z.string()).optional(),
+        type: z.enum(["time", "duration"]),
+    })
+    .strict()
+    .superRefine((val, ctx) => {
+        if (val.type === "time") {
+            if (val.intervals) {
+                ctx.addIssue({
+                    path: ["intervals"],
+                    code: z.ZodIssueCode.custom,
+                    message: "intervals should not be present for type: time",
+                });
+            }
+            // timeframes is optional for 'time'
+        }
+        if (val.type === "duration") {
+            if (!val.sql_start) {
+                ctx.addIssue({
+                    path: ["sql_start"],
+                    code: z.ZodIssueCode.custom,
+                    message: "sql_start is required for type: duration",
+                });
+            }
+            if (!val.sql_end) {
+                ctx.addIssue({
+                    path: ["sql_end"],
+                    code: z.ZodIssueCode.custom,
+                    message: "sql_end is required for type: duration",
+                });
+            }
+            if (val.sql) {
+                ctx.addIssue({
+                    path: ["sql"],
+                    code: z.ZodIssueCode.custom,
+                    message: "sql should not be present for type: duration",
+                });
+            }
+            if (val.timeframes) {
+                ctx.addIssue({
+                    path: ["timeframes"],
+                    code: z.ZodIssueCode.custom,
+                    message:
+                        "timeframes should not be present for type: duration",
+                });
+            }
+        }
+    });
 
 export const measureSchema = fieldProperties.extend({
   drill_fields: z.array(z.string()).optional(),
@@ -297,62 +309,59 @@ export const aggregateTableSchema = parserValues.extend({
   }).strict(),
 }).strict();
 
-export const exploreSchema = parserValues.extend({
-  extension: z.boolean().optional(),
-  extends: z.array(z.string()).optional(),
-  fields: z.array(z.string()).optional(),
-  tags: z.array(z.string()).optional(),
-
-  // Display
-  description: z.string().optional(),
-  group_label: z.string().optional(),
-  hidden: z.boolean().optional(),
-  label: z.string().optional(),
-  query: z.record(z.unknown()).optional(),
-  view_label: z.string().optional(),
-
-  // Filter
-  access_filter: z.union([
-    z.object({
-      field: z.string(),
-      user_attribute: z.string(),
-    }),
-    z.array(z.object({
-      field: z.string(),
-      user_attribute: z.string(),
-    }))
-  ]).optional(),
-
-  always_filter: z.object({
-    filters: z.record(z.string())
-  }).optional(),
-
-  conditionally_filter: z.object({
-    filters: z.record(z.string()),
-    unless: z.array(z.string()),
-  }).optional(),
-
-  case_sensitive: z.boolean().optional(),
-  sql_always_having: z.string().optional(),
-  sql_always_where: z.string().optional(),
-
-  // Join
-  always_join: z.array(z.string()).optional(),
-  join: z.record(z.string(), joinSchema).optional(),
-
-  // Query
-  cancel_grouping_fields: z.array(z.string()).optional(),
-  from: z.string().optional(),
-  persist_for: z.string().optional(),
-  persist_with: z.string().optional(),
-  required_access_grants: z.array(z.string()).optional(),
-  sql_table_name: z.string().optional(),
-  symmetric_aggregates: z.boolean().optional(),
-  view_name: z.string().optional(),
-
-  // Aggregate Table
-  aggregate_table: z.record(z.string(), aggregateTableSchema).optional(),
-}).strict();
+export const exploreSchema = parserValues
+    .extend({
+        access_filter: z
+            .union([
+                z.object({
+                    field: z.string(),
+                    user_attribute: z.string(),
+                }),
+                z.array(
+                    z.object({
+                        field: z.string(),
+                        user_attribute: z.string(),
+                    }),
+                ),
+            ])
+            .optional(),
+        aggregate_table: z.record(z.string(), aggregateTableSchema).optional(),
+        always_filter: z
+            .object({
+                filters: z.record(z.string()),
+            })
+            .optional(),
+        always_join: z.array(z.string()).optional(),
+        cancel_grouping_fields: z.array(z.string()).optional(),
+        case_sensitive: z.boolean().optional(),
+        conditionally_filter: z
+            .object({
+                filters: z.record(z.string()),
+                unless: z.array(z.string()),
+            })
+            .optional(),
+        description: z.string().optional(),
+        extends: z.array(z.string()).optional(),
+        extension: z.boolean().optional(),
+        fields: z.array(z.string()).optional(),
+        from: z.string().optional(),
+        group_label: z.string().optional(),
+        hidden: z.boolean().optional(),
+        join: z.record(z.string(), joinSchema).optional(),
+        label: z.string().optional(),
+        persist_for: z.string().optional(),
+        persist_with: z.string().optional(),
+        query: z.record(z.unknown()).optional(),
+        required_access_grants: z.array(z.string()).optional(),
+        sql_always_having: z.string().optional(),
+        sql_always_where: z.string().optional(),
+        sql_table_name: z.string().optional(),
+        symmetric_aggregates: z.boolean().optional(),
+        tags: z.array(z.string()).optional(),
+        view_label: z.string().optional(),
+        view_name: z.string().optional(),
+    })
+    .strict();
 
 export const derivedTableSchema = z.object({
   cluster_keys: z.array(z.string()).optional(),
