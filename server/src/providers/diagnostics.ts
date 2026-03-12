@@ -36,6 +36,7 @@ export enum DiagnosticCode {
     VIEW_REF_VIEW_NOT_FOUND = 20002,
     VIEW_REF_VIEW_NOT_INCLUDED = 20003,
     VIEW_REF_FIELD_IN_SQL = 20004,
+    VIEW_MULTIPLE_PRIMARY_KEYS = 20005,
 
     // SQL Reference validation (30000-39999)
     SQL_REF_FIELD_NOT_FOUND = 30001,
@@ -502,6 +503,61 @@ export class DiagnosticsProvider {
         return diagnostics;
     }
 
+    private validateMultiplePrimaryKeys(
+        view: LookmlView,
+        viewDetails: LookmlViewWithFileInfo,
+    ): Diagnostic[] {
+        const diagnostics: Diagnostic[] = [];
+        const positions = viewDetails.positions;
+
+        const allFields = this.workspaceModel.getViewFields(view.$name!);
+        const pkDimensions: { name: string; isLocal: boolean }[] = [];
+
+        for (const [dimName, dim] of Object.entries(allFields.dimension)) {
+            if (
+                dim &&
+                typeof dim === "object" &&
+                dim.primary_key === true
+            ) {
+                const isLocal = !!view.dimension?.[dimName];
+                pkDimensions.push({ name: dimName, isLocal });
+            }
+        }
+
+        if (pkDimensions.length <= 1) {
+            return diagnostics;
+        }
+
+        const pkNames = pkDimensions.map((pk) => pk.name).join(", ");
+        for (const pk of pkDimensions) {
+            if (!pk.isLocal) continue;
+            const dimPosition =
+                positions?.dimension?.[pk.name]?.primary_key;
+            const fallbackPosition = positions?.dimension?.[pk.name];
+            const pos = dimPosition || fallbackPosition;
+            if (pos?.$p) {
+                diagnostics.push({
+                    severity: DiagnosticSeverity.Error,
+                    range: {
+                        start: {
+                            line: pos.$p[0],
+                            character: pos.$p[1],
+                        },
+                        end: {
+                            line: pos.$p[2],
+                            character: pos.$p[3],
+                        },
+                    },
+                    message: `Multiple primary keys defined in view "${view.$name}": ${pkNames}. A view can only have one primary key.`,
+                    source: "lookml-lsp",
+                    code: DiagnosticCode.VIEW_MULTIPLE_PRIMARY_KEYS,
+                });
+            }
+        }
+
+        return diagnostics;
+    }
+
     // Then in the validation method:
     protected validateProperties(document: TextDocument): Diagnostic[] {
         let diagnostics: Diagnostic[] = [];
@@ -567,6 +623,13 @@ export class DiagnosticsProvider {
                         source: "lookml-lsp",
                     });
                 }
+
+                diagnostics.push(
+                    ...this.validateMultiplePrimaryKeys(
+                        view,
+                        viewDetails,
+                    ),
+                );
 
                 if (view.drill_fields) {
                     diagnostics.push(
