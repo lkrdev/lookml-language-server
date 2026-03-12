@@ -6,6 +6,7 @@ import {
   Range,
   TextDocument,
 } from "vscode-languageserver/node";
+import { DashboardParser } from "../models/dashboard-parser";
 import { WorkspaceModel } from "../models/workspace";
 import { getLines } from "../utils/document";
 
@@ -79,7 +80,11 @@ export class HoverProvider {
     document: TextDocument,
     position: Position,
   ): Hover | null {
-    //const text = document.getText();
+    // Dashboard files: use the dashboard parser for precise field detection
+    if (DashboardParser.isDashboardFile(document.uri)) {
+      return this.getDashboardHover(document, position);
+    }
+
     const wordRange = this.getWordRangeAtPosition(document, position);
 
     if (!wordRange) {
@@ -433,5 +438,87 @@ export class HoverProvider {
     }
 
     return null;
+  }
+
+  /**
+   * Provide hover information for dashboard files.
+   */
+  private getDashboardHover(
+    document: TextDocument,
+    position: Position,
+  ): Hover | null {
+    const dashboardParser = this.workspaceModel.getDashboardParser();
+
+    // Check for field reference
+    const fieldRef = dashboardParser.getFieldReferenceAtPosition(
+      document,
+      position.line,
+      position.character,
+    );
+    if (fieldRef) {
+      const viewDetails = this.workspaceModel.getView(fieldRef.viewName);
+      if (!viewDetails) {
+        return {
+          contents: {
+            kind: MarkupKind.Markdown,
+            value: `**${fieldRef.fullRef}** — View \`${fieldRef.viewName}\` not found`,
+          },
+          range: fieldRef.range,
+        };
+      }
+
+      const fields = this.workspaceModel.getViewFields(viewDetails.view.$name!);
+      const field =
+        fields.dimension?.[fieldRef.fieldName] ||
+        fields.measure?.[fieldRef.fieldName] ||
+        fields.dimension_group?.[fieldRef.fieldName];
+
+      if (!field) {
+        return {
+          contents: {
+            kind: MarkupKind.Markdown,
+            value: `**${fieldRef.fullRef}** — Field \`${fieldRef.fieldName}\` not found in view \`${fieldRef.viewName}\``,
+          },
+          range: fieldRef.range,
+        };
+      }
+
+      const details: string[] = [];
+      if (field.type) details.push(`**Type:** \`${field.type}\``);
+      if (field.sql) details.push(`**SQL:** \`${field.sql}\``);
+      if (field.label) details.push(`**Label:** ${field.label}`);
+      if (field.description) details.push(`**Description:** ${field.description}`);
+
+      const fieldType = fields.dimension?.[fieldRef.fieldName]
+        ? "Dimension"
+        : fields.measure?.[fieldRef.fieldName]
+          ? "Measure"
+          : "Dimension Group";
+
+      return {
+        contents: {
+          kind: MarkupKind.Markdown,
+          value: `**${fieldRef.fullRef}** (${fieldType} in \`${fieldRef.viewName}\`)\n\n${details.join("\n\n")}`,
+        },
+        range: fieldRef.range,
+      };
+    }
+
+    // Check for explore reference
+    const exploreRef = dashboardParser.getExploreReferenceAtPosition(
+      document,
+      position.line,
+      position.character,
+    );
+    if (exploreRef) {
+      return this.getExploreHover(exploreRef.exploreName);
+    }
+
+    // Fallback to word-based hover
+    const wordRange = this.getWordRangeAtPosition(document, position);
+    if (!wordRange) return null;
+    const word = document.getText(wordRange);
+
+    return this.getViewHover(word) || this.getExploreHover(word) || null;
   }
 }

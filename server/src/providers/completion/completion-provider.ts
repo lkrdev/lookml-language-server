@@ -6,6 +6,7 @@ import {
   TextDocumentPositionParams,
 } from "vscode-languageserver/node";
 import * as z from "zod";
+import { DashboardParser } from "../../models/dashboard-parser";
 import { WorkspaceModel } from "../../models/workspace";
 import { splitIntoLines } from "../../utils/document";
 import { BlockCompletionProvider } from "./block-completions";
@@ -72,6 +73,11 @@ export class CompletionProvider {
     position: TextDocumentPositionParams,
   ): CompletionItem[] | CompletionList {
     try {
+      // Dashboard files get their own completion logic
+      if (DashboardParser.isDashboardFile(document.uri)) {
+        return this.getDashboardCompletions(document, position);
+      }
+
       // Detect context at current position
       const context = this.contextDetector.getContext(document, position);
       const lineContext = this.lineContextDetector.getLineContext(
@@ -250,5 +256,135 @@ export class CompletionProvider {
    */
   private isAtWordBoundary(text: string): boolean {
     return text.match(/\b\w+$/) !== null;
+  }
+
+  /**
+   * Provide completions for dashboard files.
+   * After `view_name.`, suggest fields from that view.
+   * On field-reference lines, suggest `view_name.field_name`.
+   */
+  private getDashboardCompletions(
+    document: TextDocument,
+    position: TextDocumentPositionParams,
+  ): CompletionList {
+    const lines = splitIntoLines(document.getText());
+    const line = lines[position.position.line] ?? "";
+    const textBefore = line.substring(0, position.position.character);
+    const items: CompletionItem[] = [];
+
+    // After a dot: suggest fields for the view before the dot
+    const dotMatch = textBefore.match(/\b([a-zA-Z_][a-zA-Z0-9_]*)\.([a-zA-Z_]?[a-zA-Z0-9_]*)$/);
+    if (dotMatch) {
+      const viewName = dotMatch[1];
+      const partial = dotMatch[2];
+      const viewDetails = this.workspaceModel.getView(viewName);
+      if (viewDetails) {
+        const fields = this.workspaceModel.getViewFields(viewDetails.view.$name!);
+        const allFields = [
+          ...Object.entries(fields.dimension || {}).map(([name, f]) => ({
+            name,
+            kind: "dimension" as const,
+            field: f,
+          })),
+          ...Object.entries(fields.measure || {}).map(([name, f]) => ({
+            name,
+            kind: "measure" as const,
+            field: f,
+          })),
+          ...Object.entries(fields.dimension_group || {}).map(([name, f]) => ({
+            name,
+            kind: "dimension_group" as const,
+            field: f,
+          })),
+        ];
+
+        for (const { name, kind, field } of allFields) {
+          if (partial && !name.startsWith(partial)) continue;
+          items.push({
+            label: name,
+            kind:
+              kind === "measure"
+                ? CompletionItemKind.Value
+                : CompletionItemKind.Field,
+            detail: `${kind} in ${viewName}`,
+            documentation: field?.description || field?.label || undefined,
+            insertText: name,
+          });
+        }
+      }
+
+      return { isIncomplete: false, items };
+    }
+
+    // If on a line that expects a field ref, offer view.field completions
+    const trimmed = line.trim();
+    const isFieldContext =
+      trimmed.startsWith("- ") ||
+      trimmed.startsWith("field:") ||
+      this.isDashboardListenLine(lines, position.position.line);
+
+    if (isFieldContext) {
+      const views = this.workspaceModel.getViews();
+      for (const [viewName, viewDetails] of views) {
+        if (viewName.startsWith("+")) continue;
+        const fields = this.workspaceModel.getViewFields(viewName);
+        for (const [fieldName, field] of Object.entries(fields.dimension || {})) {
+          items.push({
+            label: `${viewName}.${fieldName}`,
+            kind: CompletionItemKind.Field,
+            detail: "dimension",
+            documentation: (field as any)?.description || (field as any)?.label || undefined,
+          });
+        }
+        for (const [fieldName, field] of Object.entries(fields.measure || {})) {
+          items.push({
+            label: `${viewName}.${fieldName}`,
+            kind: CompletionItemKind.Value,
+            detail: "measure",
+            documentation: (field as any)?.description || (field as any)?.label || undefined,
+          });
+        }
+        for (const [fieldName, field] of Object.entries(fields.dimension_group || {})) {
+          items.push({
+            label: `${viewName}.${fieldName}`,
+            kind: CompletionItemKind.Field,
+            detail: "dimension_group",
+            documentation: (field as any)?.description || (field as any)?.label || undefined,
+          });
+        }
+      }
+    }
+
+    // On `explore:` lines, suggest explores
+    if (trimmed.startsWith("explore:") || trimmed === "explore:") {
+      for (const [exploreName] of this.workspaceModel.getExplores()) {
+        items.push({
+          label: exploreName,
+          kind: CompletionItemKind.Module,
+          detail: "explore",
+        });
+      }
+    }
+
+    return { isIncomplete: false, items };
+  }
+
+  private isDashboardListenLine(lines: string[], lineIdx: number): boolean {
+    const line = lines[lineIdx];
+    const trimmed = line.trim();
+    if (trimmed.startsWith("- ") || trimmed.startsWith("#")) return false;
+    if (!trimmed.includes(":")) return false;
+
+    const currentIndent = line.length - line.trimStart().length;
+    for (let j = lineIdx - 1; j >= 0; j--) {
+      const prevLine = lines[j];
+      const prevTrimmed = prevLine.trim();
+      if (prevTrimmed === "") continue;
+      const prevIndent = prevLine.length - prevLine.trimStart().length;
+      if (prevIndent < currentIndent) {
+        return prevTrimmed.startsWith("listen:");
+      }
+    }
+    return false;
   }
 }
