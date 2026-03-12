@@ -18,6 +18,7 @@ import { URI } from "vscode-uri";
 import { ZodError, ZodIssue } from "zod";
 import { WorkspaceModel } from "../models/workspace";
 import { VALID_TIMEFRAMES } from "../schemas/constants";
+import { DIMENSION_GROUP_DEFAULT_TIMEFRAMES } from "../schemas/defaults";
 import { exploreSchema, LookMLView } from "../schemas/lookml";
 import { ensureMinRangeLength } from "../utils/range";
 
@@ -113,10 +114,8 @@ export class DiagnosticsProvider {
             fields.dimension_group,
         )) {
             if (!dimGroup) continue;
-            const timeframes: string[] = (dimGroup as any).timeframes ?? [
-                "time",
-                "date",
-            ];
+            const timeframes: string[] =
+                (dimGroup as any).timeframes ?? DIMENSION_GROUP_DEFAULT_TIMEFRAMES;
             for (const timeframe of timeframes) {
                 if (fieldName === `${dimGroupName}_${timeframe}`) return true;
             }
