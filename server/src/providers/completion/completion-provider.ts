@@ -280,36 +280,22 @@ export class CompletionProvider {
       const viewDetails = this.workspaceModel.getView(viewName);
       if (viewDetails) {
         const fields = this.workspaceModel.getViewFields(viewDetails.view.$name!);
-        const allFields = [
-          ...Object.entries(fields.dimension || {}).map(([name, f]) => ({
-            name,
-            kind: "dimension" as const,
-            field: f,
-          })),
-          ...Object.entries(fields.measure || {}).map(([name, f]) => ({
-            name,
-            kind: "measure" as const,
-            field: f,
-          })),
-          ...Object.entries(fields.dimension_group || {}).map(([name, f]) => ({
-            name,
-            kind: "dimension_group" as const,
-            field: f,
-          })),
+        const fieldTypes = [
+          { type: "dimension", map: fields.dimension, kind: CompletionItemKind.Field },
+          { type: "measure", map: fields.measure, kind: CompletionItemKind.Value },
+          { type: "dimension_group", map: fields.dimension_group, kind: CompletionItemKind.Field },
         ];
-
-        for (const { name, kind, field } of allFields) {
-          if (partial && !name.startsWith(partial)) continue;
-          items.push({
-            label: name,
-            kind:
-              kind === "measure"
-                ? CompletionItemKind.Value
-                : CompletionItemKind.Field,
-            detail: `${kind} in ${viewName}`,
-            documentation: field?.description || field?.label || undefined,
-            insertText: name,
-          });
+        for (const { type, map, kind } of fieldTypes) {
+          for (const [name, field] of Object.entries(map || {})) {
+            if (partial && !name.startsWith(partial)) continue;
+            items.push({
+              label: name,
+              kind,
+              detail: `${type} in ${viewName}`,
+              documentation: (field as any)?.description || (field as any)?.label || undefined,
+              insertText: name,
+            });
+          }
         }
       }
 
@@ -328,29 +314,20 @@ export class CompletionProvider {
       for (const [viewName, viewDetails] of views) {
         if (viewName.startsWith("+")) continue;
         const fields = this.workspaceModel.getViewFields(viewName);
-        for (const [fieldName, field] of Object.entries(fields.dimension || {})) {
-          items.push({
-            label: `${viewName}.${fieldName}`,
-            kind: CompletionItemKind.Field,
-            detail: "dimension",
-            documentation: (field as any)?.description || (field as any)?.label || undefined,
-          });
-        }
-        for (const [fieldName, field] of Object.entries(fields.measure || {})) {
-          items.push({
-            label: `${viewName}.${fieldName}`,
-            kind: CompletionItemKind.Value,
-            detail: "measure",
-            documentation: (field as any)?.description || (field as any)?.label || undefined,
-          });
-        }
-        for (const [fieldName, field] of Object.entries(fields.dimension_group || {})) {
-          items.push({
-            label: `${viewName}.${fieldName}`,
-            kind: CompletionItemKind.Field,
-            detail: "dimension_group",
-            documentation: (field as any)?.description || (field as any)?.label || undefined,
-          });
+        const fieldTypes = [
+          { type: "dimension", map: fields.dimension, kind: CompletionItemKind.Field },
+          { type: "measure", map: fields.measure, kind: CompletionItemKind.Value },
+          { type: "dimension_group", map: fields.dimension_group, kind: CompletionItemKind.Field },
+        ];
+        for (const { type, map, kind } of fieldTypes) {
+          for (const [fieldName, field] of Object.entries(map || {})) {
+            items.push({
+              label: `${viewName}.${fieldName}`,
+              kind,
+              detail: type,
+              documentation: (field as any)?.description || (field as any)?.label || undefined,
+            });
+          }
         }
       }
     }
