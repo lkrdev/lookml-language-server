@@ -64,6 +64,11 @@
                     "type": "string",
                     "default": "",
                     "description": "Looker project name"
+                },
+                "looker.writeToDevOnSave": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Send file content to Looker on save if in dev workspace."
                 }
             }
         },
