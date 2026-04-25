@@ -23,25 +23,22 @@ export class ExtendedLooker40SDK extends Looker40SDK {
    * Get file content.
    */
   async getFileContent(project_id: string, file_path: string): Promise<string> {
+    const token = await this.authSession.getToken();
+    const baseUrl = this.authSession.settings.base_url;
     const path = `/projects/${encodeURIComponent(project_id)}/file/content`;
-    const response = await this.authSession.transport.rawRequest(
-      "GET",
-      path,
-      { file_path },
-      null,
-      this.authSession.authenticate.bind(this.authSession)
-    );
-    
-    const body = response.body;
-    if (typeof body === "string") {
-      return body;
-    } else if (Buffer.isBuffer(body)) {
-      return body.toString("utf-8");
-    } else if (body && typeof body === "object") {
-      return JSON.stringify(body);
+    const url = new URL(`${baseUrl}/api/4.0${path}?file_path=${encodeURIComponent(file_path)}`);
+
+    const response = await fetch(url.toString(), {
+      headers: {
+        'Authorization': `token ${token.access_token}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch project file: ${response.status} ${response.statusText}`);
     }
-    
-    return String(body);
+
+    return await response.text();
   }
 
   /**
