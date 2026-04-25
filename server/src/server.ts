@@ -1,18 +1,20 @@
 import {
-  createConnection,
-  Definition,
-  DefinitionParams,
-  DocumentSymbolParams,
-  ExecuteCommandParams,
-  InitializeParams,
-  InitializeResult,
-  ProposedFeatures,
-  SymbolInformation,
-  TextDocuments,
-  TextDocumentSyncKind,
+    createConnection,
+    Definition,
+    DefinitionParams,
+    DocumentSymbolParams,
+    ExecuteCommandParams,
+    InitializeParams,
+    InitializeResult,
+    ProposedFeatures,
+    SymbolInformation,
+    TextDocuments,
+    TextDocumentSyncKind,
 } from "vscode-languageserver/node";
 
+import * as path from "path";
 import { TextDocument } from "vscode-languageserver-textdocument";
+import { URI } from "vscode-uri";
 
 // Import providers
 import { CompletionProvider } from "./providers/completion";
@@ -25,15 +27,17 @@ import { HoverProvider } from "./providers/hover";
 
 // Import models
 import {
-  getCurrentBranch,
-  handleGetAllProjects,
-  handleGetDevBranch,
-  handleGetExploreUrlAsMe,
-  handleListInstances,
-  handleSwitchCurrentInstance,
-  handleSwitchToBranchAndPull,
-  handleSwitchToDev,
-  handleValidateProject,
+    getCurrentBranch,
+    handleGetAllProjects,
+    handleGetDevBranch,
+    handleGetExploreUrlAsMe,
+    handleListInstances,
+    handleSwitchCurrentInstance,
+    handleSwitchToBranchAndPull,
+    handleSwitchToDev,
+    handleSyncAllFilesLocalToLooker,
+    handleSyncAllFilesLookerToLocal,
+    handleValidateProject,
 } from "./commands";
 import { WorkspaceModel } from "./models/workspace";
 import { DefinitionProvider } from "./providers/definition";
@@ -62,7 +66,7 @@ const documentUpdatePromises = new Map<string, Promise<void>>();
 
 // Create the workspace model
 const workspaceModel = new WorkspaceModel({
-  connection,
+    connection,
 });
 
 const definitionProvider = new DefinitionProvider(workspaceModel);
@@ -74,293 +78,385 @@ const formattingProvider = new FormattingProvider();
 const hoverProvider = new HoverProvider(workspaceModel);
 
 connection.onInitialize((params: InitializeParams) => {
-  logger.info("LookML Language Server initializing");
+    logger.info("LookML Language Server initializing");
 
-  const result: InitializeResult = {
-    capabilities: {
-      textDocumentSync: {
-        openClose: true,
-        change: TextDocumentSyncKind.Incremental,
-        save: {
-          includeText: false,
+    const result: InitializeResult = {
+        capabilities: {
+            textDocumentSync: {
+                openClose: true,
+                change: TextDocumentSyncKind.Incremental,
+                save: {
+                    includeText: false,
+                },
+            },
+            // Completion capabilities
+            completionProvider: {
+                resolveProvider: true,
+                triggerCharacters: [".", ":", "{", " "],
+            },
+            // Definition capabilities
+            definitionProvider: true,
+            // Hover capabilities
+            hoverProvider: true,
+            // Document symbols (outline) capabilities
+            documentSymbolProvider: true,
+            // Formatting capabilities
+            documentFormattingProvider: true,
+            documentRangeFormattingProvider: true,
+            documentOnTypeFormattingProvider: {
+                firstTriggerCharacter: "}",
+                moreTriggerCharacter: ["{", "\n"],
+            },
+            // Execute command capability
+            executeCommandProvider: {
+                commands: [
+                    "looker.remoteReset",
+                    "looker.switchToBranchAndPull",
+                    "looker.getCurrentBranch",
+                    "looker.getDevBranch",
+                    "looker.switchToDev",
+                    "looker.createExploreUrlAsMe",
+                    "looker.listInstances",
+                    "looker.switchInstance",
+                    "looker.addInstance",
+                    "looker.validateProject",
+                    "looker.getAllProjects",
+                    "looker.handleSyncAllFilesLocalToLooker",
+                    "looker.syncAllFilesLookerToLocal",
+                ],
+            },
         },
-      },
-      // Completion capabilities
-      completionProvider: {
-        resolveProvider: true,
-        triggerCharacters: [".", ":", "{", " "],
-      },
-      // Definition capabilities
-      definitionProvider: true,
-      // Hover capabilities
-      hoverProvider: true,
-      // Document symbols (outline) capabilities
-      documentSymbolProvider: true,
-      // Formatting capabilities
-      documentFormattingProvider: true,
-      documentRangeFormattingProvider: true,
-      documentOnTypeFormattingProvider: {
-        firstTriggerCharacter: "}",
-        moreTriggerCharacter: ["{", "\n"],
-      },
-      // Execute command capability
-      executeCommandProvider: {
-        commands: [
-          "looker.remoteReset",
-          "looker.switchToBranchAndPull",
-          "looker.getCurrentBranch",
-          "looker.getDevBranch",
-          "looker.switchToDev",
-          "looker.createExploreUrlAsMe",
-          "looker.listInstances",
-          "looker.switchInstance",
-          "looker.addInstance",
-          "looker.validateProject",
-          "looker.getAllProjects",
-        ],
-      },
-    },
-  };
+    };
 
-  return result;
+    return result;
 });
 
 // Initialize workspace when server is ready
 connection.onInitialized(async () => {
-  logger.info("LookML Language Server initialized");
-  await workspaceModel.initialize();
+    logger.info("LookML Language Server initialized");
+    await workspaceModel.initialize();
 });
 
 // Add command handlers
 connection.onExecuteCommand(async (params: ExecuteCommandParams) => {
-  const { command, arguments: args } = params;
-  // reset the auth service in case tokens are expired
-  authService = new AuthenticationService();
-  switch (command) {
-    case "looker.remoteReset":
-      if (!args || args.length !== 1) {
-        throw new Error("Invalid arguments for remoteReset command");
-      }
-      const project_name = args[0] as string;
-      try {
-        const reset_result = await authService.resetToRemote(project_name);
-        return { success: reset_result.success, message: reset_result.message };
-      } catch (error) {
-        return {
-          success: false,
-          message: `Failed to reset to remote: ${error}`,
-        };
-      }
+    const { command, arguments: args } = params;
+    // reset the auth service in case tokens are expired
+    authService = new AuthenticationService();
+    switch (command) {
+        case "looker.remoteReset":
+            if (!args || args.length !== 1) {
+                throw new Error("Invalid arguments for remoteReset command");
+            }
+            const project_name = args[0] as string;
+            try {
+                const reset_result =
+                    await authService.resetToRemote(project_name);
+                return {
+                    success: reset_result.success,
+                    message: reset_result.message,
+                };
+            } catch (error) {
+                return {
+                    success: false,
+                    message: `Failed to reset to remote: ${error}`,
+                };
+            }
 
-    case "looker.getDevBranch":
-      if (!args || args.length !== 1) {
-        throw new Error("Invalid arguments for getDevBranch command");
-      }
-      const { branch_name } = await handleGetDevBranch(authService!, {
-        project_name: args[0] as string,
-      });
-      return { success: true, branch_name: branch_name };
+        case "looker.getDevBranch":
+            if (!args || args.length !== 1) {
+                throw new Error("Invalid arguments for getDevBranch command");
+            }
+            const { branch_name } = await handleGetDevBranch(authService!, {
+                project_name: args[0] as string,
+            });
+            return { success: true, branch_name: branch_name };
 
-    case "looker.switchToDev":
-      if (!args || args.length !== 2) {
-        throw new Error("Project name not found");
-      }
-      const switch_args = {
-        project_name: args[0] as string,
-        branch_name: args[1] as string,
-      };
-      const branch_response = await handleGetDevBranch(
-        authService!,
-        switch_args,
-      );
-      if (branch_response.branch_name !== switch_args.branch_name) {
-        throw new Error(
-          `Branch name does not match. Looker ${switch_args.project_name} is on ${branch_response.branch_name} but ${switch_args.branch_name} was expected`,
-        );
-      } else {
-        return handleSwitchToDev(authService!, switch_args);
-      }
+        case "looker.switchToDev":
+            if (!args || args.length !== 2) {
+                throw new Error("Project name not found");
+            }
+            const switch_args = {
+                project_name: args[0] as string,
+                branch_name: args[1] as string,
+            };
+            const branch_response = await handleGetDevBranch(
+                authService!,
+                switch_args,
+            );
+            if (branch_response.branch_name !== switch_args.branch_name) {
+                throw new Error(
+                    `Branch name does not match. Looker ${switch_args.project_name} is on ${branch_response.branch_name} but ${switch_args.branch_name} was expected`,
+                );
+            } else {
+                return handleSwitchToDev(authService!, switch_args);
+            }
 
-    case "looker.getCurrentBranch":
-      return getCurrentBranch();
+        case "looker.getCurrentBranch":
+            return getCurrentBranch();
 
-    case "looker.switchToBranchAndPull":
-      if (!args || args.length !== 1) {
-        throw new Error("Invalid arguments for switchToBranchAndPull command");
-      }
-      return handleSwitchToBranchAndPull(args[0] as string);
+        case "looker.switchToBranchAndPull":
+            if (!args || args.length !== 1) {
+                throw new Error(
+                    "Invalid arguments for switchToBranchAndPull command",
+                );
+            }
+            return handleSwitchToBranchAndPull(args[0] as string);
 
-    case "looker.createExploreUrlAsMe":
-      if (!args || args.length !== 3) {
-        throw new Error("Invalid arguments for createExploreUrlAsMe command");
-      }
-      return handleGetExploreUrlAsMe(authService!, {
-        base_url: args[0] as string,
-        model_name: args[1] as string,
-        explore_name: args[2] as string,
-      });
+        case "looker.createExploreUrlAsMe":
+            if (!args || args.length !== 3) {
+                throw new Error(
+                    "Invalid arguments for createExploreUrlAsMe command",
+                );
+            }
+            return handleGetExploreUrlAsMe(authService!, {
+                base_url: args[0] as string,
+                model_name: args[1] as string,
+                explore_name: args[2] as string,
+            });
 
-    case "looker.addInstance":
-      if (!args || args.length !== 3) {
-        throw new Error("Invalid arguments for adding an instance");
-      }
-      let instance_name = args[0] as string;
-      let base_url = args[1] as string;
-      let use_production = args[2] as AuthRecord["use_production"];
-      try {
-        await authService!.newInstance(instance_name, base_url, use_production);
-        return {
-          success: true,
-          message: "Instance added",
-          data: { instance_name: instance_name, base_url: base_url },
-        };
-      } catch (error) {
-        return {
-          success: false,
-          message: `Failed to add instance: ${error}`,
-          data: { instance_name: instance_name, base_url: base_url },
-        };
-      }
-    case "looker.listInstances":
-      return await handleListInstances();
-    case "looker.switchInstance":
-      if (!args || args.length !== 1) {
-        throw new Error("Invalid arguments for switchInstance command");
-      }
-      return await handleSwitchCurrentInstance(authService!, args[0] as string);
-    case "looker.validateProject":
-      if (!args || args.length !== 1) {
-        throw new Error("Invalid arguments for validateProject command");
-      }
-      return await handleValidateProject(authService!, {
-        project_name: args[0] as string,
-      });
-    case "looker.getAllProjects":
-      return await handleGetAllProjects(authService!);
-    default:
-      throw new Error(`Unknown command: ${command}`);
-  }
+        case "looker.addInstance":
+            if (!args || args.length !== 3) {
+                throw new Error("Invalid arguments for adding an instance");
+            }
+            let instance_name = args[0] as string;
+            let base_url = args[1] as string;
+            let use_production = args[2] as AuthRecord["use_production"];
+            try {
+                await authService!.newInstance(
+                    instance_name,
+                    base_url,
+                    use_production,
+                );
+                return {
+                    success: true,
+                    message: "Instance added",
+                    data: { instance_name: instance_name, base_url: base_url },
+                };
+            } catch (error) {
+                return {
+                    success: false,
+                    message: `Failed to add instance: ${error}`,
+                    data: { instance_name: instance_name, base_url: base_url },
+                };
+            }
+        case "looker.listInstances":
+            return await handleListInstances();
+        case "looker.switchInstance":
+            if (!args || args.length !== 1) {
+                throw new Error("Invalid arguments for switchInstance command");
+            }
+            return await handleSwitchCurrentInstance(
+                authService!,
+                args[0] as string,
+            );
+        case "looker.validateProject":
+            if (!args || args.length !== 1) {
+                throw new Error(
+                    "Invalid arguments for validateProject command",
+                );
+            }
+            return await handleValidateProject(authService!, {
+                project_name: args[0] as string,
+            });
+        case "looker.getAllProjects":
+            return await handleGetAllProjects(authService!);
+        case "looker.handleSyncAllFilesLocalToLooker":
+            if (!args || args.length !== 1) {
+                throw new Error("Invalid arguments for syncAllFiles command");
+            }
+            return await handleSyncAllFilesLocalToLooker(
+                authService!,
+                args[0] as string,
+                workspaceModel,
+            );
+        case "looker.syncAllFilesLookerToLocal":
+            const project_name_arg = args && args.length > 0 ? (args[0] as string) : undefined;
+            return await handleSyncAllFilesLookerToLocal(
+                authService!,
+                project_name_arg,
+                workspaceModel,
+            );
+        default:
+            throw new Error(`Unknown command: ${command}`);
+    }
 });
 
 // Handle document content changes
 documents.onDidChangeContent(async (change) => {
-  logger.info("Document changed:", change.document.uri);
-  const updatePromise = workspaceModel.updateDocument(change.document);
-  documentUpdatePromises.set(change.document.uri, updatePromise);
-  await updatePromise;
+    logger.info("Document changed:", change.document.uri);
+    const updatePromise = workspaceModel.updateDocument(change.document);
+    documentUpdatePromises.set(change.document.uri, updatePromise);
+    await updatePromise;
 
-  setTimeout(() => {
-    const diagnostics = diagnosticsProvider.validateDocument(change.document);
-    connection.sendDiagnostics({ uri: change.document.uri, diagnostics });
-  }, 500);
+    setTimeout(() => {
+        const diagnostics = diagnosticsProvider.validateDocument(
+            change.document,
+        );
+        connection.sendDiagnostics({ uri: change.document.uri, diagnostics });
+    }, 500);
 });
 
 documents.onDidSave(async (change) => {
-  logger.info("Document saved:", change.document.uri);
+    logger.info("Document saved:", change.document.uri);
 
-  // Wait for any pending document updates to complete
-  const updatePromise = documentUpdatePromises.get(change.document.uri);
-  if (updatePromise) {
-    await updatePromise;
-  }
+    // Wait for any pending document updates to complete
+    const updatePromise = documentUpdatePromises.get(change.document.uri);
+    if (updatePromise) {
+        await updatePromise;
+    }
 
-  // Update the model and validate
-  await workspaceModel.initialize();
-  setTimeout(() => {
-    const diagnostics = diagnosticsProvider.validateDocument(change.document);
-    connection.sendDiagnostics({ uri: change.document.uri, diagnostics });
-  }, 500);
+    // Update the model and validate
+    await workspaceModel.initialize();
+    setTimeout(() => {
+        const diagnostics = diagnosticsProvider.validateDocument(
+            change.document,
+        );
+        connection.sendDiagnostics({ uri: change.document.uri, diagnostics });
+    }, 500);
+
+    // writeToDevOnSave logic
+    try {
+        const settings = await connection.workspace.getConfiguration("looker");
+        if (settings && settings.writeToDevOnSave) {
+            if (!authService) {
+                authService = new AuthenticationService();
+            }
+            const sdk = await authService.getSDK();
+            if (authService.auth_record?.use_production === 0) {
+                const document = documents.get(change.document.uri);
+                if (document) {
+                    const fsPath = URI.parse(change.document.uri).fsPath;
+                    const baseDir = process.cwd();
+                    const relPath = path.relative(baseDir, fsPath).replace(/\\/g, "/");
+                    const project_name = path.basename(baseDir);
+                    const content = document.getText();
+
+                    try {
+                        await sdk.updateFile(project_name, {
+                            path: relPath,
+                            content,
+                        });
+                    } catch (error) {
+                        console.log(
+                            `Update failed for ${relPath}, trying create...`,
+                        );
+                        try {
+                            await sdk.createFile(project_name, {
+                                path: relPath,
+                                content,
+                            });
+                        } catch (createError) {
+                            console.error(
+                                `Failed to create ${relPath}:`,
+                                createError,
+                            );
+                        }
+                    }
+                }
+            } else {
+                connection.window.showWarningMessage(
+                    "Writing to Files on Save is enabled, but you are using production, skipping writing files. Consider changing the 'looker.writeToDevOnSave' setting to false in your settings.json",
+                );
+            }
+        }
+    } catch (error) {
+        console.error("Failed to write to dev on save:", error);
+    }
 });
 
 // Handle document closing
 documents.onDidClose((event) => {
-  // don't remove this as it prevents linking to the file
-  //workspaceModel.removeDocument(event.document.uri);
+    // don't remove this as it prevents linking to the file
+    //workspaceModel.removeDocument(event.document.uri);
 
-  // Clear diagnostics
-  connection.sendDiagnostics({ uri: event.document.uri, diagnostics: [] });
+    // Clear diagnostics
+    connection.sendDiagnostics({ uri: event.document.uri, diagnostics: [] });
 });
 
 // Provide autocompletion
 connection.onCompletion(async (params) => {
-  const document = documents.get(params.textDocument.uri);
-  if (!document) return [];
+    const document = documents.get(params.textDocument.uri);
+    if (!document) return [];
 
-  // Wait for any pending document updates to complete
-  const updatePromise = documentUpdatePromises.get(document.uri);
-  if (updatePromise) {
-    await updatePromise;
-  }
+    // Wait for any pending document updates to complete
+    const updatePromise = documentUpdatePromises.get(document.uri);
+    if (updatePromise) {
+        await updatePromise;
+    }
 
-  const result = completionProvider.getCompletionItems(document, params);
-  return result;
+    const result = completionProvider.getCompletionItems(document, params);
+    return result;
 });
 
 // Provide additional information for completion items
 connection.onCompletionResolve((item) => {
-  return completionProvider.resolveCompletionItem(item);
+    return completionProvider.resolveCompletionItem(item);
 });
 
 // Provide hover information
 connection.onHover((params) => {
-  const document = documents.get(params.textDocument.uri);
-  if (!document) return null;
+    const document = documents.get(params.textDocument.uri);
+    if (!document) return null;
 
-  return hoverProvider.getHoverInfo(document, params.position);
+    return hoverProvider.getHoverInfo(document, params.position);
 });
 
 // Provide go-to-definition with support for ${view.field} references
 connection.onDefinition((params: DefinitionParams): Definition | undefined => {
-  const document = documents.get(params.textDocument.uri);
-  if (!document) return;
+    const document = documents.get(params.textDocument.uri);
+    if (!document) return;
 
-  return definitionProvider.getDefinition(document, params.position);
+    return definitionProvider.getDefinition(document, params.position);
 });
 
 // Provide document symbols for outline view
 connection.onDocumentSymbol(
-  (params: DocumentSymbolParams): SymbolInformation[] => {
-    const document = documents.get(params.textDocument.uri);
-    if (!document) return [];
+    (params: DocumentSymbolParams): SymbolInformation[] => {
+        const document = documents.get(params.textDocument.uri);
+        if (!document) return [];
 
-    // Extract symbols from the workspace model
-    const symbols: SymbolInformation[] = [];
-    const uri = params.textDocument.uri;
+        // Extract symbols from the workspace model
+        const symbols: SymbolInformation[] = [];
+        const uri = params.textDocument.uri;
 
-    // TODO: Implement document symbol provider
-    // This will be simplified once we implement document tracking
+        // TODO: Implement document symbol provider
+        // This will be simplified once we implement document tracking
 
-    return symbols;
+        return symbols;
   },
 );
 
 // Document formatting
 connection.onDocumentFormatting((params) => {
-  const document = documents.get(params.textDocument.uri);
-  if (!document) return [];
+    const document = documents.get(params.textDocument.uri);
+    if (!document) return [];
 
-  return formattingProvider.enhancedFormatting(document, params.options);
+    return formattingProvider.enhancedFormatting(document, params.options);
 });
 
 // Range formatting
 connection.onDocumentRangeFormatting((params) => {
-  const document = documents.get(params.textDocument.uri);
-  if (!document) return [];
+    const document = documents.get(params.textDocument.uri);
+    if (!document) return [];
 
-  return formattingProvider.formatRange(document, params.range, params.options);
+    return formattingProvider.formatRange(
+        document,
+        params.range,
+        params.options,
+    );
 });
 
 // On-type formatting
 connection.onDocumentOnTypeFormatting((params) => {
-  const document = documents.get(params.textDocument.uri);
-  if (!document) return [];
+    const document = documents.get(params.textDocument.uri);
+    if (!document) return [];
 
-  return formattingProvider.formatOnType(
-    document,
-    params.position,
-    params.ch,
-    params.options,
-  );
+    return formattingProvider.formatOnType(
+        document,
+        params.position,
+        params.ch,
+        params.options,
+    );
 });
 
 // Helper function to get word at positi

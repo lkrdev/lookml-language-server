@@ -236,6 +236,14 @@ export function activate(context: ExtensionContext) {
     }
   });
 
+  client.onRequest("lookml/showInputBox", async (params: any) => {
+    const { prompt } = params;
+    return await vscode.window.showInputBox({
+      prompt: prompt,
+      ignoreFocusOut: true,
+    });
+  });
+
   client.onRequest("lookml/getFileContent", async (params: any) => {
     const { uri } = params;
 

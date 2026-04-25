@@ -57,3 +57,6 @@ export const VALID_TIMEFRAMES: ReadonlySet<string> = new Set([
     "year",
     "yesno",
 ]);
+
+export const VALID_EXTENSIONS: ReadonlyArray<string> = [".md", ".js", ".strings.json", ".dashboard.lookml", ".lkml"];
+export const VALID_EXTENSIONS_GLOB = `**/*.{${VALID_EXTENSIONS.map(ext => ext.slice(1)).join(",")}}`;

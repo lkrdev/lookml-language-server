@@ -1,5 +1,5 @@
 {
-    "name": "@lkr-dev/lookml-language-server-client",
+    "name": "@lkrdev/lookml-language-server-client",
     "description": "LookML Language Server for Visual Studio Code",
     "author": "rileylnapier@gmail.com",
     "license": "MIT",
@@ -21,6 +21,17 @@
         "@types/node": "^20.17.30"
     },
     "contributes": {
+        "configuration": {
+            "type": "object",
+            "title": "LookML",
+            "properties": {
+                "looker.writeToDevOnSave": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Send file content to Looker on save if in dev workspace."
+                }
+            }
+        },
         "configurationDefaults": {
             "[json]": {
                 "editor.formatOnSave": true

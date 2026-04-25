@@ -12,11 +12,13 @@ We are actively looking for feedback and contributions from the community, pleas
 
 There are a few steps you need to follow to get the Language Server working.
 
-- If this if the first time you're using the Language Server, you'll need to register a new OAuth client to communicate with the Language Server [go](#looker-save-all-stage-all-commit-and-sync)
+- If this if the first time you're using the Language Server, you'll need to register a new OAuth client to communicate with the Language Server [go](#setting-up-your-looker-environment)
 - If you've already registered an OAuth client, you can skip that step and go to [looker-login](#looker-login)
-- Make sure you do not have uncommited changes in your LookML development mode
-- After you've opened up a LookML repository in your IDE, run the [looker-sync-branches](#looker-sync-branches) command to ensure your local LookML files are on the development branch and up to date
-- Make some LookML Changes and run the [looker-save-all-stage-all-commit-and-sync](#looker-save-all-stage-all-commit-and-sync) (hotkey `alt+shift+r`) to push your changes to Looker
+- Make sure you do not have uncommited changes in your LookML development mode on the server before starting local development.
+- **Preferred Sync Method**: For rapid development, we recommend using the direct file sync commands instead of Git. This avoids creating numerous small commits on your branch.
+    - Use `Looker: Sync All Files Local to Looker` to push your local changes.
+    - Use `Looker: Sync All Files Looker to Local` to pull changes from Looker (e.g. if you used the Looker UI).
+- Alternatively, for traditional Git workflow, you can still use `Looker: Save All, Stage All, Commit, and Sync` (hotkey `alt+shift+r`) to push your changes via a Git commit.
 
 ## Setting up your Looker Environment
 
@@ -87,6 +89,23 @@ The Looker: Select Project command allows you to set the current Looker project 
 1. The extension prompts you to enter the name of your Looker project.
 2. You can enter the project name directly or select it from a list of projects you have previously configured.
 
+## Looker: Sync All Files Local to Looker [PREFERRED]
+
+This is the preferred method for pushing changes to Looker during active development. It directly copies all files matching the valid extensions from your local workspace to the Looker development workspace.
+
+- **Why it's preferred**: It bypasses the need to make a Git commit for every small change you want to test in Looker.
+- **How to use**: Run the command from the palette. It will prompt for the project name if not found.
+
+## Looker: Sync All Files Looker to Local
+
+This command pulls all project files from the Looker development workspace and saves them to your local workspace.
+
+- **Use case**: Perfect for bootstrapping a new workspace! If you open a new, empty workspace, you can run this command to pull all files from Looker and start developing locally immediately. It's also useful if you made changes directly in the Looker UI and want to bring them into your local IDE.
+- **How to use**: Run the command from the palette. It will prompt for the project name if not found.
+
+> [!TIP]
+> After running this command in a new, empty workspace, future commands will automatically detect the project name if a `manifest.lkml` file was downloaded as part of the sync, as described in the **Project Configuration** section.
+
 ## Looker: Reset to Remote
 
 The Looker: Reset to Remote command allows you to reset your local Looker project to the remote branch. When you run this command:
@@ -94,7 +113,10 @@ The Looker: Reset to Remote command allows you to reset your local Looker projec
 1. The extension prompts you to enter the name of your Looker project.
 2. You can enter the project name directly or select it from a list of projects you have previously configured.
 
-## Looker: Save All, Stage All, Commit, and Sync
+## Looker: Save All, Stage All, Commit, and Sync [ALTERNATIVE]
+
+> [!NOTE]
+> This method is still supported but considered an alternative to the direct file sync methods described above.
 
 The Looker: Save All, Stage All, Commit, and Sync command allows you to save all files, stage all changes, commit all changes, and have Looker automatically sync with the remote branch. When you run this command:
 

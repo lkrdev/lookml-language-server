@@ -109,7 +109,7 @@
         "test:validator": "cd packages/lookml-validator && npm test"
     },
     "dependencies": {
-        "@looker/sdk": "^25.4.0",
+        "@looker/sdk": "^26.6.1",
         "@looker/sdk-node": "^25.4.0",
         "js-yaml": "^4.1.0",
         "lookml-parser": "^7.1.0",
