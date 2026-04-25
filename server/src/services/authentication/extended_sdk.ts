@@ -24,8 +24,24 @@ export class ExtendedLooker40SDK extends Looker40SDK {
    */
   async getFileContent(project_id: string, file_path: string): Promise<string> {
     const path = `/projects/${encodeURIComponent(project_id)}/file/content`;
-    const query = { file_path };
-    return await this.ok(this.get<string, any>(path, query));
+    const response = await this.authSession.transport.rawRequest(
+      "GET",
+      path,
+      { file_path },
+      null,
+      this.authSession as any
+    );
+    
+    const body = response.body;
+    if (typeof body === "string") {
+      return body;
+    } else if (Buffer.isBuffer(body)) {
+      return body.toString("utf-8");
+    } else if (body && typeof body === "object") {
+      return JSON.stringify(body);
+    }
+    
+    return String(body);
   }
 
   /**
