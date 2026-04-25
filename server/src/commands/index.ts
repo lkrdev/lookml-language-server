@@ -9,3 +9,5 @@ export { handleSwitchToDev } from "./switchToDev";
 
 export { handleGetAllProjects } from "./getAllProjects";
 export { handleValidateProject } from "./validateProject";
+export { handleSyncAllFilesLocalToLooker } from "./syncAllFiles";
+export { handleSyncAllFilesLookerToLocal } from "./syncAllFiles";

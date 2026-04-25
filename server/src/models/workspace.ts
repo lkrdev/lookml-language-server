@@ -26,6 +26,7 @@ import {
     DIMENSION_GROUP_DEFAULT_INTERVALS,
     DIMENSION_GROUP_DEFAULT_TIMEFRAMES,
 } from "../schemas/defaults";
+import { VALID_EXTENSIONS_GLOB } from "../schemas/constants";
 import { getLines } from "../utils/document";
 import { LookMLParser } from "./lookml-parser";
 
@@ -168,7 +169,7 @@ export class WorkspaceModel {
         source?: string;
         reset?: boolean;
     }): Promise<void> {
-        source = source ?? "**/*.{view,model,explore}.lkml";
+        source = source ?? VALID_EXTENSIONS_GLOB;
 
         const project = await parseFiles({
             source,
