@@ -21,6 +21,16 @@
         "@types/node": "^20.17.30"
     },
     "contributes": {
+        "commands": [
+            {
+                "command": "looker.syncAllFilesLocalToLooker",
+                "title": "Looker: Sync All Files Local to Looker"
+            },
+            {
+                "command": "looker.syncAllFilesLookerToLocal",
+                "title": "Looker: Sync All Files Looker to Local"
+            }
+        ],
         "configuration": {
             "type": "object",
             "title": "LookML",

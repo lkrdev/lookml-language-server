@@ -45,6 +45,16 @@
                 "command": "looker.saveAllStageAllCommitAndSync",
                 "title": "Save All, Stage All, Commit, and Sync",
                 "category": "Looker"
+            },
+            {
+                "command": "looker.syncAllFilesLocalToLooker",
+                "title": "Sync All Files Local to Looker",
+                "category": "Looker"
+            },
+            {
+                "command": "looker.syncAllFilesLookerToLocal",
+                "title": "Sync All Files Looker to Local",
+                "category": "Looker"
             }
         ],
         "configuration": {
