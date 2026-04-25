@@ -327,7 +327,7 @@ documents.onDidSave(async (change) => {
                 if (document) {
                     const fsPath = URI.parse(change.document.uri).fsPath;
                     const baseDir = process.cwd();
-                    const relPath = path.relative(baseDir, fsPath);
+                    const relPath = path.relative(baseDir, fsPath).replace(/\\/g, "/");
                     const project_name = path.basename(baseDir);
                     const content = document.getText();
 
