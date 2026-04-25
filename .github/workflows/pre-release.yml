@@ -13,10 +13,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20.18.3
-      - run: npm install
-        env:
-          npm_config_arch: arm64
-      
       - name: Set Pre-release Version
         shell: bash
         run: |
@@ -26,6 +22,9 @@ jobs:
           
           find . -name "package.json" -exec sed -i '' "s/\"version\": \".*\"/\"version\": \"${NEW_VERSION}\"/" {} +
           
+      - run: npm install
+        env:
+          npm_config_arch: arm64
       - shell: pwsh
         run: echo "target=darwin-arm64" >> $env:GITHUB_ENV
         
