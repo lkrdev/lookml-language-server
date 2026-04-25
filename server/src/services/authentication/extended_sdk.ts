@@ -29,7 +29,7 @@ export class ExtendedLooker40SDK extends Looker40SDK {
       path,
       { file_path },
       null,
-      this.authSession as any
+      this.authSession.authenticate.bind(this.authSession)
     );
     
     const body = response.body;
