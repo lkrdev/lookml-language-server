@@ -528,35 +528,7 @@ export function activate(context: ExtensionContext) {
     }),
   );
 
-  context.subscriptions.push(
-    vscode.commands.registerCommand("looker.syncAllFilesLookerToLocal", async () => {
-      let projectName = await getProjectName();
-      projectName = await validateProjectName(projectName);
-      if (!projectName) return;
 
-      const result = await vscode.window.withProgress(
-        {
-          location: vscode.ProgressLocation.Notification,
-          title: `Syncing all files from Looker to Local for project "${projectName}"...`,
-          cancellable: false,
-        },
-        async () => {
-          return await client.sendRequest<CommandResponse>(
-            "workspace/executeCommand",
-            {
-              command: "looker.syncAllFilesLookerToLocal",
-              arguments: [projectName],
-            },
-          );
-        },
-      );
-      if (result.success) {
-        vscode.window.showInformationMessage(result.message || "Successfully synced all files from Looker.");
-      } else {
-        vscode.window.showErrorMessage(result.message || "Failed to sync files from Looker.");
-      }
-    }),
-  );
 
   client.start();
   // Start the client AFTER registering handlers
