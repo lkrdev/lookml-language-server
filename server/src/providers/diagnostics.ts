@@ -18,6 +18,7 @@ import { URI } from "vscode-uri";
 import { ZodError, ZodIssue } from "zod";
 import { WorkspaceModel } from "../models/workspace";
 import { VALID_TIMEFRAMES } from "../schemas/constants";
+import { DIMENSION_GROUP_DEFAULT_TIMEFRAMES } from "../schemas/defaults";
 import { exploreSchema, LookMLView } from "../schemas/lookml";
 import { ensureMinRangeLength } from "../utils/range";
 
@@ -83,6 +84,44 @@ export class DiagnosticsProvider {
 
     constructor(workspaceModel: WorkspaceModel) {
         this.workspaceModel = workspaceModel;
+    }
+
+    /**
+     * Check whether a field (dimension, measure, or dimension_group timeframe)
+     * exists in the given view, including all fields inherited via `extends:`.
+     *
+     * Uses `getViewFields()` to resolve extends recursively, then iterates
+     * every dimension_group's timeframes to match generated field names such as
+     * `transaction_date_raw` or `transaction_date_month_name`.
+     *
+     * The previous approach split `fieldName` on `_` and used the last segment
+     * as the timeframe, which failed for multi-word timeframes like `month_name`
+     * or `day_of_week`.  This helper iterates all declared timeframes and checks
+     * for an exact `${groupName}_${timeframe}` match.
+     */
+    private fieldExistsInView(viewName: string, fieldName: string): boolean {
+        const fields = this.workspaceModel.getViewFields(viewName);
+
+        if (fields.dimension?.[fieldName] || fields.measure?.[fieldName]) {
+            return true;
+        }
+        if (fields.dimension_group?.[fieldName]) return true;
+
+        // Generated dimension_group timeframe fields (e.g. transaction_date_raw,
+        // transaction_date_month_name).  Iterate all groups and their declared
+        // timeframes so that multi-word timeframes with underscores are handled.
+        for (const [dimGroupName, dimGroup] of Object.entries(
+            fields.dimension_group,
+        )) {
+            if (!dimGroup) continue;
+            const timeframes: string[] =
+                (dimGroup as any).timeframes ?? DIMENSION_GROUP_DEFAULT_TIMEFRAMES;
+            for (const timeframe of timeframes) {
+                if (fieldName === `${dimGroupName}_${timeframe}`) return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -277,13 +316,11 @@ export class DiagnosticsProvider {
                     continue;
                 }
 
-                const fields = this.workspaceModel.getViewFields(
-                    viewDetails.view.$name!,
-                );
                 if (
-                    !fields.dimension?.[fieldName] &&
-                    !fields.measure?.[fieldName] &&
-                    !fields.dimension_group?.[fieldName] &&
+                    !this.fieldExistsInView(
+                        viewDetails.view.$name!,
+                        fieldName,
+                    ) &&
                     fieldName !== "SQL_TABLE_NAME"
                 ) {
                     diagnostics.push({
@@ -297,26 +334,17 @@ export class DiagnosticsProvider {
                 const fieldName = ref;
                 refViewName = currentViewName;
                 refFieldName = fieldName;
-                const viewDetails =
-                    this.workspaceModel.getView(currentViewName);
-                if (viewDetails) {
-                    const fields = this.workspaceModel.getViewFields(
-                        viewDetails.view.$name!,
-                    );
-                    if (
-                        !fields.dimension?.[fieldName] &&
-                        !fields.measure?.[fieldName] &&
-                        !fields.dimension_group?.[fieldName] &&
-                        fieldName !== "TABLE" &&
-                        fieldName !== "SQL_TABLE_NAME"
-                    ) {
-                        diagnostics.push({
-                            severity: DiagnosticSeverity.Error,
-                            range,
-                            message: `Could not find a field named "${ref}"`,
-                            code: DiagnosticCode.VIEW_REF_FIELD_NOT_FOUND,
-                        });
-                    }
+                if (
+                    !this.fieldExistsInView(currentViewName, fieldName) &&
+                    fieldName !== "TABLE" &&
+                    fieldName !== "SQL_TABLE_NAME"
+                ) {
+                    diagnostics.push({
+                        severity: DiagnosticSeverity.Error,
+                        range,
+                        message: `Could not find a field named "${ref}"`,
+                        code: DiagnosticCode.VIEW_REF_FIELD_NOT_FOUND,
+                    });
                 }
             }
 
@@ -341,7 +369,11 @@ export class DiagnosticsProvider {
         }
 
         // ❌ Detect malformed references (e.g. $foo, $foo}, ${bar)
-        while ((match = invalidRefPattern.exec(sql)) !== null) {
+        // Strip single-quoted string literals first so that $ inside SQL
+        // strings (e.g. BigQuery regex anchors like r'[^-]+$') are not
+        // falsely flagged as malformed LookML references.
+        const sqlWithoutStringLiterals = sql.replace(/'[^']*'/g, "''");
+        while ((match = invalidRefPattern.exec(sqlWithoutStringLiterals)) !== null) {
             diagnostics.push({
                 severity: DiagnosticSeverity.Error,
                 range,
@@ -448,38 +480,7 @@ export class DiagnosticsProvider {
             }
 
             const fields = this.workspaceModel.getViewFields(targetedViewName!);
-            const viewDimensions = fields.dimension;
-            const viewMeasures = fields.measure;
-            const viewDimensionGroups = fields.dimension_group;
-
-            if (
-                !viewDimensions?.[fieldName] &&
-                !viewMeasures?.[fieldName] &&
-                !viewDimensionGroups?.[fieldName]
-            ) {
-                if (fieldName.includes("_")) {
-                    const fieldSplit = fieldName.split("_");
-                    const groupName = fieldSplit.pop();
-                    if (!groupName) {
-                        throw new Error(
-                            `No group name found for field ${fieldName}`,
-                        );
-                    }
-                    const dimensionGroupName = fieldSplit.join("_");
-                    const dimensionGroup =
-                        viewDimensionGroups?.[dimensionGroupName];
-                    const timeframes = dimensionGroup?.timeframes ?? [
-                        "time",
-                        "date",
-                    ];
-                    if (
-                        viewDimensionGroups?.[dimensionGroupName] &&
-                        timeframes.includes(groupName)
-                    ) {
-                        continue;
-                    }
-                }
-
+            if (!this.fieldExistsInView(targetedViewName!, fieldName)) {
                 diagnostics.push({
                     severity: DiagnosticSeverity.Error,
                     message: `Field "${fieldName}" not found in view "${targetedViewDetails.view.$name}"`,
@@ -790,50 +791,12 @@ export class DiagnosticsProvider {
                                 });
                                 continue;
                             }
-                            const viewDimensions =
-                                targetedViewDetails.view.dimension;
-                            const viewMeasures =
-                                targetedViewDetails.view.measure;
-                            const viewDimensionGroups =
-                                targetedViewDetails.view.dimension_group;
-
                             if (
-                                !viewDimensions?.[fieldName] &&
-                                !viewMeasures?.[fieldName] &&
-                                !viewDimensionGroups?.[fieldName]
+                                !this.fieldExistsInView(
+                                    targetedViewName!,
+                                    fieldName,
+                                )
                             ) {
-                                if (fieldName.includes("_")) {
-                                    const fieldSplit = fieldName.split("_");
-                                    const groupName = fieldSplit.pop();
-
-                                    if (!groupName) {
-                                        throw new Error(
-                                            `No group name found for field ${fieldName}`,
-                                        );
-                                    }
-
-                                    const dimensionGroupName =
-                                        fieldSplit.join("_");
-                                    const dimensionGroup =
-                                        viewDimensionGroups?.[
-                                            dimensionGroupName
-                                        ];
-
-                                    const timeframes =
-                                        dimensionGroup?.timeframes ?? [
-                                            "time",
-                                            "date",
-                                        ];
-                                    if (
-                                        viewDimensionGroups?.[
-                                            dimensionGroupName
-                                        ] &&
-                                        timeframes.includes(groupName)
-                                    ) {
-                                        continue;
-                                    }
-                                }
-
                                 diagnostics.push({
                                     severity: DiagnosticSeverity.Error,
                                     message: `Field "${fieldName}" not found in view "${targetedViewName}"`,
