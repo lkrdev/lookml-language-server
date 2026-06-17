@@ -1,4 +1,5 @@
 import { Definition, Position, TextDocument } from "vscode-languageserver/node";
+import { DashboardParser } from "../models/dashboard-parser";
 import { WorkspaceModel } from "../models/workspace";
 import { getLines } from "../utils/document";
 
@@ -140,12 +141,41 @@ export class DefinitionProvider {
   }
 
   /**
+   * Resolve a `view_name.field_name` reference to the field's definition location.
+   */
+  private resolveFieldReference(viewName: string, fieldName: string): Definition | undefined {
+    const viewDetails = this.workspaceModel.getView(viewName);
+    if (!viewDetails) return;
+
+    const fieldPosition =
+      viewDetails?.positions?.dimension?.[fieldName]?.$name?.$p ||
+      viewDetails?.positions?.measure?.[fieldName]?.$name?.$p ||
+      viewDetails?.positions?.dimension_group?.[fieldName]?.$name?.$p;
+
+    if (fieldPosition) {
+      return {
+        uri: viewDetails.uri,
+        range: {
+          start: { line: fieldPosition[0], character: fieldPosition[1] },
+          end: { line: fieldPosition[2], character: fieldPosition[3] },
+        },
+      };
+    }
+    return undefined;
+  }
+
+  /**
    * Provide definition locations for LookML elements
    */
   public getDefinition(
     document: TextDocument,
     position: Position,
   ): Definition | undefined {
+    // Handle dashboard files with the dashboard parser
+    if (DashboardParser.isDashboardFile(document.uri)) {
+      return this.getDashboardDefinition(document, position);
+    }
+
     const lines = getLines(document);
     const word = this.getWordAtPosition(document, position);
     if (!word) return;
@@ -162,31 +192,7 @@ export class DefinitionProvider {
     // If the word contains a dot and we're in a valid context, it's a field reference
     if (isBetweenBrackets && word.includes(".")) {
       const [viewName, fieldName] = word.split(".");
-      const viewDetails = this.workspaceModel.getView(viewName);
-
-      if (viewDetails) {
-        const fieldPosition =
-          viewDetails?.positions?.dimension?.[fieldName]?.$name?.$p ||
-          viewDetails?.positions?.measure?.[fieldName]?.$name?.$p ||
-          viewDetails?.positions?.dimension_group?.[fieldName]?.$name?.$p;
-
-        if (fieldPosition) {
-          return {
-            uri: viewDetails.uri,
-            range: {
-              start: {
-                line: fieldPosition[0],
-                character: fieldPosition[1],
-              },
-              end: {
-                line: fieldPosition[2],
-                character: fieldPosition[3],
-              },
-            },
-          };
-        }
-      }
-      return;
+      return this.resolveFieldReference(viewName, fieldName);
     }
 
     // If not a dotted reference, check if it's a view reference
@@ -217,5 +223,69 @@ export class DefinitionProvider {
         },
       },
     };
+  }
+
+  /**
+   * Handle go-to-definition in dashboard files.
+   */
+  private getDashboardDefinition(
+    document: TextDocument,
+    position: Position,
+  ): Definition | undefined {
+    const dashboardParser = this.workspaceModel.getDashboardParser();
+
+    // Check for field reference (view_name.field_name)
+    const fieldRef = dashboardParser.getFieldReferenceAtPosition(
+      document,
+      position.line,
+      position.character,
+    );
+    if (fieldRef) {
+      return this.resolveFieldReference(fieldRef.viewName, fieldRef.fieldName);
+    }
+
+    // Check for explore reference
+    const exploreRef = dashboardParser.getExploreReferenceAtPosition(
+      document,
+      position.line,
+      position.character,
+    );
+    if (exploreRef) {
+      const exploreDetails = this.workspaceModel.getExplore(exploreRef.exploreName);
+      if (exploreDetails?.positions?.$p) {
+        const p = exploreDetails.positions.$p;
+        return {
+          uri: exploreDetails.uri,
+          range: {
+            start: { line: p[0], character: p[1] },
+            end: { line: p[2], character: p[3] },
+          },
+        };
+      }
+    }
+
+    // Fallback: try to detect a bare view_name.field_name under the cursor
+    const word = this.getWordAtPosition(document, position);
+    if (word?.includes(".")) {
+      const [viewName, fieldName] = word.split(".");
+      return this.resolveFieldReference(viewName, fieldName);
+    }
+
+    // Try as a view name
+    if (word) {
+      const viewDetails = this.workspaceModel.getView(word);
+      if (viewDetails?.positions?.$name?.$p) {
+        const p = viewDetails.positions.$name.$p;
+        return {
+          uri: viewDetails.uri,
+          range: {
+            start: { line: p[0], character: p[1] },
+            end: { line: p[2], character: p[3] },
+          },
+        };
+      }
+    }
+
+    return undefined;
   }
 }

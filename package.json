@@ -76,7 +76,8 @@
                     ".lookml",
                     ".model.lkml",
                     ".view.lkml",
-                    ".explore.lkml"
+                    ".explore.lkml",
+                    ".dashboard.lookml"
                 ],
                 "configuration": "./client/language-configuration.json"
             }

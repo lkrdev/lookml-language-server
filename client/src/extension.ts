@@ -186,7 +186,7 @@ export function activate(context: ExtensionContext) {
     documentSelector: [{ scheme: "file", language: "lookml" }],
     synchronize: {
       fileEvents: workspace.createFileSystemWatcher(
-        "**/*.{lkml,lookml,model.lkml,view.lkml,explore.lkml}",
+        "**/*.{lkml,lookml,model.lkml,view.lkml,explore.lkml,dashboard.lookml}",
       ),
     },
     outputChannel,

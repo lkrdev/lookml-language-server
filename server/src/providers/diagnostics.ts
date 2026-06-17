@@ -16,6 +16,7 @@ import {
 } from "vscode-languageserver/node";
 import { URI } from "vscode-uri";
 import { ZodError, ZodIssue } from "zod";
+import { DashboardParser } from "../models/dashboard-parser";
 import { WorkspaceModel } from "../models/workspace";
 import { VALID_TIMEFRAMES } from "../schemas/constants";
 import { exploreSchema, LookMLView } from "../schemas/lookml";
@@ -75,6 +76,11 @@ export enum DiagnosticCode {
     EXPLORE_FIELD_NOT_FOUND = 70002,
     EXPLORE_VIEW_NOT_INCLUDED = 70003,
     EXPLORE_INVALID_EXTENDS = 70004,
+
+    // Dashboard validation (80000-89999)
+    DASHBOARD_VIEW_NOT_FOUND = 80001,
+    DASHBOARD_FIELD_NOT_FOUND = 80002,
+    DASHBOARD_EXPLORE_NOT_FOUND = 80003,
 }
 
 export class DiagnosticsProvider {
@@ -89,6 +95,11 @@ export class DiagnosticsProvider {
      * Validate a document and return diagnostics
      */
     public validateDocument(document: TextDocument): Diagnostic[] {
+        // Dashboard files get their own validation path
+        if (DashboardParser.isDashboardFile(document.uri)) {
+            return this.validateDashboard(document);
+        }
+
         this.fullyExplored.clear();
         const diagnostics: Diagnostic[] = [];
         diagnostics.push(...this.validateProperties(document));
@@ -1416,5 +1427,58 @@ export class DiagnosticsProvider {
             Position.create(startLine, startChar),
             Position.create(endLine, endChar),
         );
+    }
+
+    /**
+     * Validate field references in a dashboard file.
+     */
+    private validateDashboard(document: TextDocument): Diagnostic[] {
+        const diagnostics: Diagnostic[] = [];
+        const dashboardParser = this.workspaceModel.getDashboardParser();
+        const info = dashboardParser.parseDashboard(document);
+
+        for (const ref of info.fieldReferences) {
+            const viewDetails = this.workspaceModel.getView(ref.viewName);
+            if (!viewDetails) {
+                diagnostics.push({
+                    severity: DiagnosticSeverity.Warning,
+                    range: ref.range,
+                    message: `View "${ref.viewName}" not found`,
+                    source: "lookml-lsp",
+                    code: DiagnosticCode.DASHBOARD_VIEW_NOT_FOUND,
+                });
+                continue;
+            }
+
+            const fields = this.workspaceModel.getViewFields(viewDetails.view.$name!);
+            if (
+                !fields.dimension?.[ref.fieldName] &&
+                !fields.measure?.[ref.fieldName] &&
+                !fields.dimension_group?.[ref.fieldName]
+            ) {
+                diagnostics.push({
+                    severity: DiagnosticSeverity.Warning,
+                    range: ref.range,
+                    message: `Field "${ref.fieldName}" not found in view "${ref.viewName}"`,
+                    source: "lookml-lsp",
+                    code: DiagnosticCode.DASHBOARD_FIELD_NOT_FOUND,
+                });
+            }
+        }
+
+        for (const ref of info.exploreReferences) {
+            const exploreDetails = this.workspaceModel.getExplore(ref.exploreName);
+            if (!exploreDetails) {
+                diagnostics.push({
+                    severity: DiagnosticSeverity.Warning,
+                    range: ref.range,
+                    message: `Explore "${ref.exploreName}" not found`,
+                    source: "lookml-lsp",
+                    code: DiagnosticCode.DASHBOARD_EXPLORE_NOT_FOUND,
+                });
+            }
+        }
+
+        return diagnostics;
     }
 }

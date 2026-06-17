@@ -28,6 +28,7 @@ import {
 } from "../schemas/defaults";
 import { VALID_EXTENSIONS_GLOB } from "../schemas/constants";
 import { getLines } from "../utils/document";
+import { DashboardInfo, DashboardParser } from "./dashboard-parser";
 import { LookMLParser } from "./lookml-parser";
 
 
@@ -47,6 +48,10 @@ export class WorkspaceModel {
     private modelsByFile: Map<DocumentUri, string[]> = new Map();
     private loadedFiles: Set<string> = new Set();
 
+    // Dashboard tracking
+    private dashboardParser: DashboardParser = new DashboardParser();
+    private dashboards: Map<DocumentUri, DashboardInfo> = new Map();
+
     // Version tracking for incremental updates
     private documentVersions: Map<DocumentUri, number> = new Map();
 
@@ -57,6 +62,18 @@ export class WorkspaceModel {
 
     public getView(name: string): LookmlViewWithFileInfo | undefined {
         return this.views.get(name);
+    }
+
+    public getDashboardParser(): DashboardParser {
+        return this.dashboardParser;
+    }
+
+    public getDashboardInfo(uri: string): DashboardInfo | undefined {
+        return this.dashboards.get(uri);
+    }
+
+    public isDashboardFile(uri: string): boolean {
+        return DashboardParser.isDashboardFile(uri);
     }
 
     public getViews(): Map<string, LookmlViewWithFileInfo> {
@@ -486,9 +503,10 @@ export class WorkspaceModel {
         // Remove existing data for this file
         this.clearDocumentData(uri);
 
-        // Dashboard files use YAML list syntax (- dashboard:), not block LookML.
-        // The lookml-parser expects block syntax and would report a false error on "-".
+        // Dashboard files use YAML list syntax — parse them separately with the dashboard parser
         if (uri.includes(".dashboard.lookml")) {
+            const dashboardInfo = this.dashboardParser.parseDashboard(document);
+            this.dashboards.set(fsPath, dashboardInfo);
             return;
         }
 
@@ -532,6 +550,10 @@ export class WorkspaceModel {
      */
     private clearDocumentData(uri: DocumentUri): void {
         const fsPath = URI.parse(uri).fsPath;
+
+        // Remove dashboard data if present
+        this.dashboards.delete(fsPath);
+
         // Remove views defined in this file
         const viewNames = this.viewsByFile.get(fsPath) || [];
         for (const viewName of viewNames) {
